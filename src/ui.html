@@ -293,10 +293,13 @@ async function loadProjects() {
 
 async function refresh(force) {
   if (!state.project) { state.items = []; render(); return; }
+  // Responses for an older selection (project, view, search) are discarded.
+  const req = (state.reqId = (state.reqId || 0) + 1);
   const path = state.project === ALL ? "/items" : P(state.project) + "/items";
   const params = new URLSearchParams({ status: state.view });
   if (state.q) params.set("q", state.q);
   const { items } = await api(path + "?" + params);
+  if (req !== state.reqId) return;
   const before = state.lastRefs;
   state.items = items;
   state.lastRefs = new Set(items.map((i) => i.project_slug + ":" + i.ref + ":" + i.updated_at));
@@ -306,14 +309,16 @@ async function refresh(force) {
 
 async function poll() {
   if (document.hidden || !state.token || !state.project) return;
+  const project = state.project;
   try {
-    const v = await api(state.project === ALL ? "/version" : P(state.project) + "/version");
-    setLive(true);
+    const v = await api(project === ALL ? "/version" : P(project) + "/version");
+    if (project !== state.project) return;
+    // Only acknowledge a version once the refresh for it succeeded, so a failed refresh is retried.
     if (v.version !== state.version) {
-      const first = state.version === -1;
-      state.version = v.version;
-      if (!first) { await refresh(false); loadProjects(); }
+      if (state.version !== -1) { await refresh(false); loadProjects(); }
+      if (project === state.project) state.version = v.version;
     }
+    setLive(true);
   } catch { setLive(false); }
 }
 function setLive(ok) { const l = $("#live"); l.className = "live " + (ok ? "on" : "off"); l.title = ok ? "Live: verbunden" : "Keine Verbindung"; }

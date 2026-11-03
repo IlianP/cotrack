@@ -444,20 +444,22 @@ async function deleteItem(db, project, item, actor) {
 // Idea accepted -> becomes a task/to-do with a NEW ref; the idea is closed and points to it.
 async function convertItem(db, project, item, input, actor) {
   if (item.converted_to) throw new HttpError(409, "already_converted", item.converted_to);
-  const target = await createItem(
-    db,
-    project,
-    {
-      kind: input.kind,
-      title: input.title ?? item.title,
-      short: input.short ?? item.short,
-      body: input.body ?? item.body,
-      source: item.source,
-      waiting_on: item.waiting_on,
-      ...("owner" in input ? { owner: input.owner } : {}),
-    },
-    actor,
-  );
+  // Claim the source item atomically so concurrent or double-clicked conversions cannot both succeed.
+  const claim = await db
+    .prepare("UPDATE items SET converted_to = 'pending' WHERE id = ? AND converted_to IS NULL")
+    .bind(item.id)
+    .run();
+  if (!claim.meta.changes) throw new HttpError(409, "already_converted");
+  let target;
+  try {
+    target = await createItem(db, project, conversionInput(item, input), actor);
+  } catch (err) {
+    await db
+      .prepare("UPDATE items SET converted_to = NULL WHERE id = ? AND converted_to = 'pending'")
+      .bind(item.id)
+      .run();
+    throw err;
+  }
   const t = now();
   await db.batch([
     db
@@ -468,6 +470,18 @@ async function convertItem(db, project, item, input, actor) {
     eventStmt(db, project.slug, item.ref, "converted", actor, { to: target.ref }, t),
   ]);
   return { from: await getItemByRef(db, project.slug, item.ref), to: target };
+}
+
+function conversionInput(item, input) {
+  return {
+    kind: input.kind,
+    title: input.title ?? item.title,
+    short: input.short ?? item.short,
+    body: input.body ?? item.body,
+    source: item.source,
+    waiting_on: item.waiting_on,
+    ...("owner" in input ? { owner: input.owner } : {}),
+  };
 }
 
 /* --------------------------------------------------------------- output */
