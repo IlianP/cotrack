@@ -279,6 +279,7 @@ async function boot() {
       setInterval(poll, 4000);
       document.addEventListener("visibilitychange", poll);
     }
+    poll();
   } catch (e) { if (e.message !== "unauthorized") toast("Fehler: " + e.message); }
 }
 

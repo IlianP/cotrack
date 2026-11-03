@@ -1,1 +1,91 @@
 # cotrack
+
+**Tie up loose ends – together.** Live tracking of open points for people who work with AI assistants.
+
+When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still
+have to make, tasks the AI promised to do, ideas, risks. *cotrack* keeps these open points in one live list
+per project. You edit it in a responsive web app; your AI assistants read and update it through an HTTP API
+(and soon an MCP server). Every item has a stable reference like `T3` or `A4` that is **never reused**, so you can
+talk about it in any chat.
+
+> 🇩🇪 Die Methodik hinter cotrack (Kategorien, Regeln, Bezug zu PRINCE2/RAID) ist in
+> [docs/METHODIK.md](docs/METHODIK.md) beschrieben.
+
+## Features (prototype)
+
+- **Categories** – default set: **T** to-do (you) · **A** task (AI) · **I** idea · **W** warning. Configurable.
+- **Stable references** per project and category; dependencies like `A4 ⏸T2`.
+- **Projects** – one per GitHub repository (or anything else), plus a cross-project view.
+- **Live** – the web app picks up changes made by you or an AI within a few seconds.
+- **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
+  `Du: T3 Lizenz · KI: A2 ⏸T4 MCP-Server · Ideen: I2 Sync · ⚠ W1 Auth`.
+- **STATUS.md export** – the "Offene Punkte" section for handovers.
+- **Audit trail** – every change is logged with who made it (you or the AI).
+- Responsive (phone, tablet, desktop), dark mode, no build step, no dependencies.
+
+## Architecture
+
+```
+Browser (src/ui.html) ─┐
+                       ├─► Cloudflare Worker (src/worker.js) ─► D1 (SQLite)
+AI assistant (API) ────┘        Bearer token → actor "user" | "ai"
+```
+
+## Self-hosting
+
+Requirements: a Cloudflare account and Node.js.
+
+```bash
+npm install
+npx wrangler d1 create cotrack-db          # put the id into wrangler.toml
+npm run db:migrate
+npx wrangler secret put TOKEN_USER         # e.g. openssl rand -hex 24
+npx wrangler secret put TOKEN_AI
+npm run deploy
+```
+
+Open the worker URL, enter `TOKEN_USER`, create a project. Give `TOKEN_AI` to your AI assistant.
+
+## API
+
+All endpoints except `/` and `/api/health` require `Authorization: Bearer <token>`.
+The token decides the actor (`user` or `ai`) recorded on every change.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/projects` | list projects (with open counts) |
+| POST | `/api/projects` | create `{slug, name?, repo?}` |
+| PATCH | `/api/projects/:slug` | update `{name?, repo?, archived?}` |
+| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=` | list items |
+| POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/T3` |
+| POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8` | chat footer line |
+| GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
+| GET | `/api/projects/:slug/events?after=` | change log |
+| GET | `/api/items?owner=user&status=open` | items across all projects |
+| GET / POST | `/api/kinds` | list / create-or-update categories |
+
+Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name.
+`seq` lets you import an existing reference (e.g. `T3` from a chat); a reference that was ever used is rejected.
+
+```bash
+export COTRACK_URL=https://cotrack.example.workers.dev COTRACK_TOKEN=...
+curl -s -H "Authorization: Bearer $COTRACK_TOKEN" "$COTRACK_URL/api/projects/cotrack/footer?format=text"
+curl -s -X POST -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
+  "$COTRACK_URL/api/projects/cotrack/items" -d '{"kind":"T","title":"entscheiden: Lizenz","short":"Lizenz"}'
+curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
+  "$COTRACK_URL/api/projects/cotrack/items/T3" -d '{"status":"done"}'
+```
+
+## Roadmap
+
+- MCP server so Claude and ChatGPT can use cotrack natively
+- Sync with `docs/STATUS.md` in GitHub repositories
+- WebSocket live updates (Durable Objects)
+- Proper login (Cloudflare Access / OAuth) and multi-user support
+- Methodology v2 – see [docs/METHODIK.md](docs/METHODIK.md)
+
+## License
+
+To be decided.
