@@ -1,0 +1,17 @@
+{
+  "name": "cotrack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live tracking of open points (to-dos, tasks, ideas, warnings) shared between you and your AI assistants.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply cotrack-db --remote",
+    "db:migrate:local": "wrangler d1 migrations apply cotrack-db --local"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
