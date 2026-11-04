@@ -1,6 +1,6 @@
 # Methodik: offene Punkte gemeinsam führen
 
-## Gültig: Methodik v2.3 (Stand 4. November 2026)
+## Gültig: Methodik v2.4 (Stand 4. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -17,6 +17,16 @@
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Führende Liste:** cotrack (Web-App + MCP-Connector). Die `docs/STATUS.md` eines Repositorys enthält nur einen Link
   zum Board, damit niemand bei jeder Änderung eine Datei pushen muss. Ohne cotrack gilt weiter die Liste in `STATUS.md`.
+- **Projekt-Kürzel (v2.4):** Jedes Projekt hat einen eindeutigen Slug (Identität) und optional ein **Kürzel** aus 2–4 Zeichen
+  (zwei Buchstaben, dann Buchstaben oder Ziffern), das du selbst wählst; ohne Wunsch wird eines aus dem Slug vorgeschlagen.
+  Es wird nur einmal festgelegt und nie geändert. Damit gibt es die **qualifizierte Kennung `CT:A14`**; `A14` allein bleibt gültig,
+  solange nur ein Projekt im Gespräch ist.
+- **Zuordnung Unterhaltung → Projekt (v2.4):** Die KI bestimmt sie, nicht der Server. Reihenfolge: (1) `COTRACK.md` im Repo-Root
+  (`project:`/`code:`), einmal beim Start und wenn ein Repository hinzukommt; (2) `cotrack_projects` mit dem Repository
+  (`owner/name`); (3) ohne Repository das Projekt aus den Projektanweisungen; (4) sonst einmal nachfragen. Nie selbst ein Projekt anlegen.
+- **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt eine Zeile
+  (`CT ▸ Du: … · 🤖KI: …`) und zeigt bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
+  an dem gerade gearbeitet wird; bei Unklarheit fragen. Abhängigkeiten über Projektgrenzen gibt es vorerst nicht.
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md). Beide Dateien müssen immer zueinander passen.
 
