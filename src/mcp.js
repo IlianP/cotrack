@@ -20,6 +20,7 @@ import {
   getProject,
   listKinds,
   listItems,
+  successorsOf,
   getItemByRef,
   createItem,
   updateItem,
@@ -33,7 +34,8 @@ const OWNER_LABELS = { user: "Du", ai: "KI" };
 
 const INSTRUCTIONS = `cotrack führt die offenen Punkte eines Projekts, gemeinsam für Mensch und KI.
 Kategorien: A Aufgabe (owner "user" = Du oder "ai" = KI), D Entscheidung (trifft der Mensch), I Idee (💡), W Warnung/Risiko (⚠).
-Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2" → angezeigt als "A4 ⏸D2".
+Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2". Anzeige: "D2 ▶A4" = D2 kommt zuerst,
+A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nur wenn D2 nicht in der Zeile steht).
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
 cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Fußzeile sparsam: Ändern sich in einer
 Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die volle Fußzeile (cotrack_footer) nur auf Nachfrage („Stand?“),
@@ -213,6 +215,8 @@ async function callTool(name, args, db, actor) {
       ];
       if (it.short) lines.push(`Kurz: ${it.short}`);
       if (it.body) lines.push(`Beschreibung: ${it.body}`);
+      const next = await successorsOf(db, it.project_slug, it.ref);
+      if (next.length) lines.push(`Danach folgt: ▶${next.join(",")}`);
       if (it.source) lines.push(`Quelle: ${it.source}`);
       if (it.converted_to) lines.push(`Umgewandelt in: ${it.converted_to}`);
       lines.push(`Angelegt ${it.created_at} (${it.created_by}), geändert ${it.updated_at} (${it.updated_by})`);

@@ -9,7 +9,10 @@
 | **I** | Idee – bei Zusage wird daraus A oder D, bei Absage „verworfen“ | 💡 |
 | **W** | Warnung/Risiko – bleibt bis erledigt oder ausdrücklich akzeptiert; eingetretene Probleme werden zu A/D | ⚠ |
 
-- **Nummerierung:** je Kategorie, nie neu vergeben. Abhängigkeiten als „A4 ⏸D2“.
+- **Nummerierung:** je Kategorie, nie neu vergeben.
+- **Abhängigkeiten:** gespeichert wird nur „A4 wartet auf D2“. Angezeigt wird die Reihenfolge: **„D2 ▶A4“** (D2 zuerst, dann A4),
+  bei mehreren „D2 ▶A4,A5“. In der Fußzeile steht ▶ bei Paaren nur am vorausgehenden Punkt; **„A4 ⏸D2“** nur, wenn D2 nicht
+  in der Zeile steht. Erledigte Vorgänger verschwinden aus der Anzeige. Der Nachfolger wird berechnet, nicht gepflegt.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Führende Liste:** cotrack (Web-App + MCP-Connector). Die `docs/STATUS.md` eines Repositorys enthält nur einen Link

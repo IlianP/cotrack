@@ -313,6 +313,18 @@ export async function listItems(db, f) {
   return results;
 }
 
+export async function successorsOf(db, slug, ref) {
+  const { results } = await db
+    .prepare(
+      `SELECT kind || seq AS ref FROM items
+       WHERE project_slug = ? AND status IN ('open','doing','blocked') AND ',' || waiting_on || ',' LIKE ?
+       ORDER BY kind, seq`,
+    )
+    .bind(slug, `%,${ref},%`)
+    .all();
+  return results.map((r) => r.ref);
+}
+
 function parseRef(ref) {
   const m = String(ref || "").toUpperCase().match(REF_RE);
   if (!m) throw new HttpError(400, "invalid_ref", ref);
@@ -513,9 +525,22 @@ function shortLabel(item) {
 
 /**
  * Builds the one-line summary used at the end of chat answers, e.g.
- * "Du: D1 Repo-Name · 🤖KI: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: T2"
+ * "Du: D1 ▶A3 Lizenz · 🤖KI: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: A1"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
+// ref -> refs of OPEN items that wait for it (the reverse of waiting_on; nothing extra is stored).
+export function successorMap(items) {
+  const map = new Map();
+  for (const it of items) {
+    if (!OPEN.includes(it.status) || !it.waiting_on) continue;
+    for (const r of it.waiting_on.split(",")) {
+      if (!map.has(r)) map.set(r, []);
+      map.get(r).push(it.ref);
+    }
+  }
+  return map;
+}
+
 export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const groups = new Map();
@@ -551,12 +576,22 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
       }
     });
   }
+  // Dependencies: the blocking item carries "▶A2,A4" (order is visible at a glance). The waiting item only
+  // keeps "⏸D1" when its blocker is open or unknown but not itself shown in the line; resolved blockers show nothing.
+  const succ = successorMap(items);
+  const status = new Map(items.map((i) => [i.ref, i.status]));
+  const shownRefs = new Set(ordered.flatMap((g, i) => g.items.slice(0, shown[i]).map((it) => it.ref)));
   const parts = ordered
     .map((g, i) => {
       if (!shown[i]) return null;
       const entries = g.items.slice(0, shown[i]).map((it) => {
-        const wait = it.waiting_on ? " " + it.waiting_on.split(",").map((r) => `⏸${r}`).join(" ") : "";
-        return `${it.ref}${wait} ${shortLabel(it)}`;
+        const next = succ.get(it.ref) || [];
+        const waits = (it.waiting_on ? it.waiting_on.split(",") : []).filter(
+          // Unknown blockers (not in the loaded items) keep their marker; only known-closed ones are dropped.
+          (r) => (!status.has(r) || OPEN.includes(status.get(r))) && !shownRefs.has(r),
+        );
+        const marks = [next.length ? `▶${next.join(",")}` : "", waits.length ? `⏸${waits.join(",")}` : ""].filter(Boolean);
+        return `${it.ref}${marks.length ? " " + marks.join(" ") : ""} ${shortLabel(it)}`;
       });
       const hidden = g.items.length - shown[i];
       return `${g.label} ${entries.join(" · ")}${hidden ? ` (+${hidden})` : ""}`;
@@ -573,15 +608,18 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
 
 /**
  * Compact one-line-per-item listing for AI assistants (few tokens), e.g.
- * "T4 entscheiden: Kategorien ⏸A3" or "A2 MCP-Server bauen [in Arbeit] @Maria".
+ * "A2 MCP-Server bauen ⏸D1 [in Arbeit] @Maria" or "D1 Lizenz wählen ▶A2,A4" (▶ = items waiting for it).
  * Bodies are left out; fetch a single item for details.
  */
 export function itemsAsText(items, kinds, { withProject = false } = {}) {
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
+  const succ = successorMap(items);
   const lines = items.map((it) => {
     const k = kindBy.get(it.kind);
     const parts = [withProject ? `${it.project_slug}/${it.ref}` : it.ref, it.title];
-    if (it.waiting_on) parts.push(it.waiting_on.split(",").map((r) => `⏸${r}`).join(" "));
+    if (it.waiting_on) parts.push(`⏸${it.waiting_on}`);
+    const next = succ.get(it.ref);
+    if (next && !withProject) parts.push(`▶${next.join(",")}`);
     if (it.status !== "open") parts.push(`[${STATUS_LABELS[it.status]}]`);
     if (it.owner && (!k || it.owner !== k.default_owner)) parts.push(`@${OWNER_LABELS[it.owner] || it.owner}`);
     if (it.converted_to) parts.push(`→${it.converted_to}`);
