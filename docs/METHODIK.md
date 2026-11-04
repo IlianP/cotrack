@@ -1,10 +1,10 @@
 # Methodik: offene Punkte gemeinsam führen
 
-## Gültig: Methodik v2.2 (Stand 4. November 2026)
+## Gültig: Methodik v2.3 (Stand 4. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
-| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „Du:“ bzw. „KI:“ |
+| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „Du:“ bzw. „🤖KI:“ |
 | **D** | Entscheidung – triffst du, die KI bereitet Optionen vor; Ergebnis wird festgehalten | unter „Du:“, vor den Aufgaben |
 | **I** | Idee – bei Zusage wird daraus A oder D, bei Absage „verworfen“ | 💡 |
 | **W** | Warnung/Risiko – bleibt bis erledigt oder ausdrücklich akzeptiert; eingetretene Probleme werden zu A/D | ⚠ |
@@ -83,7 +83,7 @@ T/A/I/W bleiben. Nur Ergänzungen: abgesagte Ideen werden „verworfen“ statt 
 Die Fußzeile bleibt fast gleich – gruppiert wird weiterhin nach **Du / KI**:
 
 ```
-Du: D1 Lizenz · A6 Tokens · KI: A2 ⏸D1 MCP-Server · 💡 I2 Sync · ⚠ R1 Auth · neu: A6 · erledigt: A1
+Du: D1 Lizenz · A6 Tokens · 🤖KI: A2 ⏸D1 MCP-Server · 💡 I2 Sync · ⚠ R1 Auth · neu: A6 · erledigt: A1
 ```
 
 Vorteile:

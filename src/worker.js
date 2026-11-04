@@ -16,6 +16,8 @@ const REF_RE = /^([A-Z]{1,4})(\d{1,6})$/;
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const OWNER_LABELS = { user: "Du", ai: "KI" };
+// Footer group labels (the AI group carries a robot icon).
+const FOOTER_OWNER_LABELS = { user: "Du", ai: "🤖KI" };
 const OWNER_ALIASES = { user: "user", du: "user", me: "user", ich: "user", human: "user", ai: "ai", ki: "ai" };
 const STATUS_LABELS = { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" };
 
@@ -511,7 +513,7 @@ function shortLabel(item) {
 
 /**
  * Builds the one-line summary used at the end of chat answers, e.g.
- * "Du: T1 Repo-Name · KI: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: T2"
+ * "Du: D1 Repo-Name · 🤖KI: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: T2"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
 export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
@@ -524,7 +526,7 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
     if (!k || k.actionable) {
       const owner = it.owner || "user";
       key = `o:${owner}`;
-      label = `${OWNER_LABELS[owner] || owner}:`;
+      label = `${FOOTER_OWNER_LABELS[owner] || owner}:`;
       weight = owner === "user" ? 0 : owner === "ai" ? 1 : 2;
     } else {
       key = `k:${k.code}`;

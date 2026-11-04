@@ -18,7 +18,7 @@ talk about it in any chat.
 - **Projects** – one per GitHub repository (or anything else), plus a cross-project view.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
-  `Du: D1 Lizenz · A5 Tokens · KI: A2 ⏸D1 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
+  `Du: D1 Lizenz · A5 Tokens · 🤖KI: A2 ⏸D1 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, no build step, no dependencies.
