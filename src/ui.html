@@ -382,7 +382,7 @@ function renderItem(it, k, before) {
   for (const r of (it.waiting_on || "").split(",").filter(Boolean)) meta.push(h("span", { class: "pill wait", title: "wartet auf" }, "⏸ " + r));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
   if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
-  if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, "👤 " + ownerLabel(it.owner)));
+  if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
   if (it.due) meta.push(h("span", { class: "pill" }, "📅 " + it.due));
   if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
     ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 Quelle")
