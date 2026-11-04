@@ -46,6 +46,13 @@ npm run deploy
 
 Open the worker URL, enter `TOKEN_USER`, create a project. Give `TOKEN_AI` to your AI assistant.
 
+## MCP server
+
+`POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
+(Streamable HTTP, stateless). Tools: `cotrack_projects`, `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`,
+`cotrack_update`, `cotrack_convert`, `cotrack_footer`, `cotrack_changes`. Answers are compact text to save tokens.
+Setup for Claude and ChatGPT (German): [docs/MCP.md](docs/MCP.md).
+
 ## API
 
 All endpoints except `/` and `/api/health` require `Authorization: Bearer <token>`.
@@ -80,7 +87,7 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 ## Roadmap
 
-- MCP server so Claude and ChatGPT can use cotrack natively
+- OAuth for the MCP server (no token in the URL)
 - Sync with `docs/STATUS.md` in GitHub repositories
 - WebSocket live updates (Durable Objects)
 - Proper login (Cloudflare Access / OAuth) and multi-user support

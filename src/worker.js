@@ -5,6 +5,7 @@
  * Cloudflare Worker + D1, no build step. See README.md for the API.
  */
 import UI_HTML from "./ui.html";
+import { handleMcp } from "./mcp.js";
 
 const STATUSES = ["open", "doing", "blocked", "done", "dropped"];
 const OPEN = ["open", "doing", "blocked"];
@@ -26,6 +27,11 @@ class HttpError extends Error {
   }
 }
 
+// Helpers for other modules (the class itself is not exported: the Workers runtime
+// treats exported classes of the main module as entrypoints).
+export const httpError = (status, code, detail) => new HttpError(status, code, detail);
+export const isHttpError = (err) => err instanceof HttpError;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -33,6 +39,7 @@ export default {
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
         return page(UI_HTML);
       }
+      if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return await handleMcp(request, env, url);
       if (url.pathname === "/api/health") return json({ ok: true, service: "cotrack" });
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
         const actor = await authenticate(request, env);
@@ -52,11 +59,14 @@ export default {
 
 async function authenticate(request, env) {
   const m = (request.headers.get("authorization") || "").match(/^Bearer\s+(\S+)\s*$/i);
-  if (!m) return null;
-  // Each token maps to an actor, so every change is attributed automatically.
+  return m ? tokenActor(m[1], env) : null;
+}
+
+// Each token maps to an actor, so every change is attributed automatically.
+export async function tokenActor(token, env) {
   const candidates = [["user", env.TOKEN_USER], ["ai", env.TOKEN_AI]];
   for (const [actor, secret] of candidates) {
-    if (secret && (await safeEqual(m[1], secret))) return actor;
+    if (secret && (await safeEqual(token, secret))) return actor;
   }
   return null;
 }
@@ -165,7 +175,7 @@ async function route(req, db, url, actor) {
 
 /* ------------------------------------------------------------- projects */
 
-async function listProjects(db, includeArchived) {
+export async function listProjects(db, includeArchived) {
   const { results } = await db
     .prepare(
       `SELECT p.*,
@@ -177,7 +187,7 @@ async function listProjects(db, includeArchived) {
   return results;
 }
 
-async function getProject(db, slug) {
+export async function getProject(db, slug) {
   const p = await db.prepare("SELECT * FROM projects WHERE slug = ?").bind(slug).first();
   if (!p) throw new HttpError(404, "project_not_found", slug);
   return p;
@@ -223,7 +233,7 @@ async function updateProject(db, project, input, actor) {
 
 /* ---------------------------------------------------------------- kinds */
 
-async function listKinds(db, includeInactive) {
+export async function listKinds(db, includeInactive) {
   const { results } = await db
     .prepare("SELECT * FROM kinds WHERE active = 1 OR ? = 1 ORDER BY sort_order, code")
     .bind(includeInactive ? 1 : 0)
@@ -269,7 +279,7 @@ function filtersFrom(q) {
 
 const ITEM_SELECT = `SELECT i.*, i.kind || i.seq AS ref FROM items i LEFT JOIN kinds k ON k.code = i.kind`;
 
-async function listItems(db, f) {
+export async function listItems(db, f) {
   const where = [];
   const args = [];
   if (f.project) {
@@ -307,7 +317,7 @@ function parseRef(ref) {
   return { kind: m[1], seq: Number(m[2]) };
 }
 
-async function getItemByRef(db, slug, ref) {
+export async function getItemByRef(db, slug, ref) {
   const { kind, seq } = parseRef(ref);
   const item = await db
     .prepare(`${ITEM_SELECT} WHERE i.project_slug = ? AND i.kind = ? AND i.seq = ?`)
@@ -323,7 +333,7 @@ async function getKind(db, code) {
   return k;
 }
 
-async function createItem(db, project, input, actor) {
+export async function createItem(db, project, input, actor) {
   const kind = await getKind(db, String(input.kind || "").toUpperCase());
   const t = now();
   const row = {
@@ -399,7 +409,7 @@ async function createItem(db, project, input, actor) {
   return db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(row.id).first();
 }
 
-async function updateItem(db, project, item, input, actor) {
+export async function updateItem(db, project, item, input, actor) {
   const t = now();
   const changes = {};
   const set = (col, val) => {
@@ -449,7 +459,7 @@ async function deleteItem(db, project, item, actor) {
 }
 
 // Idea accepted -> becomes a task/to-do with a NEW ref; the idea is closed and points to it.
-async function convertItem(db, project, item, input, actor) {
+export async function convertItem(db, project, item, input, actor) {
   if (item.converted_to) throw new HttpError(409, "already_converted", item.converted_to);
   // Claim the source item atomically so concurrent or double-clicked conversions cannot both succeed.
   const claim = await db
