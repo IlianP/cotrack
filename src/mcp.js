@@ -35,8 +35,9 @@ const INSTRUCTIONS = `cotrack führt die offenen Punkte eines Projekts, gemeinsa
 Kategorien: A Aufgabe (owner "user" = Du oder "ai" = KI), D Entscheidung (trifft der Mensch), I Idee (💡), W Warnung/Risiko (⚠).
 Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2" → angezeigt als "A4 ⏸D2".
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
-cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Am Ende jeder Antwort
-die Fußzeile aus cotrack_status bzw. cotrack_footer zeigen. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.`;
+cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Fußzeile sparsam: Ändern sich in einer
+Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die volle Fußzeile (cotrack_footer) nur auf Nachfrage („Stand?“),
+am Ende größerer Arbeiten oder etwa alle vier Antworten. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.`;
 
 const projectParam = { type: "string", description: "Projekt-Kürzel, z. B. \"cotrack\" (siehe cotrack_projects)" };
 const refParam = { type: "string", description: "Kennung, z. B. \"A4\"" };
