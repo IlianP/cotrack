@@ -117,6 +117,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .pill { font-size: 12px; padding: 1px 7px; border-radius: 99px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill.wait { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
+.pill.next { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .pill.st-doing { color: var(--accent); }
 .pill.st-blocked { color: var(--danger); }
 .pill a { color: inherit; }
@@ -353,7 +354,17 @@ function renderKindSeg() {
   $("#addHint").textContent = k ? `${k.name}: ${k.description || ""} · Tipp: „I: …“ wählt die Kategorie per Kürzel.` : "";
 }
 
+// ref -> open items waiting for it (reverse of waiting_on, computed from what is on screen)
+let successors = new Map();
 function render(before) {
+  successors = new Map();
+  for (const i of state.items) {
+    if (i.status === "done" || i.status === "dropped") continue;
+    for (const r of (i.waiting_on || "").split(",").filter(Boolean)) {
+      const key = i.project_slug + ":" + r;
+      successors.set(key, [...(successors.get(key) || []), i.ref]);
+    }
+  }
   const board = $("#board");
   if (!state.project) {
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, "Noch kein Projekt. Lege über ☰ ein neues an.")));
@@ -380,6 +391,8 @@ function renderItem(it, k, before) {
   const meta = [];
   if (state.project === ALL) meta.push(h("span", { class: "pill" }, it.project_slug));
   for (const r of (it.waiting_on || "").split(",").filter(Boolean)) meta.push(h("span", { class: "pill wait", title: "wartet auf" }, "⏸ " + r));
+  const next = successors.get(it.project_slug + ":" + it.ref);
+  if (next) meta.push(h("span", { class: "pill next", title: "danach folgt" }, "▶ " + next.join(", ")));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
   if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
