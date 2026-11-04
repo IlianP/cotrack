@@ -88,4 +88,4 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 ## License
 
-To be decided.
+[MIT](LICENSE)
