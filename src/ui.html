@@ -181,6 +181,7 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
 <main>
   <form id="add" class="add" autocomplete="off">
     <div id="kindSeg" class="seg" role="group" aria-label="Kategorie"></div>
+    <div id="ownerSeg" class="seg" role="group" aria-label="Verantwortlich"></div>
     <label class="sr" for="addTitle">Neuer Punkt</label>
     <input id="addTitle" placeholder="Neuer Punkt … z. B. „entscheiden: Lizenz“" enterkeyhint="done">
     <button class="primary" type="submit">Hinzufügen</button>
@@ -222,7 +223,7 @@ const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
   view: "open", q: "", kinds: [], projects: [], items: [], version: -1,
-  actor: null, addKind: null, lastRefs: new Set(),
+  actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
 
 /* tiny DOM helper: never uses innerHTML, so user text cannot inject markup */
@@ -261,15 +262,16 @@ async function copy(text, label = "Kopiert") {
   try { await navigator.clipboard.writeText(text); toast(label); }
   catch { prompt("Zum Kopieren:", text); }
 }
-const kindBy = (code) => state.kinds.find((k) => k.code === code);
+const kindBy = (code) => state.allKinds.find((k) => k.code === code);
+const needsOwner = (k) => k && k.actionable && !k.default_owner;
 const ownerLabel = (o) => OWNER_LABELS[o] || o || "–";
 
 /* ---------------------------------------------------------- loading */
 async function boot() {
   if (!state.token) return showLogin();
   try {
-    const [me, kinds] = await Promise.all([api("/me"), api("/kinds")]);
-    state.actor = me.actor; state.kinds = kinds.kinds;
+    const [me, kinds] = await Promise.all([api("/me"), api("/kinds?all=1")]);
+    state.actor = me.actor; state.allKinds = kinds.kinds; state.kinds = kinds.kinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
     renderKindSeg();
@@ -344,6 +346,10 @@ function renderKindSeg() {
     onclick: () => { state.addKind = k.code; renderKindSeg(); $("#addTitle").focus(); },
   }, k.code)));
   const k = kindBy(state.addKind);
+  $("#ownerSeg").replaceChildren(...(needsOwner(k) ? ["user", "ai"].map((o) => h("button", {
+    type: "button", "aria-pressed": String(o === state.addOwner), title: "Verantwortlich",
+    onclick: () => { state.addOwner = o; renderKindSeg(); $("#addTitle").focus(); },
+  }, OWNER_LABELS[o])) : []));
   $("#addHint").textContent = k ? `${k.name}: ${k.description || ""} · Tipp: „I: …“ wählt die Kategorie per Kürzel.` : "";
 }
 
@@ -353,10 +359,12 @@ function render(before) {
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, "Noch kein Projekt. Lege über ☰ ein neues an.")));
     return;
   }
-  const known = new Set(state.kinds.map((k) => k.code));
+  // Inactive kinds (e.g. legacy "T") only get a column while they still have items in view.
+  const legacy = state.allKinds.filter((k) => !k.active && state.items.some((i) => i.kind === k.code));
+  const known = new Set(state.allKinds.map((k) => k.code));
   const extra = [...new Set(state.items.map((i) => i.kind).filter((c) => !known.has(c)))]
     .map((c) => ({ code: c, name: c, color: "#6b7280" }));
-  board.replaceChildren(...[...state.kinds, ...extra].map((k) => {
+  board.replaceChildren(...[...state.kinds, ...legacy, ...extra].map((k) => {
     const list = state.items.filter((i) => i.kind === k.code);
     return h("section", { class: "col", style: `--kc:${k.color || "#6b7280"}` },
       h("header", { class: "col-head" },
@@ -420,7 +428,7 @@ $("#add").addEventListener("submit", async (e) => {
     kind = m[1].toUpperCase(); title = m[2];
   }
   try {
-    const { item } = await api(P(state.project) + "/items", { method: "POST", body: { kind, title } });
+    const { item } = await api(P(state.project) + "/items", { method: "POST", body: { kind, title, ...(needsOwner(kindBy(kind)) ? { owner: state.addOwner } : {}) } });
     $("#addTitle").value = "";
     toast(`${item.ref} angelegt`);
     await refresh(false);

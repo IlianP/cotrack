@@ -13,12 +13,12 @@ talk about it in any chat.
 
 ## Features (prototype)
 
-- **Categories** – default set: **T** to-do (you) · **A** task (AI) · **I** idea (💡) · **W** warning (⚠). Configurable.
+- **Categories** – default set: **A** action (yours or the AI's) · **D** decision · **I** idea (💡) · **W** warning (⚠). Configurable.
 - **Stable references** per project and category; dependencies like `A4 ⏸T2`.
 - **Projects** – one per GitHub repository (or anything else), plus a cross-project view.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
-  `Du: T3 Lizenz · KI: A2 ⏸T4 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
+  `Du: D1 Lizenz · A5 Tokens · KI: A2 ⏸D1 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, no build step, no dependencies.
@@ -66,16 +66,16 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 
-Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name.
+Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name (default: the creator).
 `seq` lets you import an existing reference (e.g. `T3` from a chat); a reference that was ever used is rejected.
 
 ```bash
 export COTRACK_URL=https://cotrack.example.workers.dev COTRACK_TOKEN=...
 curl -s -H "Authorization: Bearer $COTRACK_TOKEN" "$COTRACK_URL/api/projects/cotrack/footer?format=text"
 curl -s -X POST -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
-  "$COTRACK_URL/api/projects/cotrack/items" -d '{"kind":"T","title":"entscheiden: Lizenz","short":"Lizenz"}'
+  "$COTRACK_URL/api/projects/cotrack/items" -d '{"kind":"D","title":"Lizenz","owner":"user"}'
 curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
-  "$COTRACK_URL/api/projects/cotrack/items/T3" -d '{"status":"done"}'
+  "$COTRACK_URL/api/projects/cotrack/items/D1" -d '{"status":"done"}'
 ```
 
 ## Roadmap

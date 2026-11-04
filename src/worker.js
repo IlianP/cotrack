@@ -333,7 +333,8 @@ async function createItem(db, project, input, actor) {
     title: text(input.title, "title", 500, { required: true }),
     short: text(input.short, "short", 40),
     body: text(input.body, "body", 20000),
-    owner: "owner" in input ? normOwner(input.owner) : kind.default_owner,
+    // Without an explicit owner, actionable items belong to whoever creates them.
+    owner: "owner" in input ? normOwner(input.owner) : (kind.default_owner ?? (kind.actionable ? actor : null)),
     status: normStatus(input.status ?? "open"),
     waiting_on: normRefs(input.waiting_on),
     source: text(input.source, "source", 1000),

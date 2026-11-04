@@ -121,7 +121,7 @@ T/W für neue Einträge deaktivieren. Bestehende Kennungen bleiben gültig.
   Schritt. Mögliche Umsetzung: cotrack fragt bei der Übergabe nach „Was nehmen wir mit?“ und speichert es
   projektübergreifend, zeigt es aber im Chat nicht an.
 
-**Offene Frage: Nummerierung**
+**Nummerierung** (entschieden: bleibt je Kategorie)
 - Heute zählt jede Kategorie für sich: T4, A4 und I4 können gleichzeitig existieren.
 - Beim Wechsel der Kategorie (Idee wird zugesagt, Aufgabe wandert von der KI zu dir) entsteht eine neue Nummer.
 - Alternative: **eine fortlaufende Nummer pro Projekt** für alle Kategorien. Der Buchstabe zeigt nur den aktuellen Zustand:
@@ -138,3 +138,17 @@ Grundsätze:
 3. **Nur Änderungen nachladen:** seit dem letzten bekannten Stand (`/events?after=<id>`).
 4. **Schreiben ist billig:** Eine Änderung ist ein kurzer Aufruf mit Kennung, z. B. „A4 erledigt“.
 5. Der spätere MCP-Server (A2) gibt standardmäßig dieselben kompakten Textformate zurück, kein ausführliches JSON.
+
+## 9. Entscheidung: Methodik v2 (4. November)
+
+| Kürzel | Bedeutung | Fußzeile |
+|---|---|---|
+| **A** | Aufgabe – für dich oder die KI | unter „Du:“ bzw. „KI:“ |
+| **D** | Entscheidung – triffst du, die KI bereitet vor | unter „Du:“, vor den Aufgaben |
+| **I** | Idee | 💡 |
+| **W** | Warnung/Risiko | ⚠ |
+
+- Jede Kategorie zählt für sich (keine fortlaufende Projektnummer).
+- Kein eigenes P (Problem) und kein L (Erkenntnis) in der Fußzeile.
+- Bestehende T-Kennungen bleiben gültig; offene T-Punkte wurden in cotrack zu A/D umgewandelt.
+- Neuer Prompt-Text: [PROMPT.md](PROMPT.md).
