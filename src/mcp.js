@@ -184,10 +184,12 @@ async function callTool(name, args, db, actor) {
     }
     case "cotrack_status": {
       const project = await getProject(db, args.project);
-      const [items, kinds, stand] = await Promise.all([
+      // Read the cursor BEFORE the items: a write in between is then replayed by
+      // cotrack_changes instead of being skipped.
+      const stand = await latestEvent(db, project.slug);
+      const [items, kinds] = await Promise.all([
         listItems(db, { project: project.slug, status: "open" }),
         listKinds(db, true),
-        latestEvent(db, project.slug),
       ]);
       return `Fußzeile: ${buildFooter(items, kinds) || "(nichts offen)"}\nStand: ${stand}\n\n${itemsAsText(items, kinds)}`;
     }
@@ -248,15 +250,27 @@ async function callTool(name, args, db, actor) {
         .all();
       if (!results.length) return `Keine Änderungen seit Stand ${after}.`;
       const lines = results.map((e) => {
-        const d = e.data ? JSON.parse(e.data) : {};
-        const detail = d.title || (d.status ? `→ ${d.status}` : d.to ? `→ ${d.to}` : "");
-        return `${e.item_ref || "Projekt"} ${e.action} (${OWNER_LABELS[e.actor] || e.actor})${detail ? ": " + detail : ""}`;
+        return `${e.item_ref || "Projekt"} ${e.action} (${OWNER_LABELS[e.actor] || e.actor})${describeChange(e)}`;
       });
       return `${lines.join("\n")}\nStand: ${results[results.length - 1].id}`;
     }
     default:
       throw httpError(404, "unknown_tool", name);
   }
+}
+
+// Compact but complete: every changed field of an event, long texts shortened.
+const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "source", "due", "body", "to", "name", "repo"];
+function describeChange(e) {
+  if (!e.data) return "";
+  const d = JSON.parse(e.data);
+  if (e.action === "deleted") return d.title ? `: ${d.title}` : "";
+  const parts = CHANGE_FIELDS.filter((k) => k in d).map((k) => {
+    let v = d[k] === null ? "–" : String(d[k]);
+    if (v.length > 80) v = v.slice(0, 77) + "…";
+    return k === "title" ? v : `${k}=${v}`;
+  });
+  return parts.length ? `: ${parts.join(" · ")}` : "";
 }
 
 /* ---------------------------------------------------------- JSON-RPC */
