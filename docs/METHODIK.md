@@ -1,10 +1,27 @@
 # Methodik: offene Punkte gemeinsam führen
 
-> Arbeitsdokument zu **A3** / **T4**. Ziel: ein kleines, alltagstaugliches Schema,
-> das sich an Projektmanagement-Standards (PRINCE2, PMBOK, RAID-Log) orientiert,
-> ohne Chats und kleine Projekte zu überfrachten.
+## Gültig: Methodik v2.2 (Stand 4. November 2026)
 
-## 1. Ausgangslage – Schema v1 (heute im Einsatz)
+| Kürzel | Bedeutung | Fußzeile |
+|---|---|---|
+| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „Du:“ bzw. „KI:“ |
+| **D** | Entscheidung – triffst du, die KI bereitet Optionen vor; Ergebnis wird festgehalten | unter „Du:“, vor den Aufgaben |
+| **I** | Idee – bei Zusage wird daraus A oder D, bei Absage „verworfen“ | 💡 |
+| **W** | Warnung/Risiko – bleibt bis erledigt oder ausdrücklich akzeptiert; eingetretene Probleme werden zu A/D | ⚠ |
+
+- **Nummerierung:** je Kategorie, nie neu vergeben. Abhängigkeiten als „A4 ⏸D2“.
+- **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
+  bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
+- **Führende Liste:** cotrack (Web-App + MCP-Connector). Die `docs/STATUS.md` eines Repositorys enthält nur einen Link
+  zum Board, damit niemand bei jeder Änderung eine Datei pushen muss. Ohne cotrack gilt weiter die Liste in `STATUS.md`.
+- **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
+- Der Prompt-Text dazu: [PROMPT.md](PROMPT.md). Beide Dateien müssen immer zueinander passen.
+
+---
+
+*Die folgenden Abschnitte dokumentieren, wie es zu dieser Methodik kam (Herleitung und Diskussion).*
+
+## 1. Ausgangslage – Schema v1 (bis 3. November)
 
 | Kürzel | Bedeutung | Wer |
 |---|---|---|
