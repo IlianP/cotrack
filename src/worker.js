@@ -577,7 +577,7 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
     });
   }
   // Dependencies: the blocking item carries "▶A2,A4" (order is visible at a glance). The waiting item only
-  // keeps "⏸D1" when its blocker is open but not itself shown in the line; resolved blockers show nothing.
+  // keeps "⏸D1" when its blocker is open or unknown but not itself shown in the line; resolved blockers show nothing.
   const succ = successorMap(items);
   const status = new Map(items.map((i) => [i.ref, i.status]));
   const shownRefs = new Set(ordered.flatMap((g, i) => g.items.slice(0, shown[i]).map((it) => it.ref)));
@@ -587,7 +587,8 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
       const entries = g.items.slice(0, shown[i]).map((it) => {
         const next = succ.get(it.ref) || [];
         const waits = (it.waiting_on ? it.waiting_on.split(",") : []).filter(
-          (r) => OPEN.includes(status.get(r)) && !shownRefs.has(r),
+          // Unknown blockers (not in the loaded items) keep their marker; only known-closed ones are dropped.
+          (r) => (!status.has(r) || OPEN.includes(status.get(r))) && !shownRefs.has(r),
         );
         const marks = [next.length ? `▶${next.join(",")}` : "", waits.length ? `⏸${waits.join(",")}` : ""].filter(Boolean);
         return `${it.ref}${marks.length ? " " + marks.join(" ") : ""} ${shortLabel(it)}`;
