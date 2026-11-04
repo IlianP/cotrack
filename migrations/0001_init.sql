@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS kinds (
   description   TEXT,
   actionable    INTEGER NOT NULL DEFAULT 1,    -- 1 = someone has to do it (grouped by owner in the footer)
   default_owner TEXT,                          -- 'user' | 'ai' | NULL
-  footer_label  TEXT,                          -- label for non-actionable kinds, e.g. "Ideen:" or "⚠"
+  footer_label  TEXT,                          -- label for non-actionable kinds, e.g. "💡" or "⚠"
   color         TEXT,
   sort_order    INTEGER NOT NULL DEFAULT 50,
   active        INTEGER NOT NULL DEFAULT 1
@@ -73,5 +73,5 @@ CREATE INDEX IF NOT EXISTS events_ref ON events(project_slug, item_ref);
 INSERT OR IGNORE INTO kinds (code, name, description, actionable, default_owner, footer_label, color, sort_order) VALUES
   ('T', 'To-do (Du)',  'Nur der Mensch kann es tun: entscheiden, freigeben, Zugänge, Tests auf eigenen Geräten. Entscheidungen beginnen mit „entscheiden:“.', 1, 'user', NULL, '#d97706', 10),
   ('A', 'Aufgabe (KI)', 'Kann die KI selbst erledigen.', 1, 'ai', NULL, '#2563eb', 20),
-  ('I', 'Idee', 'Vorschlag, noch nicht beschlossen. Bei Zusage wird daraus A oder T, bei Absage wird sie entfernt.', 0, NULL, 'Ideen:', '#7c3aed', 30),
+  ('I', 'Idee', 'Vorschlag, noch nicht beschlossen. Bei Zusage wird daraus A oder T, bei Absage wird sie entfernt.', 0, NULL, '💡', '#7c3aed', 30),
   ('W', 'Warnung', 'Risiko oder Problem. Bleibt, bis es erledigt oder ausdrücklich akzeptiert ist.', 0, NULL, '⚠', '#dc2626', 40);

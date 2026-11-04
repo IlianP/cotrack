@@ -66,7 +66,7 @@ T/A/I/W bleiben. Nur Ergänzungen: abgesagte Ideen werden „verworfen“ statt 
 Die Fußzeile bleibt fast gleich – gruppiert wird weiterhin nach **Du / KI**:
 
 ```
-Du: D1 Lizenz · A6 Tokens · KI: A2 ⏸D1 MCP-Server · Ideen: I2 Sync · ⚠ R1 Auth · neu: A6 · erledigt: A1
+Du: D1 Lizenz · A6 Tokens · KI: A2 ⏸D1 MCP-Server · 💡 I2 Sync · ⚠ R1 Auth · neu: A6 · erledigt: A1
 ```
 
 Vorteile:
@@ -101,3 +101,40 @@ T/W für neue Einträge deaktivieren. Bestehende Kennungen bleiben gültig.
 6. **Buchstaben:** Englisch (A/D/I/R/P/L) oder Deutsch (A/E/I/R/P/L)?
 7. **Abgesagte Ideen:** löschen (wie bisher) oder als „verworfen“ behalten?
 8. **Verantwortliche:** Reichen „Du“ und „KI“ – oder sollen weitere Personen bzw. Claude und ChatGPT getrennt auftauchen?
+
+## 7. Stand der Diskussion (4. November)
+
+**Entschieden**
+- Ideen werden in der Fußzeile mit 💡 statt „Ideen:“ angezeigt (umgesetzt).
+- „Du:“ und „KI:“ bleiben als Gruppen in der Fußzeile. Keine Emojis für Verantwortliche: zwei Buchstaben sind eindeutiger.
+- Entscheidungen bekommen eine eigene Kategorie, getrennt von Aufgaben.
+- Die Kategorien sollen geschärft werden (also nicht Option 1). Wie genau, ist noch offen.
+
+**Empfehlung nach Rückfragen**
+- **Kein eigenes P (Problem).** Ein Problem, das schon eingetreten ist, wird im Chat praktisch immer sofort
+  zu einer Aufgabe („Deployment schlägt fehl“ → A „Deployment reparieren“) oder zu einer Entscheidung.
+  Die Trennung lohnt sich nur in großen Projekten mit eigenem Issue-Register. Deshalb bleibt **⚠ W** für alles,
+  was *noch nicht* Aufgabe ist, aber beobachtet oder bewusst akzeptiert werden muss.
+  - Typisches W/Risiko: „Token steht im Chatverlauf – könnte missbraucht werden“, „Free-Tarif reicht evtl. nicht“.
+  - Typisches Problem: „Codex hat einen Fehler gefunden“, „Build ist rot“. Daraus wird direkt eine A.
+- **Erkenntnisse (L) nicht in der Fußzeile.** Sie sind am Ende einer Arbeit (Übergabe) nützlich, nicht in jedem
+  Schritt. Mögliche Umsetzung: cotrack fragt bei der Übergabe nach „Was nehmen wir mit?“ und speichert es
+  projektübergreifend, zeigt es aber im Chat nicht an.
+
+**Offene Frage: Nummerierung**
+- Heute zählt jede Kategorie für sich: T4, A4 und I4 können gleichzeitig existieren.
+- Beim Wechsel der Kategorie (Idee wird zugesagt, Aufgabe wandert von der KI zu dir) entsteht eine neue Nummer.
+- Alternative: **eine fortlaufende Nummer pro Projekt** für alle Kategorien. Der Buchstabe zeigt nur den aktuellen Zustand:
+  Aus 💡 I7 wird bei Zusage A7, die Nummer bleibt. „7“ meint dann immer denselben Punkt.
+  Nachteil: Die Nummern wachsen schneller und haben je Kategorie Lücken (A1, I2, W3, A4 …).
+
+## 8. Anforderung: mehrere Sessions, wenige Tokens
+
+Mehrere Unterhaltungen arbeiten am selben Projekt. Jede Session muss den Stand kennen, ohne viel Kontext zu verbrauchen.
+Grundsätze:
+1. **Session-Start:** nur die Fußzeile laden (eine Zeile, ca. 100 Tokens), bei Bedarf die Kurzliste
+   (`?format=text`, eine Zeile pro Punkt, ohne Beschreibungen).
+2. **Details nur auf Anfrage:** Beschreibung eines einzelnen Punkts gezielt abrufen.
+3. **Nur Änderungen nachladen:** seit dem letzten bekannten Stand (`/events?after=<id>`).
+4. **Schreiben ist billig:** Eine Änderung ist ein kurzer Aufruf mit Kennung, z. B. „A4 erledigt“.
+5. Der spätere MCP-Server (A2) gibt standardmäßig dieselben kompakten Textformate zurück, kein ausführliches JSON.

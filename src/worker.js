@@ -91,7 +91,9 @@ async function route(req, db, url, actor) {
 
   // Cross-project view, e.g. GET /api/items?owner=user&status=open
   if (seg[0] === "items" && seg.length === 1 && method === "GET") {
-    return json({ items: await listItems(db, filtersFrom(q)) });
+    const items = await listItems(db, filtersFrom(q));
+    if (q.get("format") === "text") return plain(itemsAsText(items, await listKinds(db, true), { withProject: true }));
+    return json({ items });
   }
 
   if (seg[0] === "projects") {
@@ -107,7 +109,11 @@ async function route(req, db, url, actor) {
     const sub = seg[2];
     if (sub === "items") {
       if (seg.length === 3) {
-        if (method === "GET") return json({ items: await listItems(db, { ...filtersFrom(q), project: project.slug }) });
+        if (method === "GET") {
+          const items = await listItems(db, { ...filtersFrom(q), project: project.slug });
+          if (q.get("format") === "text") return plain(itemsAsText(items, await listKinds(db, true)));
+          return json({ items });
+        }
         if (method === "POST") return json({ item: await createItem(db, project, await readJson(req), actor) }, 201);
       }
       const item = await getItemByRef(db, project.slug, seg[3]);
@@ -494,7 +500,7 @@ function shortLabel(item) {
 
 /**
  * Builds the one-line summary used at the end of chat answers, e.g.
- * "Du: T1 Repo-Name · KI: A3 Konzept (+2) · Ideen: I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: T2"
+ * "Du: T1 Repo-Name · KI: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: T2"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
 export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
@@ -550,6 +556,26 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
     if (done.length) parts.push(`erledigt: ${done.join(", ")}`);
   }
   return parts.join(" · ");
+}
+
+/**
+ * Compact one-line-per-item listing for AI assistants (few tokens), e.g.
+ * "T4 entscheiden: Kategorien ⏸A3" or "A2 MCP-Server bauen [in Arbeit] @Maria".
+ * Bodies are left out; fetch a single item for details.
+ */
+export function itemsAsText(items, kinds, { withProject = false } = {}) {
+  const kindBy = new Map(kinds.map((k) => [k.code, k]));
+  const lines = items.map((it) => {
+    const k = kindBy.get(it.kind);
+    const parts = [withProject ? `${it.project_slug}/${it.ref}` : it.ref, it.title];
+    if (it.waiting_on) parts.push(it.waiting_on.split(",").map((r) => `⏸${r}`).join(" "));
+    if (it.status !== "open") parts.push(`[${STATUS_LABELS[it.status]}]`);
+    if (it.owner && (!k || it.owner !== k.default_owner)) parts.push(`@${OWNER_LABELS[it.owner] || it.owner}`);
+    if (it.converted_to) parts.push(`→${it.converted_to}`);
+    if (it.due) parts.push(`📅${it.due}`);
+    return parts.join(" ");
+  });
+  return lines.length ? lines.join("\n") + "\n" : "(keine)\n";
 }
 
 export function buildStatusMarkdown(project, items, kinds, origin) {

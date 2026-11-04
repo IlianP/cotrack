@@ -13,12 +13,12 @@ talk about it in any chat.
 
 ## Features (prototype)
 
-- **Categories** – default set: **T** to-do (you) · **A** task (AI) · **I** idea · **W** warning. Configurable.
+- **Categories** – default set: **T** to-do (you) · **A** task (AI) · **I** idea (💡) · **W** warning (⚠). Configurable.
 - **Stable references** per project and category; dependencies like `A4 ⏸T2`.
 - **Projects** – one per GitHub repository (or anything else), plus a cross-project view.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
-  `Du: T3 Lizenz · KI: A2 ⏸T4 MCP-Server · Ideen: I2 Sync · ⚠ W1 Auth`.
+  `Du: T3 Lizenz · KI: A2 ⏸T4 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, no build step, no dependencies.
@@ -56,14 +56,14 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/projects` | list projects (with open counts) |
 | POST | `/api/projects` | create `{slug, name?, repo?}` |
 | PATCH | `/api/projects/:slug` | update `{name?, repo?, archived?}` |
-| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=` | list items |
+| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | list items (`format=text`: one compact line per item, for AI assistants) |
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/T3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8` | chat footer line |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |
-| GET | `/api/items?owner=user&status=open` | items across all projects |
+| GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 
 Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name.
