@@ -20,17 +20,36 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 
 | Werkzeug | Zweck | liest/schreibt |
 |---|---|---|
-| `cotrack_projects` | Projekte mit Anzahl offener Punkte | liest |
+| `cotrack_projects` | Projekte (Slug, Kürzel, Repository) mit Anzahl offener Punkte; mit `repo` nur das Projekt zu diesem Repository | liest |
 | `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer | liest |
 | `cotrack_list` | gefilterte Liste (Status, Kategorie, Zuständigkeit, Suche) | liest |
 | `cotrack_get` | ein Punkt mit Beschreibung | liest |
 | `cotrack_add` | neuen Punkt anlegen | schreibt |
 | `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`) | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D | schreibt |
-| `cotrack_footer` | nur die Fußzeile | liest |
+| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = eine Zeile je Projekt, `delta` = nur „neu/erledigt“ | liest |
 | `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions) | liest |
 
 Bewusst **kein Löschen** per KI – verworfen wird mit `status: "dropped"`, damit nichts verloren geht.
+
+Überall, wo `project` verlangt wird, geht der **Slug oder das Kürzel** (`cotrack` oder `CT`). `cotrack_get`, `cotrack_update`
+und `cotrack_convert` nehmen auch eine **qualifizierte Kennung** (`ref: "CT:A4"`); `project` darf dann fehlen.
+
+## Welches Projekt gehört zur Unterhaltung?
+
+Das entscheidet die KI, nicht der Server: Der MCP-Server sieht nicht, welches Repository an der Unterhaltung hängt.
+Damit das zuverlässig klappt, greifen drei Ebenen ineinander:
+
+1. **`instructions` des Servers** – cotrack schickt beim Verbinden eine Gebrauchsanweisung mit, die die Zuordnung beschreibt
+   (`COTRACK.md` lesen, sonst `cotrack_projects` mit `repo`, sonst nachfragen). Clients, die sie weiterreichen (Claude Code tut das),
+   brauchen nichts weiter.
+2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), v2.4) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
+   nicht anzeigt (claude.ai, ChatGPT).
+3. **Hinweis im Repository** (optional) – eine Zeile in `CLAUDE.md` bzw. `AGENTS.md`, z. B. „Offene Punkte: cotrack-Projekt siehe COTRACK.md“.
+   Claude Code lädt diese Dateien von selbst; so klappt es auch ohne Prompt.
+
+`COTRACK.md` im Repo-Root ist die Zuordnung (Vorlage im [README](../README.md#linking-a-repository)). Fehlt sie, ist das Feld `repo`
+des Projekts die Rückfalllösung.
 
 ## Verbinden
 

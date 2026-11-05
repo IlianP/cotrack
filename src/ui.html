@@ -330,7 +330,7 @@ function setLive(ok) { const l = $("#live"); l.className = "live " + (ok ? "on" 
 function renderProjects() {
   const sel = $("#project");
   sel.replaceChildren(
-    ...state.projects.map((p) => h("option", { value: p.slug }, `${p.name}${p.open_count ? ` (${p.open_count})` : ""}`)),
+    ...state.projects.map((p) => h("option", { value: p.slug }, `${p.code ? p.code + " · " : ""}${p.name}${p.open_count ? ` (${p.open_count})` : ""}`)),
     h("option", { value: ALL }, "Alle Projekte"),
   );
   sel.value = state.project;
@@ -389,7 +389,10 @@ function render(before) {
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
   const meta = [];
-  if (state.project === ALL) meta.push(h("span", { class: "pill" }, it.project_slug));
+  if (state.project === ALL) {
+    const pr = state.projects.find((p) => p.slug === it.project_slug);
+    meta.push(h("span", { class: "pill", title: it.project_slug }, pr?.code || it.project_slug));
+  }
   for (const r of (it.waiting_on || "").split(",").filter(Boolean)) meta.push(h("span", { class: "pill wait", title: "wartet auf" }, "⏸ " + r));
   const next = successors.get(it.project_slug + ":" + it.ref);
   if (next) meta.push(h("span", { class: "pill next", title: "danach folgt" }, "▶ " + next.join(", ")));
@@ -542,6 +545,7 @@ function openMenu() {
     h("h3", null, "Menü"),
     h("div", { class: "menu-list" },
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, "＋ Neues Projekt"),
+      inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, "Kürzel für dieses Projekt festlegen") : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), "STATUS.md-Abschnitt kopiert")) }, "„Offene Punkte“ für STATUS.md kopieren") : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(() => copy($("#footerText").textContent, "Fußzeile kopiert")) }, "Fußzeile kopieren") : null,
       h("a", { class: "btn", style: "display:flex;align-items:center;text-decoration:none", href: "https://github.com/IlianP/cotrack#api", target: "_blank", rel: "noopener" }, "API-Dokumentation ↗"),
@@ -551,24 +555,55 @@ function openMenu() {
   );
 }
 
+const currentProject = () => state.projects.find((p) => p.slug === state.project);
+
+function openSetCode() {
+  const p = currentProject();
+  const code = h("input", { required: true, pattern: "[A-Za-z]{2}[A-Za-z0-9]{0,2}", maxlength: "4", placeholder: "2–4 Zeichen, z. B. CT", style: "text-transform:uppercase" });
+  const d = openDialog(
+    h("h3", null, `Kürzel für ${p.name}`),
+    h("p", { class: "small" }, "Zwei Buchstaben, dann optional Buchstaben oder Ziffern. Einmal festgelegt, lässt es sich nicht mehr ändern."),
+    field("Kürzel", code),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"), h("button", { class: "primary" }, "Festlegen")),
+  );
+  d.querySelector("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      await api(P(p.slug), { method: "PATCH", body: { code: code.value.trim() } });
+      closeDialog(); await loadProjects(); toast("Kürzel festgelegt");
+    } catch (err) { toast("Fehler: " + err.message); }
+  });
+}
+
 function openNewProject() {
   const slug = h("input", { required: true, pattern: "[a-z0-9][a-z0-9\\-]{0,62}", placeholder: "z. B. festival-workshop-planner" });
   const name = h("input", { placeholder: "Anzeigename" });
   const repo = h("input", { placeholder: "GitHub: owner/repo (optional)" });
+  const code = h("input", { pattern: "[A-Za-z]{2}[A-Za-z0-9]{0,2}", maxlength: "4", placeholder: "2–4 Zeichen, leer = Vorschlag", style: "text-transform:uppercase" });
+  let timer;
+  const suggest = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      const s = slug.value.trim();
+      if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) return;
+      try { const r = await api("/code-suggestion?slug=" + encodeURIComponent(s)); code.placeholder = r.code ? `${r.code} (Vorschlag)` : "2–4 Zeichen"; } catch { /* suggestion is optional */ }
+    }, 250);
+  };
   repo.addEventListener("input", () => {
     const r = repo.value.trim().split("/")[1];
-    if (r && !slug.dataset.touched) slug.value = r.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    if (r && !slug.dataset.touched) { slug.value = r.toLowerCase().replace(/[^a-z0-9-]/g, "-"); suggest(); }
   });
-  slug.addEventListener("input", () => { slug.dataset.touched = "1"; });
+  slug.addEventListener("input", () => { slug.dataset.touched = "1"; suggest(); });
   const d = openDialog(
     h("h3", null, "Neues Projekt"),
-    field("GitHub-Repository", repo), field("Kürzel (URL)", slug), field("Name", name),
+    field("GitHub-Repository", repo), field("Slug (URL)", slug), h("div", { class: "row2" }, field("Name", name), field("Kürzel", code)),
+    h("p", { class: "small" }, "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern."),
     h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"), h("button", { class: "primary" }, "Anlegen")),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
-      const { project } = await api("/projects", { method: "POST", body: { slug: slug.value.trim(), name: name.value.trim() || undefined, repo: repo.value.trim() || undefined } });
+      const { project } = await api("/projects", { method: "POST", body: { slug: slug.value.trim(), name: name.value.trim() || undefined, repo: repo.value.trim() || undefined, code: code.value.trim() || undefined } });
       closeDialog(); await loadProjects(); selectProject(project.slug); toast("Projekt angelegt");
     } catch (err) { toast("Fehler: " + err.message); }
   });

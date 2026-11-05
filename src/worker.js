@@ -13,6 +13,10 @@ const CLOSED = ["done", "dropped"];
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const KIND_RE = /^[A-Z]{1,4}$/;
 const REF_RE = /^([A-Z]{1,4})(\d{1,6})$/;
+// Project code: 2-4 characters, starts with two letters so it never looks like a reference ("A1").
+const CODE_RE = /^[A-Z]{2}[A-Z0-9]{0,2}$/;
+// Qualified reference: "<code or slug>:<ref>", e.g. "CT:A14".
+const QREF_RE = /^([A-Za-z0-9][A-Za-z0-9-]{0,62}):([A-Za-z]{1,4}\d{1,6})$/;
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const OWNER_LABELS = { user: "Du", ai: "KI" };
@@ -96,6 +100,22 @@ async function route(req, db, url, actor) {
     return json({ version: row.v });
   }
 
+  // Suggested project code for a slug, e.g. GET /api/code-suggestion?slug=festival-workshop-planner
+  if (seg.length === 1 && seg[0] === "code-suggestion" && method === "GET") {
+    const slug = (q.get("slug") || "").toLowerCase();
+    if (!SLUG_RE.test(slug)) throw new HttpError(400, "invalid_field", "slug");
+    return json({ code: await suggestCode(db, slug) });
+  }
+
+  // Footer for several projects at once: GET /api/footer?projects=cotrack,ct2&since=ISO&delta=1
+  if (seg.length === 1 && seg[0] === "footer" && method === "GET") {
+    const keys = (q.get("projects") || "").split(",").map((k) => k.trim()).filter(Boolean);
+    if (!keys.length) throw new HttpError(400, "missing_field", "projects");
+    const textLine = await footerFor(db, keys, { since: q.get("since") || null, delta: q.get("delta") === "1", max: clampInt(q.get("max"), 1, 30, 8) });
+    if (q.get("format") === "text") return plain(textLine);
+    return json({ footer: textLine });
+  }
+
   if (seg[0] === "kinds" && seg.length === 1) {
     if (method === "GET") return json({ kinds: await listKinds(db, q.get("all") === "1") });
     if (method === "POST") return json({ kind: await upsertKind(db, await readJson(req)) });
@@ -164,6 +184,7 @@ async function route(req, db, url, actor) {
           const textLine = buildFooter(items, kinds, {
             max: clampInt(q.get("max"), 1, 30, 8),
             since: q.get("since") || null,
+            deltaOnly: q.get("delta") === "1",
           });
           if (q.get("format") === "text") return plain(textLine);
           return json({ footer: textLine });
@@ -189,10 +210,68 @@ export async function listProjects(db, includeArchived) {
   return results;
 }
 
-export async function getProject(db, slug) {
-  const p = await db.prepare("SELECT * FROM projects WHERE slug = ?").bind(slug).first();
-  if (!p) throw new HttpError(404, "project_not_found", slug);
+// Accepts the slug or the code of a project ("cotrack" or "CT"); case does not matter.
+export async function getProject(db, key) {
+  const k = String(key ?? "").trim();
+  const p = k
+    ? await db.prepare("SELECT * FROM projects WHERE slug = ? OR code = ?").bind(k.toLowerCase(), k.toUpperCase()).first()
+    : null;
+  if (!p) throw new HttpError(404, "project_not_found", k);
   return p;
+}
+
+// "CT:A14" -> { qualifier: "CT", ref: "A14" }; "A14" -> { qualifier: null, ref: "A14" }
+export function splitRef(ref) {
+  const s = String(ref ?? "").trim();
+  const m = s.match(QREF_RE);
+  return m ? { qualifier: m[1], ref: m[2] } : { qualifier: null, ref: s };
+}
+
+// Codes and slugs share one namespace for lookups, so a code must not equal another project's slug
+// (and vice versa); otherwise "CO" could mean two projects.
+async function assertCodeFree(db, code, ownSlug) {
+  const clash = await db
+    .prepare("SELECT slug FROM projects WHERE (code = ? OR slug = ?) AND slug != ?")
+    .bind(code, code.toLowerCase(), ownSlug ?? "")
+    .first();
+  if (clash) throw new HttpError(409, "code_taken", `${code} (${clash.slug})`);
+}
+
+// The checks above give friendly errors; the unique index and the namespace triggers in migration 0004 are the
+// atomic backstop when two requests race. Translate their failures into the same 409.
+async function batchProject(db, stmts, detail) {
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    if (/code_immutable/.test(String(err?.message ?? err))) throw new HttpError(409, "code_immutable", detail);
+    if (/code_slug_clash|UNIQUE constraint failed: projects\.code/.test(String(err?.message ?? err))) {
+      throw new HttpError(409, "code_taken", detail);
+    }
+    throw err;
+  }
+}
+
+function codeCandidates(slug) {
+  const parts = slug.toUpperCase().split("-").map((p) => p.replace(/[^A-Z]/g, "")).filter(Boolean);
+  const letters = parts.join("");
+  const out = [];
+  if (parts.length > 1) out.push(parts.map((p) => p[0]).join("").slice(0, 4)); // initials: "test-sandbox" -> TS
+  for (const n of [2, 3, 4]) out.push(letters.slice(0, n));
+  for (let n = 2; n < 100 && letters.length >= 2; n++) out.push(`${letters.slice(0, 2)}${n}`);
+  return [...new Set(out)].filter((c) => CODE_RE.test(c));
+}
+
+// First free candidate: initials of the slug parts, then its first 2, 3, 4 letters. Null if none fits.
+export async function suggestCode(db, slug, ownSlug = null) {
+  const { results } = await db.prepare("SELECT slug, code FROM projects WHERE slug != ?").bind(ownSlug ?? "").all();
+  const used = new Set(results.flatMap((r) => [r.slug.toUpperCase(), r.code].filter(Boolean)));
+  return codeCandidates(slug).find((c) => !used.has(c)) ?? null;
+}
+
+function normCode(v) {
+  const code = text(v, "code", 4)?.toUpperCase() ?? null;
+  if (code && !CODE_RE.test(code)) throw new HttpError(400, "invalid_field", "code (2-4 characters: two letters, then letters or digits)");
+  return code;
 }
 
 async function createProject(db, input, actor) {
@@ -204,12 +283,22 @@ async function createProject(db, input, actor) {
   const t = now();
   const exists = await db.prepare("SELECT 1 FROM projects WHERE slug = ?").bind(slug).first();
   if (exists) throw new HttpError(409, "project_exists", slug);
-  await db.batch([
-    db
-      .prepare("INSERT INTO projects (slug, name, repo, archived, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)")
-      .bind(slug, name, repo, t, t),
-    eventStmt(db, slug, null, "project_created", actor, { name, repo }, t),
-  ]);
+  // The human may choose the code; otherwise one is suggested from the slug.
+  let code = normCode(input.code);
+  if (code) await assertCodeFree(db, code, slug);
+  else code = await suggestCode(db, slug);
+  const taken = await db.prepare("SELECT 1 FROM projects WHERE code = ?").bind(slug.toUpperCase()).first();
+  if (taken) throw new HttpError(409, "slug_matches_code", slug);
+  await batchProject(
+    db,
+    [
+      db
+        .prepare("INSERT INTO projects (slug, name, repo, code, archived, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)")
+        .bind(slug, name, repo, code, t, t),
+      eventStmt(db, slug, null, "project_created", actor, { name, repo, code }, t),
+    ],
+    `${code ?? ""} / ${slug}`,
+  );
   return getProject(db, slug);
 }
 
@@ -220,16 +309,30 @@ async function updateProject(db, project, input, actor) {
     changes.repo = text(input.repo, "repo", 200);
     if (changes.repo && !REPO_RE.test(changes.repo)) throw new HttpError(400, "invalid_field", "repo");
   }
+  if ("code" in input) {
+    // Set once, never changed: references written down in chats and documents must stay valid.
+    const code = normCode(input.code);
+    if (!code) throw new HttpError(400, "missing_field", "code");
+    if (project.code && project.code !== code) throw new HttpError(409, "code_immutable", project.code);
+    if (project.code !== code) {
+      await assertCodeFree(db, code, project.slug);
+      changes.code = code;
+    }
+  }
   if ("archived" in input) changes.archived = input.archived ? 1 : 0;
   const cols = Object.keys(changes);
   if (!cols.length) return project;
   const t = now();
-  await db.batch([
-    db
-      .prepare(`UPDATE projects SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ? WHERE slug = ?`)
-      .bind(...cols.map((c) => changes[c]), t, project.slug),
-    eventStmt(db, project.slug, null, "project_updated", actor, changes, t),
-  ]);
+  await batchProject(
+    db,
+    [
+      db
+        .prepare(`UPDATE projects SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ? WHERE slug = ?`)
+        .bind(...cols.map((c) => changes[c]), t, project.slug),
+      eventStmt(db, project.slug, null, "project_updated", actor, changes, t),
+    ],
+    `${changes.code ?? ""} / ${project.slug}`,
+  );
   return getProject(db, project.slug);
 }
 
@@ -332,7 +435,11 @@ function parseRef(ref) {
 }
 
 export async function getItemByRef(db, slug, ref) {
-  const { kind, seq } = parseRef(ref);
+  const { qualifier, ref: plainRef } = splitRef(ref);
+  if (qualifier && (await getProject(db, qualifier)).slug !== slug) {
+    throw new HttpError(400, "ref_project_mismatch", `${ref} gehört nicht zu ${slug}`);
+  }
+  const { kind, seq } = parseRef(plainRef);
   const item = await db
     .prepare(`${ITEM_SELECT} WHERE i.project_slug = ? AND i.kind = ? AND i.seq = ?`)
     .bind(slug, kind, seq)
@@ -541,7 +648,7 @@ export function successorMap(items) {
   return map;
 }
 
-export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
+export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = false } = {}) {
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const groups = new Map();
   for (const it of items) {
@@ -597,13 +704,46 @@ export function buildFooter(items, kinds, { max = 8, since = null } = {}) {
       return `${g.label} ${entries.join(" · ")}${hidden ? ` (+${hidden})` : ""}`;
     })
     .filter(Boolean);
+  const delta = [];
   if (since) {
     const created = items.filter((i) => i.created_at >= since).map((i) => i.ref);
     const done = items.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => i.ref);
-    if (created.length) parts.push(`neu: ${created.join(", ")}`);
-    if (done.length) parts.push(`erledigt: ${done.join(", ")}`);
+    if (created.length) delta.push(`neu: ${created.join(", ")}`);
+    if (done.length) delta.push(`erledigt: ${done.join(", ")}`);
   }
-  return parts.join(" · ");
+  // deltaOnly = the short line "neu: … · erledigt: …" (empty when nothing changed)
+  return (deltaOnly ? delta : [...parts, ...delta]).join(" · ");
+}
+
+/**
+ * Footer for several projects (decided 2026-11-04, D4): one line per project, prefixed with its code
+ * (or slug), e.g. "CT ▸ Du: D1 … · 🤖KI: A2 …". Projects without anything to show are left out,
+ * so with `deltaOnly` only projects with changes appear.
+ */
+export function buildMultiFooter(entries, kinds, opts = {}) {
+  return entries
+    .map(({ project, items }) => {
+      const line = buildFooter(items, kinds, opts);
+      return line ? `${project.code || project.slug} ▸ ${line}` : null;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+// Footer for one or more projects given by slug or code; a single project keeps the plain one-line format.
+export async function footerFor(db, keys, { since = null, delta = false, max = 8 } = {}) {
+  const projects = [];
+  for (const key of keys) {
+    const p = await getProject(db, key);
+    if (!projects.some((x) => x.slug === p.slug)) projects.push(p);
+  }
+  const [kinds, ...lists] = await Promise.all([
+    listKinds(db, true),
+    ...projects.map((p) => listItems(db, { project: p.slug, status: "all" })),
+  ]);
+  const opts = { since, deltaOnly: delta, max };
+  if (projects.length === 1) return buildFooter(lists[0], kinds, opts);
+  return buildMultiFooter(projects.map((project, i) => ({ project, items: lists[i] })), kinds, opts);
 }
 
 /**

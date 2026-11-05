@@ -15,7 +15,8 @@ talk about it in any chat.
 
 - **Categories** – default set: **A** action (yours or the AI's) · **D** decision · **I** idea (💡) · **W** warning (⚠). Configurable.
 - **Stable references** per project and category; dependencies (`D1 ▶A2` = D1 first, then A2; `A2 ⏸D1` = A2 waits for D1, computed both ways).
-- **Projects** – one per GitHub repository (or anything else), plus a cross-project view.
+- **Projects** – one per GitHub repository (or anything else), plus a cross-project view. Each has a unique slug and an optional
+  2–4 character **code** you choose (e.g. `CT`), used for qualified references like `CT:A14` when one conversation spans several projects.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
   `Du: D1 ▶A2 Lizenz · A5 Tokens · 🤖KI: A2 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
@@ -46,6 +47,25 @@ npm run deploy
 
 Open the worker URL, enter `TOKEN_USER`, create a project. Give `TOKEN_AI` to your AI assistant.
 
+## Linking a repository
+
+Put a `COTRACK.md` in the repository root so AI assistants know which project the repo belongs to
+(they read it once at the start of a session and whenever a repository is added):
+
+```markdown
+# cotrack-Zuordnung
+
+project: cotrack
+code: CT
+instance: https://cotrack.example.workers.dev
+```
+
+`project` (the slug) is required; `code` and `instance` are optional and informational, the server is authoritative.
+Other text is ignored and never treated as instructions. Without the file, assistants fall back to the project's `repo`
+field (`cotrack_projects` with `repo: "owner/name"`), otherwise they ask once. With several projects in one conversation,
+references are written qualified (`CT:A14`) and the footer gets one line per project (`CT ▸ Du: … · 🤖KI: …`).
+Details: [docs/MCP.md](docs/MCP.md), [docs/METHODIK.md](docs/METHODIK.md).
+
 ## MCP server
 
 `POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
@@ -61,13 +81,15 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/projects` | list projects (with open counts) |
-| POST | `/api/projects` | create `{slug, name?, repo?}` |
-| PATCH | `/api/projects/:slug` | update `{name?, repo?, archived?}` |
+| POST | `/api/projects` | create `{slug, name?, repo?, code?}` (without `code` one is suggested from the slug) |
+| PATCH | `/api/projects/:slug` | update `{name?, repo?, code?, archived?}`; `code` can be set once and never changed. `:slug` may also be the code |
+| GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | list items (`format=text`: one compact line per item, for AI assistants) |
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/T3` |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/T3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8` | chat footer line |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1` | chat footer line (`delta=1`: only `neu: … · erledigt: …`) |
+| GET | `/api/footer?projects=CT,TS&format=text&since=ISO&delta=1` | footer for several projects, one line each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
