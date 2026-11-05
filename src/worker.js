@@ -237,6 +237,19 @@ async function assertCodeFree(db, code, ownSlug) {
   if (clash) throw new HttpError(409, "code_taken", `${code} (${clash.slug})`);
 }
 
+// The checks above give friendly errors; the unique index and the namespace triggers in migration 0004 are the
+// atomic backstop when two requests race. Translate their failures into the same 409.
+async function batchProject(db, stmts, detail) {
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    if (/code_slug_clash|UNIQUE constraint failed: projects\.code/.test(String(err?.message ?? err))) {
+      throw new HttpError(409, "code_taken", detail);
+    }
+    throw err;
+  }
+}
+
 function codeCandidates(slug) {
   const parts = slug.toUpperCase().split("-").map((p) => p.replace(/[^A-Z]/g, "")).filter(Boolean);
   const letters = parts.join("");
@@ -275,12 +288,16 @@ async function createProject(db, input, actor) {
   else code = await suggestCode(db, slug);
   const taken = await db.prepare("SELECT 1 FROM projects WHERE code = ?").bind(slug.toUpperCase()).first();
   if (taken) throw new HttpError(409, "slug_matches_code", slug);
-  await db.batch([
-    db
-      .prepare("INSERT INTO projects (slug, name, repo, code, archived, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)")
-      .bind(slug, name, repo, code, t, t),
-    eventStmt(db, slug, null, "project_created", actor, { name, repo, code }, t),
-  ]);
+  await batchProject(
+    db,
+    [
+      db
+        .prepare("INSERT INTO projects (slug, name, repo, code, archived, created_at, updated_at) VALUES (?, ?, ?, ?, 0, ?, ?)")
+        .bind(slug, name, repo, code, t, t),
+      eventStmt(db, slug, null, "project_created", actor, { name, repo, code }, t),
+    ],
+    `${code ?? ""} / ${slug}`,
+  );
   return getProject(db, slug);
 }
 
@@ -305,12 +322,16 @@ async function updateProject(db, project, input, actor) {
   const cols = Object.keys(changes);
   if (!cols.length) return project;
   const t = now();
-  await db.batch([
-    db
-      .prepare(`UPDATE projects SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ? WHERE slug = ?`)
-      .bind(...cols.map((c) => changes[c]), t, project.slug),
-    eventStmt(db, project.slug, null, "project_updated", actor, changes, t),
-  ]);
+  await batchProject(
+    db,
+    [
+      db
+        .prepare(`UPDATE projects SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ? WHERE slug = ?`)
+        .bind(...cols.map((c) => changes[c]), t, project.slug),
+      eventStmt(db, project.slug, null, "project_updated", actor, changes, t),
+    ],
+    `${changes.code ?? ""} / ${project.slug}`,
+  );
   return getProject(db, project.slug);
 }
 
