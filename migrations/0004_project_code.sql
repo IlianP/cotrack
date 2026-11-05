@@ -21,3 +21,12 @@ BEGIN
   SELECT RAISE(ABORT, 'code_slug_clash')
   WHERE EXISTS (SELECT 1 FROM projects WHERE slug = lower(NEW.code) AND slug != NEW.slug);
 END;
+
+-- A code is set once and never changed (references written down in chats and documents must stay valid).
+-- Enforced here as well, so two concurrent "set code" requests cannot both win; the loser's whole batch,
+-- including its change event, is rolled back.
+CREATE TRIGGER IF NOT EXISTS projects_code_immutable BEFORE UPDATE OF code ON projects
+WHEN OLD.code IS NOT NULL AND NEW.code IS NOT OLD.code
+BEGIN
+  SELECT RAISE(ABORT, 'code_immutable');
+END;

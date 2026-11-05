@@ -243,6 +243,7 @@ async function batchProject(db, stmts, detail) {
   try {
     await db.batch(stmts);
   } catch (err) {
+    if (/code_immutable/.test(String(err?.message ?? err))) throw new HttpError(409, "code_immutable", detail);
     if (/code_slug_clash|UNIQUE constraint failed: projects\.code/.test(String(err?.message ?? err))) {
       throw new HttpError(409, "code_taken", detail);
     }
