@@ -72,7 +72,7 @@ cotrack den Token übergangsweise auch im Pfad an:
 (Die Menünamen ändern sich bei beiden Apps gelegentlich.)
 
 ⚠ Die URL mit Token ist ein Passwort: nicht teilen, nicht in Screenshots zeigen. Der saubere Weg ist OAuth –
-dann meldest du dich beim Verbinden einmal an, und es steht kein Geheimnis in der URL (offener Punkt W1).
+dann meldest du dich beim Verbinden einmal an, und es steht kein Geheimnis in der URL (offener Punkt A12).
 
 ## Selbst ausprobieren
 
