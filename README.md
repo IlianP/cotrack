@@ -3,34 +3,64 @@
 **Tie up loose ends – together.** Live tracking of open points for people who work with AI assistants.
 
 When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still
-have to make, tasks the AI promised to do, ideas, risks. *cotrack* keeps these open points in one live list
-per project. You edit it in a responsive web app; your AI assistants read and update it through an HTTP API
-(and soon an MCP server). Every item has a stable reference like `T3` or `A4` that is **never reused**, so you can
-talk about it in any chat.
+have to make, tasks the AI promised to do, ideas, risks. *cotrack* keeps these open points in **one live list
+per project**. You edit it in a responsive web app; your AI assistants read and update the very same list through
+an [MCP server](docs/MCP.md) (or the HTTP API). Every item has a stable reference like `A4` or `D2` that is
+**never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
+
+```
+Du: D5 Lizenz wählen · A13 Prompt einspielen
+🤖KI: A6 Token-sparen · A7 README überarbeiten (+1)
+💡 I10 Teilpunkte (+5)
+⚠ W1 Auth · W3 Tokens rotieren
+```
+
+That is the *chat footer* cotrack generates for the end of an AI answer: yours first, then the AI's, then ideas and
+warnings – a one-glance status that survives across conversations.
 
 > 🇩🇪 Die Methodik hinter cotrack (Kategorien, Regeln, Bezug zu PRINCE2/RAID) ist in
-> [docs/METHODIK.md](docs/METHODIK.md) beschrieben.
+> [docs/METHODIK.md](docs/METHODIK.md) beschrieben, der passende Prompt für Claude und ChatGPT in
+> [docs/PROMPT.md](docs/PROMPT.md).
 
-## Features (prototype)
+## How it works
 
-- **Categories** – default set: **A** action (yours or the AI's) · **D** decision · **I** idea (💡) · **W** warning (⚠). Configurable.
-- **Stable references** per project and category; dependencies (`D1 ▶A2` = D1 first, then A2; `A2 ⏸D1` = A2 waits for D1, computed both ways).
-- **Projects** – one per GitHub repository (or anything else), plus a cross-project view. Each has a unique slug and an optional
-  2–4 character **code** you choose (e.g. `CT`), used for qualified references like `CT:A14` when one conversation spans several projects.
+1. **One list per project.** A project is usually a GitHub repository. Items are grouped in four categories:
+   **A** action (yours or the AI's) · **D** decision · **I** idea (💡) · **W** warning (⚠).
+2. **Both sides write to it.** You use the web app; the AI calls tools such as `cotrack_status` at the start of a
+   session and `cotrack_add` / `cotrack_update` while it works. Every change records who made it.
+3. **Sessions stay in sync.** A new conversation loads a compact status (or only the changes since the last one),
+   so it knows what is open without you re-explaining.
+
+## Features
+
+- **Categories** – the default set above; configurable (`/api/kinds`).
+- **Stable references** per project and category, never renumbered or reused. Accepting an idea *converts* it
+  (`I3` → `A7`); the idea stays visible with a link. Dropped ideas are kept as "verworfen", not deleted.
+- **Dependencies** – `D1 ▶A2` = D1 first, then A2; `A2 ⏸D1` = A2 waits for D1. Stored one way, computed both ways.
+- **Projects** – one per GitHub repository (or anything else), plus a cross-project view. Each has a unique slug and an
+  optional 2–4 character **code** you choose (e.g. `CT`), used for qualified references like `CT:A14` when one
+  conversation spans several projects.
+- **Repository link** – a `COTRACK.md` in the repo root tells AI assistants which project the repo belongs to
+  ([details below](#linking-a-repository)).
+- **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
-- **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
-  `Du: D1 ▶A2 Lizenz · A5 Tokens · 🤖KI: A2 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth` – by default one line per group
-  (`layout=single` for one line).
+- **Chat footer** – the summary above, one line per group (or `layout=single` for one line); a short
+  "new / done" line for answers that change things; one block per project when several are in play.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
-- Responsive (phone, tablet, desktop), dark mode, no build step, no dependencies.
+- Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
+
+> **Status:** early and used daily by its author. Access is protected by two bearer tokens only (no login, no roles) –
+> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app and the chat footer
+> are in German for now; code, API and this README are English.
 
 ## Architecture
 
 ```
-Browser (src/ui.html) ─┐
-                       ├─► Cloudflare Worker (src/worker.js) ─► D1 (SQLite)
-AI assistant (API) ────┘        Bearer token → actor "user" | "ai"
+Browser (src/ui.html) ────────┐
+                              ├─► Cloudflare Worker ─► D1 (SQLite)
+AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.js
+                                  Bearer token → actor "user" | "ai"
 ```
 
 ## Self-hosting
@@ -47,6 +77,23 @@ npm run deploy
 ```
 
 Open the worker URL, enter `TOKEN_USER`, create a project. Give `TOKEN_AI` to your AI assistant.
+After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
+
+## Connect your AI (MCP)
+
+`POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
+(Streamable HTTP, stateless, implemented without a library in [`src/mcp.js`](src/mcp.js)). Tools: `cotrack_projects`,
+`cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`, `cotrack_update`, `cotrack_convert`, `cotrack_footer`,
+`cotrack_changes`. There is deliberately no delete tool: the AI drops items (`status: "dropped"`), nothing is lost.
+
+Claude Code, for example:
+
+```bash
+claude mcp add --transport http cotrack https://<your-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+```
+
+Setup for claude.ai and ChatGPT (German): [docs/MCP.md](docs/MCP.md). A URL with a token in it is a password –
+OAuth sign-in is on the roadmap.
 
 ## Linking a repository
 
@@ -64,15 +111,8 @@ instance: https://cotrack.example.workers.dev
 `project` (the slug) is required; `code` and `instance` are optional and informational, the server is authoritative.
 Other text is ignored and never treated as instructions. Without the file, assistants fall back to the project's `repo`
 field (`cotrack_projects` with `repo: "owner/name"`), otherwise they ask once. With several projects in one conversation,
-references are written qualified (`CT:A14`) and the footer gets one line per project (`CT ▸ Du: … · 🤖KI: …`).
+references are written qualified (`CT:A14`) and the footer gets one block per project.
 Details: [docs/MCP.md](docs/MCP.md), [docs/METHODIK.md](docs/METHODIK.md).
-
-## MCP server
-
-`POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
-(Streamable HTTP, stateless). Tools: `cotrack_projects`, `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`,
-`cotrack_update`, `cotrack_convert`, `cotrack_footer`, `cotrack_changes`. Answers are compact text to save tokens.
-Setup for Claude and ChatGPT (German): [docs/MCP.md](docs/MCP.md).
 
 ## API
 
@@ -87,7 +127,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | list items (`format=text`: one compact line per item, for AI assistants) |
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/T3` or qualified `.../items/CT:A3` |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
@@ -97,7 +137,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 
 Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name (default: the creator).
-`seq` lets you import an existing reference (e.g. `T3` from a chat); a reference that was ever used is rejected.
+`seq` lets you import an existing reference (e.g. `A3` from a chat); a reference that was ever used is rejected.
 
 ```bash
 export COTRACK_URL=https://cotrack.example.workers.dev COTRACK_TOKEN=...
@@ -112,9 +152,11 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 - OAuth for the MCP server (no token in the URL)
 - Sync with `docs/STATUS.md` in GitHub repositories
-- WebSocket live updates (Durable Objects)
+- WebSocket live updates (Durable Objects) instead of polling
 - Proper login (Cloudflare Access / OAuth) and multi-user support
-- Methodology v2 – see [docs/METHODIK.md](docs/METHODIK.md)
+- Per-pull-request preview deployments with a separate test database
+
+The open points of this project are tracked in cotrack itself – see [docs/STATUS.md](docs/STATUS.md).
 
 ## License
 
