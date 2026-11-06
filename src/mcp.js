@@ -20,6 +20,7 @@ import {
   getProject,
   splitRef,
   footerFor,
+  normLayout,
   listKinds,
   listItems,
   successorsOf,
@@ -41,7 +42,8 @@ A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nu
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
 cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Fußzeile sparsam: Ändern sich in einer
 Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die volle Fußzeile (cotrack_footer) nur auf Nachfrage („Stand?“),
-am Ende größerer Arbeiten oder etwa alle vier Antworten. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
+am Ende größerer Arbeiten oder etwa alle vier Antworten. Die volle Fußzeile ist (Probephase) mehrzeilig: jede Gruppe
+(Du, 🤖KI, 💡, ⚠) in einer eigenen Zeile; gib sie genau so wieder. Mit layout "single" gibt es sie einzeilig. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
 Projekt-Zuordnung: Welches Projekt zur Unterhaltung gehört, bestimmst du, nicht der Server. Gehört ein Repository dazu, lies einmal beim Start
 (und wenn ein Repository hinzukommt) die Datei COTRACK.md im Repo-Root: „project:“ ist der Slug, „code:“ das Kürzel. Fehlt sie, finde das Projekt
 mit cotrack_projects (Parameter repo = "owner/name"). Ohne Treffer oder bei Mehrdeutigkeit frage den Nutzer einmal; lege nie von dir aus ein Projekt an.
@@ -172,6 +174,7 @@ const TOOLS = [
         project: { type: "string", description: "Ein Projekt oder mehrere durch Komma, z. B. \"CT,TS\" (Slug oder Kürzel)" },
         since: { type: "string", description: "ISO-Zeitpunkt, z. B. Session-Beginn" },
         delta: { type: "boolean", description: "Nur „neu: … · erledigt: …“ (braucht since); leer, wenn nichts geändert wurde" },
+        layout: { type: "string", enum: ["multi", "single"], description: "multi = jede Gruppe eine Zeile (Standard in der Probephase), single = alles in einer Zeile" },
       },
       required: ["project"],
     },
@@ -232,7 +235,8 @@ async function callTool(name, args, db, actor) {
         listItems(db, { project: project.slug, status: "open" }),
         listKinds(db, true),
       ]);
-      return `Projekt: ${projectTitle(project)}\nFußzeile: ${buildFooter(items, kinds) || "(nichts offen)"}\nStand: ${stand}\n\n${itemsAsText(items, kinds)}`;
+      const footer = buildFooter(items, kinds) || "(nichts offen)";
+      return `Projekt: ${projectTitle(project)}\nFußzeile:${footer.includes("\n") ? "\n" : " "}${footer}\nStand: ${stand}\n\n${itemsAsText(items, kinds)}`;
     }
     case "cotrack_list": {
       const project = await getProject(db, args.project);
@@ -283,7 +287,7 @@ async function callTool(name, args, db, actor) {
     case "cotrack_footer": {
       const keys = String(args.project || "").split(",").map((k) => k.trim()).filter(Boolean);
       if (!keys.length) throw httpError(400, "missing_field", "project");
-      const line = await footerFor(db, keys, { since: args.since || null, delta: args.delta === true });
+      const line = await footerFor(db, keys, { since: args.since || null, delta: args.delta === true, layout: normLayout(args.layout) });
       return line || (args.delta === true ? "(keine Änderungen)" : "(nichts offen)");
     }
     case "cotrack_changes": {
@@ -335,7 +339,7 @@ async function handleMessage(msg, db, actor) {
       return reply({
         protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "cotrack", title: "cotrack – offene Punkte", version: "0.3.0" },
+        serverInfo: { name: "cotrack", title: "cotrack – offene Punkte", version: "0.4.0" },
         instructions: INSTRUCTIONS,
       });
     }

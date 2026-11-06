@@ -1,6 +1,6 @@
 # Methodik: offene Punkte gemeinsam führen
 
-## Gültig: Methodik v2.4 (Stand 4. November 2026)
+## Gültig: Methodik v2.5 (Stand 6. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -15,6 +15,10 @@
   in der Zeile steht. Erledigte Vorgänger verschwinden aus der Anzeige. Der Nachfolger wird berechnet, nicht gepflegt.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
+- **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`Du:`, `🤖KI:`, `💡`, `⚠`),
+  danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist vorerst der Standard, um die Übersicht auszuprobieren;
+  einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Rückkehr zum alten Standard: eine Konstante
+  (`FOOTER_LAYOUT_DEFAULT`) in `src/worker.js` und dieser Absatz.
 - **Führende Liste:** cotrack (Web-App + MCP-Connector). Die `docs/STATUS.md` eines Repositorys enthält nur einen Link
   zum Board, damit niemand bei jeder Änderung eine Datei pushen muss. Ohne cotrack gilt weiter die Liste in `STATUS.md`.
 - **Projekt-Kürzel (v2.4):** Jedes Projekt hat einen eindeutigen Slug (Identität) und optional ein **Kürzel** aus 2–4 Zeichen
@@ -24,8 +28,8 @@
 - **Zuordnung Unterhaltung → Projekt (v2.4):** Die KI bestimmt sie, nicht der Server. Reihenfolge: (1) `COTRACK.md` im Repo-Root
   (`project:`/`code:`), einmal beim Start und wenn ein Repository hinzukommt; (2) `cotrack_projects` mit dem Repository
   (`owner/name`); (3) ohne Repository das Projekt aus den Projektanweisungen; (4) sonst einmal nachfragen. Nie selbst ein Projekt anlegen.
-- **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt eine Zeile
-  (`CT ▸ Du: … · 🤖KI: …`) und zeigt bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
+- **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt einen Block:
+  einzeilig `CT ▸ Du: … · 🤖KI: …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
   an dem gerade gearbeitet wird; bei Unklarheit fragen. Abhängigkeiten über Projektgrenzen gibt es vorerst nicht.
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md). Beide Dateien müssen immer zueinander passen.

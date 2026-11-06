@@ -19,7 +19,8 @@ talk about it in any chat.
   2–4 character **code** you choose (e.g. `CT`), used for qualified references like `CT:A14` when one conversation spans several projects.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – generates the one-line summary used at the end of AI answers, e.g.
-  `Du: D1 ▶A2 Lizenz · A5 Tokens · 🤖KI: A2 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth`.
+  `Du: D1 ▶A2 Lizenz · A5 Tokens · 🤖KI: A2 MCP-Server · 💡 I2 Sync · ⚠ W1 Auth` – by default one line per group
+  (`layout=single` for one line).
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, no build step, no dependencies.
@@ -88,8 +89,8 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/T3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1` | chat footer line (`delta=1`: only `neu: … · erledigt: …`) |
-| GET | `/api/footer?projects=CT,TS&format=text&since=ISO&delta=1` | footer for several projects, one line each (`CT ▸ …`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`) |
+| GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |

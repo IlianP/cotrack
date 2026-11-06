@@ -419,7 +419,7 @@ function renderItem(it, k, before) {
 async function renderFooter() {
   if (!state.project || state.project === ALL) return;
   try {
-    const { footer } = await api(P(state.project) + "/footer");
+    const { footer } = await api(P(state.project) + "/footer?layout=single");
     $("#footerText").textContent = footer || "Nichts offen.";
   } catch {}
 }
@@ -460,7 +460,9 @@ $("#viewChips").addEventListener("click", (e) => {
 let searchT;
 $("#search").addEventListener("input", (e) => { clearTimeout(searchT); searchT = setTimeout(() => { state.q = e.target.value.trim(); refresh(true); }, 250); });
 $("#project").addEventListener("change", (e) => selectProject(e.target.value));
-$("#copyFooter").addEventListener("click", () => copy($("#footerText").textContent, "Fußzeile kopiert"));
+// The bar shows the compact single line; the copy button gives the chat format (default layout).
+const copyFooter = async () => copy((await api(P(state.project) + "/footer")).footer, "Fußzeile kopiert");
+$("#copyFooter").addEventListener("click", () => copyFooter().catch((err) => toast("Fehler: " + err.message)));
 $("#menuBtn").addEventListener("click", openMenu);
 window.addEventListener("hashchange", () => { const s = decodeURIComponent(location.hash.slice(1)); if (s && s !== state.project) selectProject(s); });
 
@@ -547,7 +549,7 @@ function openMenu() {
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, "＋ Neues Projekt"),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, "Kürzel für dieses Projekt festlegen") : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), "STATUS.md-Abschnitt kopiert")) }, "„Offene Punkte“ für STATUS.md kopieren") : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(() => copy($("#footerText").textContent, "Fußzeile kopiert")) }, "Fußzeile kopieren") : null,
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, "Fußzeile kopieren") : null,
       h("a", { class: "btn", style: "display:flex;align-items:center;text-decoration:none", href: "https://github.com/IlianP/cotrack#api", target: "_blank", rel: "noopener" }, "API-Dokumentation ↗"),
       h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, "Abmelden")),
     h("p", { class: "small" }, `Angemeldet als: ${ownerLabel(state.actor)}`),
