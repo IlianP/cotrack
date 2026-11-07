@@ -20,7 +20,9 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 
 | Werkzeug | Zweck | liest/schreibt |
 |---|---|---|
-| `cotrack_projects` | Projekte (Slug, Kürzel, Repository) mit Anzahl offener Punkte; mit `repo` nur das Projekt zu diesem Repository | liest |
+| `cotrack_projects` | Projekte (Slug, Kürzel, Repository) mit Anzahl offener Punkte; mit `repo` nur das Projekt zu diesem Repository, mit `archived` auch archivierte | liest |
+| `cotrack_project_create` | Projekt anlegen, mit deinem Slug und Kürzel (nur auf deinen Wunsch) | schreibt |
+| `cotrack_project_update` | Projekt umbenennen, Repository setzen, Kürzel nachtragen, archivieren oder zurückholen (`archived`) | schreibt |
 | `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer | liest |
 | `cotrack_list` | gefilterte Liste (Status, Kategorie, Zuständigkeit, Suche) | liest |
 | `cotrack_get` | ein Punkt mit Beschreibung | liest |
@@ -30,7 +32,8 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (Standard: je Gruppe eine Zeile) oder `single` | liest |
 | `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions) | liest |
 
-Bewusst **kein Löschen** per KI – verworfen wird mit `status: "dropped"`, damit nichts verloren geht.
+Bewusst **kein Löschen** per KI – Punkte werden mit `status: "dropped"` verworfen, Projekte archiviert, damit nichts verloren geht.
+Slug und Kürzel eines Projekts sind fest: Kennungen wie „CT:A4“ in Chats und Dokumenten bleiben so gültig.
 
 Überall, wo `project` verlangt wird, geht der **Slug oder das Kürzel** (`cotrack` oder `CT`). `cotrack_get`, `cotrack_update`
 und `cotrack_convert` nehmen auch eine **qualifizierte Kennung** (`ref: "CT:A4"`); `project` darf dann fehlen.

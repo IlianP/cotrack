@@ -283,7 +283,7 @@ function normCode(v) {
   return code;
 }
 
-async function createProject(db, input, actor) {
+export async function createProject(db, input, actor) {
   const slug = text(input.slug, "slug", 63, { required: true }).toLowerCase();
   if (!SLUG_RE.test(slug)) throw new HttpError(400, "invalid_field", "slug (a-z, 0-9, -)");
   const name = text(input.name, "name", 120) || slug;
@@ -311,7 +311,7 @@ async function createProject(db, input, actor) {
   return getProject(db, slug);
 }
 
-async function updateProject(db, project, input, actor) {
+export async function updateProject(db, project, input, actor) {
   const changes = {};
   if ("name" in input) changes.name = text(input.name, "name", 120, { required: true });
   if ("repo" in input) {

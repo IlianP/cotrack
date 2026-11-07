@@ -82,7 +82,7 @@ After pulling updates, run `npm run db:migrate` again before deploying – new v
 ## Connect your AI (MCP)
 
 `POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
-(Streamable HTTP, stateless, implemented without a library in [`src/mcp.js`](src/mcp.js)). Tools: `cotrack_projects`,
+(Streamable HTTP, stateless, implemented without a library in [`src/mcp.js`](src/mcp.js)). Tools: `cotrack_projects`, `cotrack_project_create`, `cotrack_project_update`,
 `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`, `cotrack_update`, `cotrack_convert`, `cotrack_footer`,
 `cotrack_changes`. There is deliberately no delete tool: the AI drops items (`status: "dropped"`), nothing is lost.
 
