@@ -1,5 +1,7 @@
 # cotrack
 
+**English** · [Deutsch](README.de.md)
+
 **Tie up loose ends – together.** Live tracking of open points for people who work with AI assistants.
 
 When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still
@@ -9,8 +11,8 @@ an [MCP server](docs/MCP.md) (or the HTTP API). Every item has a stable referenc
 **never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
 
 ```
-Du: D5 Lizenz wählen · A13 Prompt einspielen
-🤖KI: A6 Token-sparen · A7 README überarbeiten (+1)
+👤: D5 Lizenz wählen · A13 Prompt einspielen
+🤖: A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
 ⚠ W1 Auth · W3 Tokens rotieren
 ```
@@ -18,9 +20,9 @@ Du: D5 Lizenz wählen · A13 Prompt einspielen
 That is the *chat footer* cotrack generates for the end of an AI answer: yours first, then the AI's, then ideas and
 warnings – a one-glance status that survives across conversations.
 
-> 🇩🇪 Die Methodik hinter cotrack (Kategorien, Regeln, Bezug zu PRINCE2/RAID) ist in
-> [docs/METHODIK.md](docs/METHODIK.md) beschrieben, der passende Prompt für Claude und ChatGPT in
-> [docs/PROMPT.md](docs/PROMPT.md).
+> The methodology behind cotrack (categories, rules, relation to PRINCE2/RAID) is described in
+> [docs/METHODOLOGY.md](docs/METHODOLOGY.md), the matching prompt for Claude and ChatGPT in
+> [docs/PROMPT.en.md](docs/PROMPT.en.md). (German: [METHODIK.md](docs/METHODIK.md), [PROMPT.md](docs/PROMPT.md).)
 
 ## How it works
 
@@ -51,8 +53,8 @@ warnings – a one-glance status that survives across conversations.
 - Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
 > **Status:** early and used daily by its author. Access is protected by two bearer tokens only (no login, no roles) –
-> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app and the chat footer
-> are in German for now; code, API and this README are English.
+> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app is
+> in German for now, the chat footer is available in German and English (`lang`); code and API are English; this README is available in English and [German](README.de.md).
 
 ## Architecture
 
@@ -112,7 +114,7 @@ instance: https://cotrack.example.workers.dev
 Other text is ignored and never treated as instructions. Without the file, assistants fall back to the project's `repo`
 field (`cotrack_projects` with `repo: "owner/name"`), otherwise they ask once. With several projects in one conversation,
 references are written qualified (`CT:A14`) and the footer gets one block per project.
-Details: [docs/MCP.md](docs/MCP.md), [docs/METHODIK.md](docs/METHODIK.md).
+Details: [docs/MCP.md](docs/MCP.md), [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## API
 
@@ -129,7 +131,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |
