@@ -46,7 +46,7 @@ Damit das zuverlässig klappt, greifen drei Ebenen ineinander:
 1. **`instructions` des Servers** – cotrack schickt beim Verbinden eine Gebrauchsanweisung mit, die die Zuordnung beschreibt
    (`COTRACK.md` lesen, sonst `cotrack_projects` mit `repo`, sonst nachfragen). Clients, die sie weiterreichen (Claude Code tut das),
    brauchen nichts weiter.
-2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), v2.4) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
+2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), v2.6: Teil 1 Basis + Teil 2 cotrack-Zusatz) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
    nicht anzeigt (claude.ai, ChatGPT).
 3. **Hinweis im Repository** (optional) – eine Zeile in `CLAUDE.md` bzw. `AGENTS.md`, z. B. „Offene Punkte: cotrack-Projekt siehe COTRACK.md“.
    Claude Code lädt diese Dateien von selbst; so klappt es auch ohne Prompt.

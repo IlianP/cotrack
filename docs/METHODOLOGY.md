@@ -42,7 +42,7 @@
   with changes. New items belong to the project of the repo being worked on; if unclear, ask. Dependencies across project
   boundaries do not exist for now.
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
-- The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md). Both files must always match.
+- The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
 
 ---
 
