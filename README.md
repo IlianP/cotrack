@@ -53,8 +53,8 @@ warnings – a one-glance status that survives across conversations.
 - Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
 > **Status:** early and used daily by its author. Access is protected by two bearer tokens only (no login, no roles) –
-> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app and the chat footer
-> are in German for now; code and API are English; this README is available in English and [German](README.de.md).
+> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app is
+> in German for now, the chat footer is available in German and English (`lang`); code and API are English; this README is available in English and [German](README.de.md).
 
 ## Architecture
 
@@ -131,7 +131,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: labels `You / 🤖AI / new / done`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |

@@ -21,7 +21,12 @@ const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const OWNER_LABELS = { user: "Du", ai: "KI" };
 // Footer group labels (the AI group carries a robot icon).
-const FOOTER_OWNER_LABELS = { user: "Du", ai: "🤖KI" };
+const FOOTER_OWNER_LABELS = {
+  de: { user: "Du", ai: "🤖KI" },
+  en: { user: "You", ai: "🤖AI" },
+};
+// Footer wording per language (`lang=de|en`, default de): the "new / done" short line.
+const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { created: "new", done: "done" } };
 // Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (Du / KI / 💡 / ⚠),
 // "single" = everything in one line. Change this constant to switch the default back.
 const FOOTER_LAYOUT_DEFAULT = "multi";
@@ -119,6 +124,7 @@ async function route(req, db, url, actor) {
       delta: q.get("delta") === "1",
       max: clampInt(q.get("max"), 1, 30, 8),
       layout: normLayout(q.get("layout")),
+      lang: normLang(q.get("lang")),
     });
     if (q.get("format") === "text") return plain(textLine);
     return json({ footer: textLine });
@@ -194,6 +200,7 @@ async function route(req, db, url, actor) {
             since: q.get("since") || null,
             deltaOnly: q.get("delta") === "1",
             layout: normLayout(q.get("layout")),
+            lang: normLang(q.get("lang")),
           });
           if (q.get("format") === "text") return plain(textLine);
           return json({ footer: textLine });
@@ -657,7 +664,7 @@ export function successorMap(items) {
   return map;
 }
 
-export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT } = {}) {
+export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de" } = {}) {
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const groups = new Map();
   for (const it of items) {
@@ -667,7 +674,7 @@ export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = f
     if (!k || k.actionable) {
       const owner = it.owner || "user";
       key = `o:${owner}`;
-      label = `${FOOTER_OWNER_LABELS[owner] || owner}:`;
+      label = `${(FOOTER_OWNER_LABELS[lang] || FOOTER_OWNER_LABELS.de)[owner] || owner}:`;
       weight = owner === "user" ? 0 : owner === "ai" ? 1 : 2;
     } else {
       key = `k:${k.code}`;
@@ -717,14 +724,19 @@ export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = f
   if (since) {
     const created = items.filter((i) => i.created_at >= since).map((i) => i.ref);
     const done = items.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => i.ref);
-    if (created.length) delta.push(`neu: ${created.join(", ")}`);
-    if (done.length) delta.push(`erledigt: ${done.join(", ")}`);
+    const dl = FOOTER_DELTA_LABELS[lang] || FOOTER_DELTA_LABELS.de;
+    if (created.length) delta.push(`${dl.created}: ${created.join(", ")}`);
+    if (done.length) delta.push(`${dl.done}: ${done.join(", ")}`);
   }
   // deltaOnly = the short line "neu: … · erledigt: …" (empty when nothing changed), always a single line.
   if (deltaOnly) return delta.join(" · ");
   // multi: one line per group, then the "neu/erledigt" line; single: everything in one line.
   if (layout === "multi") return [...parts, ...(delta.length ? [delta.join(" · ")] : [])].join("\n");
   return [...parts, ...delta].join(" · ");
+}
+
+export function normLang(v) {
+  return String(v ?? "").toLowerCase().startsWith("en") ? "en" : "de";
 }
 
 export function normLayout(v) {
@@ -754,7 +766,7 @@ export function buildMultiFooter(entries, kinds, opts = {}) {
 }
 
 // Footer for one or more projects given by slug or code; a single project keeps the plain one-line format.
-export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = FOOTER_LAYOUT_DEFAULT } = {}) {
+export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = FOOTER_LAYOUT_DEFAULT, lang = "de" } = {}) {
   const projects = [];
   for (const key of keys) {
     const p = await getProject(db, key);
@@ -764,7 +776,7 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
     listKinds(db, true),
     ...projects.map((p) => listItems(db, { project: p.slug, status: "all" })),
   ]);
-  const opts = { since, deltaOnly: delta, max, layout };
+  const opts = { since, deltaOnly: delta, max, layout, lang };
   if (projects.length === 1) return buildFooter(lists[0], kinds, opts);
   return buildMultiFooter(projects.map((project, i) => ({ project, items: lists[i] })), kinds, opts);
 }

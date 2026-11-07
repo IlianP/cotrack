@@ -23,6 +23,7 @@ import {
   splitRef,
   footerFor,
   normLayout,
+  normLang,
   listKinds,
   listItems,
   successorsOf,
@@ -45,7 +46,7 @@ Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofor
 cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Fußzeile sparsam: Ändern sich in einer
 Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die volle Fußzeile (cotrack_footer) nur auf Nachfrage („Stand?“),
 am Ende größerer Arbeiten oder etwa alle vier Antworten. Die volle Fußzeile ist (Probephase) mehrzeilig: jede Gruppe
-(Du, 🤖KI, 💡, ⚠) in einer eigenen Zeile; gib sie genau so wieder. Mit layout "single" gibt es sie einzeilig. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
+(Du, 🤖KI, 💡, ⚠) in einer eigenen Zeile; gib sie genau so wieder. Mit layout "single" gibt es sie einzeilig. Mit lang "en" (passend zu einem englischen Prompt/Gespräch) lauten die Beschriftungen You / 🤖AI / new / done. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
 Projekt-Zuordnung: Welches Projekt zur Unterhaltung gehört, bestimmst du, nicht der Server. Gehört ein Repository dazu, lies einmal beim Start
 (und wenn ein Repository hinzukommt) die Datei COTRACK.md im Repo-Root: „project:“ ist der Slug, „code:“ das Kürzel. Fehlt sie, finde das Projekt
 mit cotrack_projects (Parameter repo = "owner/name"). Ohne Treffer oder bei Mehrdeutigkeit frage den Nutzer einmal; lege nie von dir aus ein Projekt an.
@@ -217,6 +218,7 @@ const TOOLS = [
         since: { type: "string", description: "ISO-Zeitpunkt, z. B. Session-Beginn" },
         delta: { type: "boolean", description: "Nur „neu: … · erledigt: …“ (braucht since); leer, wenn nichts geändert wurde" },
         layout: { type: "string", enum: ["multi", "single"], description: "multi = jede Gruppe eine Zeile (Standard in der Probephase), single = alles in einer Zeile" },
+        lang: { type: "string", enum: ["de", "en"], description: "Sprache der Beschriftungen: de (Standard: Du, 🤖KI, neu, erledigt) oder en (You, 🤖AI, new, done). Immer passend zur Sprache des Gesprächs setzen." },
       },
       required: ["project"],
     },
@@ -341,7 +343,7 @@ async function callTool(name, args, db, actor) {
     case "cotrack_footer": {
       const keys = String(args.project || "").split(",").map((k) => k.trim()).filter(Boolean);
       if (!keys.length) throw httpError(400, "missing_field", "project");
-      const line = await footerFor(db, keys, { since: args.since || null, delta: args.delta === true, layout: normLayout(args.layout) });
+      const line = await footerFor(db, keys, { since: args.since || null, delta: args.delta === true, layout: normLayout(args.layout), lang: normLang(args.lang) });
       return line || (args.delta === true ? "(keine Änderungen)" : "(nichts offen)");
     }
     case "cotrack_changes": {

@@ -59,7 +59,7 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 
 > **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch zwei Bearer-Tokens geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
-> teilen. Siehe Roadmap. Web-App und Chat-Fußzeile sind vorerst auf Deutsch; Code und API sind englisch; dieses README
+> teilen. Siehe Roadmap. Die Web-App ist vorerst auf Deutsch, die Chat-Fußzeile gibt es auf Deutsch und Englisch (`lang`); Code und API sind englisch; dieses README
 > gibt es auf [Englisch](README.md) und Deutsch.
 
 ## Architektur
@@ -139,7 +139,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single` | Chat-Fußzeile (`layout=multi`, derzeit Standard: eine Zeile je Gruppe; `single`: eine Zeile; `delta=1`: nur `neu: … · erledigt: …`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`, derzeit Standard: eine Zeile je Gruppe; `single`: eine Zeile; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: Beschriftungen `You / 🤖AI / new / done`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | Änderungsprotokoll |

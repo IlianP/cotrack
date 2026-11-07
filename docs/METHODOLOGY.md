@@ -2,8 +2,8 @@
 
 **English** · [Deutsch](METHODIK.md)
 
-> The footer labels shown here (`Du:`, `🤖KI:`, `neu:`, `erledigt:`) are what cotrack currently produces – the footer is
-> German for now. The letters A/D/I/W and the references are language-independent.
+> The footer examples below use the German labels (`Du:`, `🤖KI:`, `neu:`, `erledigt:`), which are cotrack's default. With
+> `lang=en` the footer reads `You:`, `🤖AI:`, `new:`, `done:`. The letters A/D/I/W and the references are language-independent.
 
 ## Current: Methodology v2.5 (as of 6 November 2026)
 
