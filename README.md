@@ -1,5 +1,7 @@
 # cotrack
 
+**English** · [Deutsch](README.de.md)
+
 **Tie up loose ends – together.** Live tracking of open points for people who work with AI assistants.
 
 When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still
@@ -52,7 +54,7 @@ warnings – a one-glance status that survives across conversations.
 
 > **Status:** early and used daily by its author. Access is protected by two bearer tokens only (no login, no roles) –
 > fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app and the chat footer
-> are in German for now; code, API and this README are English.
+> are in German for now; code and API are English; this README is available in English and [German](README.de.md).
 
 ## Architecture
 

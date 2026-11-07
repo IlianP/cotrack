@@ -51,7 +51,7 @@ Damit das zuverlässig klappt, greifen drei Ebenen ineinander:
 3. **Hinweis im Repository** (optional) – eine Zeile in `CLAUDE.md` bzw. `AGENTS.md`, z. B. „Offene Punkte: cotrack-Projekt siehe COTRACK.md“.
    Claude Code lädt diese Dateien von selbst; so klappt es auch ohne Prompt.
 
-`COTRACK.md` im Repo-Root ist die Zuordnung (Vorlage im [README](../README.md#linking-a-repository)). Fehlt sie, ist das Feld `repo`
+`COTRACK.md` im Repo-Root ist die Zuordnung (Vorlage im [README](../README.de.md#repository-zuordnung)). Fehlt sie, ist das Feld `repo`
 des Projekts die Rückfalllösung.
 
 ## Verbinden

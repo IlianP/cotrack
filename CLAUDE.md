@@ -8,5 +8,5 @@
   links to the board). Use the cotrack MCP tools if connected, otherwise the API with `COTRACK_TOKEN`:
   `curl -s -H "Authorization: Bearer $COTRACK_TOKEN" https://cotrack.ilianos1.workers.dev/api/projects/cotrack/footer?format=text`
 - Keep references stable: never renumber, never reuse. Accepted ideas are converted (`/convert`), not edited.
-- UI language is German; code, README and API are English. Methodology: `docs/METHODIK.md` (current rules at the top) and `docs/PROMPT.md` – keep both in sync.
+- UI language is German; code and API are English. The README exists in two languages: `README.md` (English, default) and `README.de.md` (German) – **change both together**. Methodology: `docs/METHODIK.md` (current rules at the top) and `docs/PROMPT.md` – keep both in sync.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
