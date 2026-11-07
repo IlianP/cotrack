@@ -2,12 +2,12 @@
 
 [English](METHODOLOGY.md) · **Deutsch**
 
-## Gültig: Methodik v2.5 (Stand 6. November 2026)
+## Gültig: Methodik v2.6 (Stand 7. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
-| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „Du:“ bzw. „🤖KI:“ |
-| **D** | Entscheidung – triffst du, die KI bereitet Optionen vor; Ergebnis wird festgehalten | unter „Du:“, vor den Aufgaben |
+| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „👤:“ bzw. „🤖:“ |
+| **D** | Entscheidung – triffst du, die KI bereitet Optionen vor; Ergebnis wird festgehalten | unter „👤:“, vor den Aufgaben |
 | **I** | Idee – bei Zusage wird daraus A oder D, bei Absage „verworfen“ | 💡 |
 | **W** | Warnung/Risiko – bleibt bis erledigt oder ausdrücklich akzeptiert; eingetretene Probleme werden zu A/D | ⚠ |
 
@@ -17,7 +17,9 @@
   in der Zeile steht. Erledigte Vorgänger verschwinden aus der Anzeige. Der Nachfolger wird berechnet, nicht gepflegt.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
-- **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`Du:`, `🤖KI:`, `💡`, `⚠`),
+- **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
+  sprachunabhängig, kürzer. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“.
+- **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤:`, `🤖:`, `💡`, `⚠`),
   danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist vorerst der Standard, um die Übersicht auszuprobieren;
   einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Rückkehr zum alten Standard: eine Konstante
   (`FOOTER_LAYOUT_DEFAULT`) in `src/worker.js` und dieser Absatz.
@@ -31,7 +33,7 @@
   (`project:`/`code:`), einmal beim Start und wenn ein Repository hinzukommt; (2) `cotrack_projects` mit dem Repository
   (`owner/name`); (3) ohne Repository das Projekt aus den Projektanweisungen; (4) sonst einmal nachfragen. Nie selbst ein Projekt anlegen.
 - **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt einen Block:
-  einzeilig `CT ▸ Du: … · 🤖KI: …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
+  einzeilig `CT ▸ 👤: … · 🤖: …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
   an dem gerade gearbeitet wird; bei Unklarheit fragen. Abhängigkeiten über Projektgrenzen gibt es vorerst nicht.
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen

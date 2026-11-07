@@ -20,12 +20,10 @@ const QREF_RE = /^([A-Za-z0-9][A-Za-z0-9-]{0,62}):([A-Za-z]{1,4}\d{1,6})$/;
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const OWNER_LABELS = { user: "Du", ai: "KI" };
-// Footer group labels (the AI group carries a robot icon).
-const FOOTER_OWNER_LABELS = {
-  de: { user: "Du", ai: "🤖KI" },
-  en: { user: "You", ai: "🤖AI" },
-};
-// Footer wording per language (`lang=de|en`, default de): the "new / done" short line.
+// Footer group labels.
+// Language-independent since v2.6: 👤 = yours, 🤖 = the AI's.
+const FOOTER_OWNER_LABELS = { user: "👤", ai: "🤖" };
+// Footer wording per language (`lang=de|en`, default de): only the "new / done" short line.
 const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { created: "new", done: "done" } };
 // Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (Du / KI / 💡 / ⚠),
 // "single" = everything in one line. Change this constant to switch the default back.
@@ -648,7 +646,7 @@ function shortLabel(item) {
 
 /**
  * Builds the one-line summary used at the end of chat answers, e.g.
- * "Du: D1 ▶A3 Lizenz · 🤖KI: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: A1"
+ * "👤: D1 ▶A3 Lizenz · 🤖: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: A1"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
 // ref -> refs of OPEN items that wait for it (the reverse of waiting_on; nothing extra is stored).
@@ -674,7 +672,7 @@ export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = f
     if (!k || k.actionable) {
       const owner = it.owner || "user";
       key = `o:${owner}`;
-      label = `${(FOOTER_OWNER_LABELS[lang] || FOOTER_OWNER_LABELS.de)[owner] || owner}:`;
+      label = `${FOOTER_OWNER_LABELS[owner] || owner}:`;
       weight = owner === "user" ? 0 : owner === "ai" ? 1 : 2;
     } else {
       key = `k:${k.code}`;
@@ -748,7 +746,7 @@ export function normLayout(v) {
 
 /**
  * Footer for several projects (decided 2026-11-04, D4): one line per project, prefixed with its code
- * (or slug), e.g. "CT ▸ Du: D1 … · 🤖KI: A2 …". Projects without anything to show are left out,
+ * (or slug), e.g. "CT ▸ 👤: D1 … · 🤖: A2 …". Projects without anything to show are left out,
  * so with `deltaOnly` only projects with changes appear.
  */
 export function buildMultiFooter(entries, kinds, opts = {}) {

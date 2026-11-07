@@ -11,8 +11,8 @@ an [MCP server](docs/MCP.md) (or the HTTP API). Every item has a stable referenc
 **never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
 
 ```
-Du: D5 Lizenz wählen · A13 Prompt einspielen
-🤖KI: A6 Token-sparen · A7 README überarbeiten (+1)
+👤: D5 Lizenz wählen · A13 Prompt einspielen
+🤖: A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
 ⚠ W1 Auth · W3 Tokens rotieren
 ```
@@ -131,7 +131,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: labels `You / 🤖AI / new / done`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |

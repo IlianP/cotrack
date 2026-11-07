@@ -12,8 +12,8 @@ die **nie neu vergeben** wird – du kannst dich also in jedem Chat darauf bezie
 demselben Stand.
 
 ```
-Du: D5 Lizenz wählen · A13 Prompt einspielen
-🤖KI: A6 Token-sparen · A7 README überarbeiten (+1)
+👤: D5 Lizenz wählen · A13 Prompt einspielen
+🤖: A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
 ⚠ W1 Auth · W3 Tokens rotieren
 ```
@@ -139,7 +139,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`, derzeit Standard: eine Zeile je Gruppe; `single`: eine Zeile; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: Beschriftungen `You / 🤖AI / new / done`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`, derzeit Standard: eine Zeile je Gruppe; `single`: eine Zeile; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | Änderungsprotokoll |
