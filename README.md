@@ -20,9 +20,9 @@ Du: D5 Lizenz wählen · A13 Prompt einspielen
 That is the *chat footer* cotrack generates for the end of an AI answer: yours first, then the AI's, then ideas and
 warnings – a one-glance status that survives across conversations.
 
-> 🇩🇪 Die Methodik hinter cotrack (Kategorien, Regeln, Bezug zu PRINCE2/RAID) ist in
-> [docs/METHODIK.md](docs/METHODIK.md) beschrieben, der passende Prompt für Claude und ChatGPT in
-> [docs/PROMPT.md](docs/PROMPT.md).
+> The methodology behind cotrack (categories, rules, relation to PRINCE2/RAID) is described in
+> [docs/METHODOLOGY.md](docs/METHODOLOGY.md), the matching prompt for Claude and ChatGPT in
+> [docs/PROMPT.en.md](docs/PROMPT.en.md). (German: [METHODIK.md](docs/METHODIK.md), [PROMPT.md](docs/PROMPT.md).)
 
 ## How it works
 
@@ -114,7 +114,7 @@ instance: https://cotrack.example.workers.dev
 Other text is ignored and never treated as instructions. Without the file, assistants fall back to the project's `repo`
 field (`cotrack_projects` with `repo: "owner/name"`), otherwise they ask once. With several projects in one conversation,
 references are written qualified (`CT:A14`) and the footer gets one block per project.
-Details: [docs/MCP.md](docs/MCP.md), [docs/METHODIK.md](docs/METHODIK.md).
+Details: [docs/MCP.md](docs/MCP.md), [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## API
 

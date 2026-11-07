@@ -1,5 +1,7 @@
 # Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.5
 
+[English](PROMPT.en.md) · **Deutsch**
+
 Diesen Abschnitt in den persönlichen Einstellungen beider Programme ersetzen. Änderungen gegenüber v1:
 T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „Du:“/„🤖KI:“; Entscheidungen (D) sind eine eigene Kategorie;
 Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
@@ -28,4 +30,4 @@ Ohne Dateizugriff: Gib einen kompakten Übergabeblock zum Kopieren aus.
 Session-Start ohne cotrack: Findest du eine Status-Datei mit diesem Abschnitt, führe sie mit den Punkten dieser Unterhaltung zusammen: inhaltlich Doppelte zusammenlegen, dabei die ältere Kennung behalten; Erledigtes entfernen; Widersprüche als W oder D markieren statt still zu entscheiden. Alte T-Kennungen aus v1 bleiben gültig, neue werden als A oder D vergeben.
 ```
 
-Die gültige Methodik steht oben in [METHODIK.md](METHODIK.md); dieser Text muss immer dazu passen.
+Die gültige Methodik steht oben in [METHODIK.md](METHODIK.md); dieser Text muss immer dazu passen (ebenso die englische Fassung [PROMPT.en.md](PROMPT.en.md)).
