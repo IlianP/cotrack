@@ -27,6 +27,9 @@ const ACCESS_TTL = 3600;
 const REFRESH_TTL = 30 * 24 * 3600;
 const AUTH_METHODS = ["none", "client_secret_post", "client_secret_basic"];
 const PKCE_RE = /^[A-Za-z0-9\-._~]{43,128}$/;
+// The only request parameters carried through the consent page. Anything else (e.g. "decision" or "token" smuggled
+// into the authorization URL) is dropped, so a client cannot pre-fill the user's choice.
+const AUTHORIZE_PARAMS = ["client_id", "redirect_uri", "response_type", "code_challenge", "code_challenge_method", "state", "scope", "resource"];
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -179,7 +182,7 @@ function validRedirectUri(u) {
 /* ------------------------------------------------------------- authorize */
 
 async function authorizeGet(db, url) {
-  const p = Object.fromEntries(url.searchParams);
+  const p = pickAuthorizeParams((key) => url.searchParams.get(key));
   const check = await checkAuthorizeRequest(db, p, url.origin);
   if (check.fatal) return consentPage({ fatal: check.fatal }, 400);
   if (check.error) return redirectTo(check.redirectUri, { ...check.error, state: p.state, iss: url.origin });
@@ -193,16 +196,14 @@ async function authorizePost(request, env, origin) {
   } catch {
     return consentPage({ fatal: "Ungültige Anfrage." }, 400);
   }
-  const p = {};
-  for (const key of ["client_id", "redirect_uri", "response_type", "code_challenge", "code_challenge_method", "state", "scope", "resource"]) {
-    const v = form.get(key);
-    if (typeof v === "string" && v !== "") p[key] = v;
-  }
+  const p = pickAuthorizeParams((key) => form.get(key));
   const check = await checkAuthorizeRequest(env.DB, p, origin);
   if (check.fatal) return consentPage({ fatal: check.fatal }, 400);
   if (check.error) return redirectTo(check.redirectUri, { ...check.error, state: p.state, iss: origin });
 
-  if (form.get("decision") !== "allow") {
+  // Exactly one decision, and it must be "allow"; anything else counts as a refusal.
+  const decisions = form.getAll("decision");
+  if (decisions.length !== 1 || decisions[0] !== "allow") {
     return redirectTo(check.redirectUri, { error: "access_denied", error_description: "Der Nutzer hat abgelehnt.", state: p.state, iss: origin });
   }
   // Only the human may connect a client: the AI token is deliberately not accepted here.
@@ -219,6 +220,15 @@ async function authorizePost(request, env, origin) {
     .bind(await sha256hex(code), check.client.client_id, check.redirectUri, p.code_challenge, SCOPE, check.resource, nowSec() + CODE_TTL)
     .run();
   return redirectTo(check.redirectUri, { code, state: p.state, iss: origin });
+}
+
+function pickAuthorizeParams(get) {
+  const p = {};
+  for (const key of AUTHORIZE_PARAMS) {
+    const v = get(key);
+    if (typeof v === "string" && v !== "") p[key] = v;
+  }
+  return p;
 }
 
 /**
@@ -256,7 +266,7 @@ function consentPage({ params, client, redirectUri, wrongToken = false, fatal = 
     body = `<h1>cotrack verbinden</h1><p class="err">${esc(fatal)}</p>`;
   } else {
     const hidden = Object.entries(params)
-      .filter(([k]) => k !== "redirect_uri")
+      .filter(([k]) => AUTHORIZE_PARAMS.includes(k) && k !== "redirect_uri")
       .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
       .join("");
     const name = client.client_name || "Eine App";
