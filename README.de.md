@@ -67,8 +67,8 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 ```
 Browser (src/ui.html) ────────┐
                               ├─► Cloudflare Worker ─► D1 (SQLite)
-KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js
-                                  Bearer-Token → Akteur "user" | "ai"
+KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js · src/oauth.js
+                                  Bearer-Token oder OAuth → Akteur "user" | "ai"
 ```
 
 ## Selbst hosten
@@ -90,7 +90,7 @@ Migrationen mitbringen.
 
 ## KI verbinden (MCP)
 
-`POST /mcp` (oder `/mcp/<token>` für Clients, die keine Header senden können) spricht das Model Context Protocol
+`POST /mcp` spricht das Model Context Protocol
 (Streamable HTTP, zustandslos, ohne Bibliothek in [`src/mcp.js`](src/mcp.js) umgesetzt). Tools: `cotrack_projects`,
 `cotrack_project_create`, `cotrack_project_update`, `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`,
 `cotrack_update`, `cotrack_convert`, `cotrack_footer`, `cotrack_changes`. Ein Lösch-Tool gibt es bewusst nicht: Die KI
@@ -102,8 +102,10 @@ Zum Beispiel Claude Code:
 claude mcp add --transport http cotrack https://<dein-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
 ```
 
-Einrichtung für claude.ai und ChatGPT: [docs/MCP.md](docs/MCP.md). Eine URL mit Token darin ist ein Passwort –
-OAuth-Anmeldung steht auf der Roadmap.
+**claude.ai und ChatGPT** verbinden sich per **OAuth** ([`src/oauth.js`](src/oauth.js), ohne Bibliothek): Connector mit der
+URL `https://<dein-worker>/mcp` anlegen; cotrack öffnet einmal eine Freigabeseite, du bestätigst mit `TOKEN_USER`, und die
+App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in der URL. Die alte Form `/mcp/<token>`
+funktioniert übergangsweise noch und wird entfernt. Schritt für Schritt: [docs/MCP.md](docs/MCP.md).
 
 ## Repository-Zuordnung
 
@@ -126,7 +128,8 @@ Projekt. Details: [docs/MCP.md](docs/MCP.md), [docs/METHODIK.md](docs/METHODIK.m
 
 ## API
 
-Alle Endpunkte außer `/` und `/api/health` erfordern `Authorization: Bearer <token>`.
+Alle Endpunkte außer `/`, `/api/health` und den OAuth-Endpunkten für MCP-Clients (`/.well-known/…`, `/register`,
+`/authorize`, `/token`, `/revoke`; siehe [docs/MCP.md](docs/MCP.md)) erfordern `Authorization: Bearer <token>`.
 Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festgehalten wird.
 
 | Methode | Pfad | Zweck |
@@ -161,7 +164,6 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 ## Roadmap
 
-- OAuth für den MCP-Server (kein Token in der URL)
 - Abgleich mit `docs/STATUS.md` in GitHub-Repositories
 - WebSocket-Live-Updates (Durable Objects) statt Polling
 - Richtiger Login (Cloudflare Access / OAuth) und Mehrbenutzerbetrieb

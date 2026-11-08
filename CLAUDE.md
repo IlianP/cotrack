@@ -1,6 +1,8 @@
 # cotrack – notes for AI assistants
 
 - Plain Cloudflare Worker, **no build step**: `src/worker.js` (API + routing) imports `src/ui.html` as text.
+  MCP server in `src/mcp.js`; OAuth 2.1 for MCP clients (claude.ai, ChatGPT) in `src/oauth.js` – security-relevant:
+  changes there go through a branch + PR. OAuth tokens only ever act as `ai` and are valid only on `/mcp`.
   Schema in `migrations/` (D1). Keep it dependency-free.
 - Live instance: https://cotrack.ilianos1.workers.dev – project slug `cotrack` tracks this repo's own open points.
 - `COTRACK.md` (repo root) maps this repo to its cotrack project (`project:` = slug; `code:` = short code once set). Keep it in sync with the board.
