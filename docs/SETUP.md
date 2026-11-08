@@ -92,7 +92,8 @@ npm run db:migrate
 
 ## 6. Choose two tokens (do this yourself)
 
-cotrack has no password login; it uses two secret tokens:
+cotrack has no password login; it uses two secret tokens. **Cloudflare does not create them** – you generate them
+yourself (command below) and store them at Cloudflare in step 7. They are two different values:
 
 | Token | Who uses it |
 |---|---|
@@ -105,7 +106,12 @@ Generate two random tokens (run twice; works on macOS, Windows and Linux):
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 ```
 
-Store both in a **password manager**. Anyone who knows a token can read and change your items.
+Store the first value as `TOKEN_USER` and the second as `TOKEN_AI` in a **password manager**. Anyone who knows a token
+can read and change your items. If you only use claude.ai or ChatGPT, day to day you only need `TOKEN_USER` (web app and
+consent page); create `TOKEN_AI` anyway, e.g. for Claude Code.
+
+Replacing a token (e.g. because it was visible somewhere): generate a new value and store it again with the same command
+from step 7. Then use the new value everywhere the old one was used.
 
 You add the tokens in step 7, right after the first deploy.
 

@@ -93,7 +93,8 @@ npm run db:migrate
 
 ## 6. Zwei Tokens festlegen (selbst machen)
 
-cotrack hat kein Login mit Passwort, sondern zwei geheime Tokens:
+cotrack hat kein Login mit Passwort, sondern zwei geheime Tokens. **Cloudflare erzeugt sie nicht** – du würfelst sie
+selbst (Befehl unten) und hinterlegst sie dann in Schritt 7 bei Cloudflare. Es sind zwei verschiedene Werte:
 
 | Token | Wer ihn benutzt |
 |---|---|
@@ -106,7 +107,12 @@ Zwei zufällige Tokens erzeugen (zweimal ausführen, funktioniert unter macOS, W
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 ```
 
-Beide in einem **Passwort-Manager** speichern. Wer einen Token kennt, kann deine Punkte lesen und ändern.
+Den ersten Wert als `TOKEN_USER`, den zweiten als `TOKEN_AI` in einem **Passwort-Manager** speichern. Wer einen Token
+kennt, kann deine Punkte lesen und ändern. Nutzt du nur claude.ai oder ChatGPT, brauchst du im Alltag nur `TOKEN_USER`
+(Web-App und Freigabeseite); `TOKEN_AI` trotzdem anlegen, z. B. für Claude Code.
+
+Einen Token austauschen (z. B. weil er irgendwo sichtbar war): neuen Wert würfeln und mit demselben Befehl aus Schritt 7
+erneut hinterlegen. Danach den neuen Wert überall eintragen, wo der alte benutzt wurde.
 
 Die Tokens hinterlegst du in Schritt 7, direkt nach dem ersten Deploy.
 
