@@ -61,29 +61,33 @@ warnings – a one-glance status that survives across conversations.
 ```
 Browser (src/ui.html) ────────┐
                               ├─► Cloudflare Worker ─► D1 (SQLite)
-AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.js
-                                  Bearer token → actor "user" | "ai"
+AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.js · src/oauth.js
+                                  Bearer token or OAuth → actor "user" | "ai"
 ```
 
 ## Self-hosting
 
-Requirements: a Cloudflare account and Node.js.
+**New to Cloudflare?** Follow the step-by-step guide [docs/SETUP.md](docs/SETUP.md): it covers creating a free account,
+deploying, choosing tokens and connecting your AI – and which steps your AI assistant can do for you.
+
+Short version for those who know Cloudflare (requirements: a Cloudflare account and Node.js):
 
 ```bash
 npm install
+npx wrangler login
 npx wrangler d1 create cotrack-db          # put the id into wrangler.toml
 npm run db:migrate
+npm run deploy                             # prints your address, e.g. https://cotrack.<you>.workers.dev
 npx wrangler secret put TOKEN_USER         # e.g. openssl rand -hex 24
 npx wrangler secret put TOKEN_AI
-npm run deploy
 ```
 
-Open the worker URL, enter `TOKEN_USER`, create a project. Give `TOKEN_AI` to your AI assistant.
+Open your worker address, enter `TOKEN_USER`, create a project. Connect your AI with `<your-address>/mcp`.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)
 
-`POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
+`POST /mcp` speaks the Model Context Protocol
 (Streamable HTTP, stateless, implemented without a library in [`src/mcp.js`](src/mcp.js)). Tools: `cotrack_projects`, `cotrack_project_create`, `cotrack_project_update`,
 `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`, `cotrack_update`, `cotrack_convert`, `cotrack_footer`,
 `cotrack_changes`. There is deliberately no delete tool: the AI drops items (`status: "dropped"`), nothing is lost.
@@ -94,8 +98,10 @@ Claude Code, for example:
 claude mcp add --transport http cotrack https://<your-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
 ```
 
-Setup for claude.ai and ChatGPT (German): [docs/MCP.md](docs/MCP.md). A URL with a token in it is a password –
-OAuth sign-in is on the roadmap.
+**claude.ai and ChatGPT** connect via **OAuth** ([`src/oauth.js`](src/oauth.js), no library): add a connector with the
+URL `https://<your-worker>/mcp`; cotrack opens a consent page once, you confirm with `TOKEN_USER`, and the app gets
+short-lived tokens that act as `ai`. No secret appears in the URL. The old form `/mcp/<token>` still works during the
+transition and will be removed. Step by step (German): [docs/MCP.md](docs/MCP.md).
 
 ## Linking a repository
 
@@ -118,7 +124,8 @@ Details: [docs/MCP.md](docs/MCP.md), [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## API
 
-All endpoints except `/` and `/api/health` require `Authorization: Bearer <token>`.
+All endpoints except `/`, `/api/health` and the OAuth endpoints for MCP clients (`/.well-known/…`, `/register`,
+`/authorize`, `/token`, `/revoke`; see [docs/MCP.md](docs/MCP.md)) require `Authorization: Bearer <token>`.
 The token decides the actor (`user` or `ai`) recorded on every change.
 
 | Method | Path | Purpose |
@@ -152,7 +159,6 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 ## Roadmap
 
-- OAuth for the MCP server (no token in the URL)
 - Sync with `docs/STATUS.md` in GitHub repositories
 - WebSocket live updates (Durable Objects) instead of polling
 - Proper login (Cloudflare Access / OAuth) and multi-user support

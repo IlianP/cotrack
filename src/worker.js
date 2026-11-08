@@ -6,6 +6,7 @@
  */
 import UI_HTML from "./ui.html";
 import { handleMcp } from "./mcp.js";
+import { handleOAuth } from "./oauth.js";
 
 const STATUSES = ["open", "doing", "blocked", "done", "dropped"];
 const OPEN = ["open", "doing", "blocked"];
@@ -52,6 +53,8 @@ export default {
         return page(UI_HTML);
       }
       if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return await handleMcp(request, env, url);
+      const oauth = await handleOAuth(request, env, url);
+      if (oauth) return oauth;
       if (url.pathname === "/api/health") return json({ ok: true, service: "cotrack" });
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
         const actor = await authenticate(request, env);
