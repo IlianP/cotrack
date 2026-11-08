@@ -29,7 +29,7 @@ const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { cr
 // "single" = everything in one line. Built-in default only: since v2.7 the human picks the default in the
 // web app (setting `footer_layout`), and a `layout` parameter in a request wins over both.
 const FOOTER_LAYOUT_DEFAULT = "multi";
-// Instance settings (table `settings`, migration 0005; web app ☰ → Einstellungen). A missing row – or a database
+// Instance settings (table `settings`, migration 0006; web app ☰ → Einstellungen). A missing row – or a database
 // without the table – means these built-in defaults.
 const SETTINGS_DEFAULTS = Object.freeze({
   footer_layout: FOOTER_LAYOUT_DEFAULT,
@@ -780,7 +780,7 @@ export function footerStyle(settings, layout = null) {
 const SETTING_KEYS = Object.keys(SETTINGS_DEFAULTS);
 const isMissingTable = (err) => /no such table/i.test(String(err?.message ?? err));
 
-// { settings, defaults, available }. `available` is false while migration 0005 is not applied yet – everything
+// { settings, defaults, available }. `available` is false while migration 0006 is not applied yet – everything
 // keeps working with the built-in defaults, only saving is not possible.
 export async function readSettings(db) {
   const settings = { ...SETTINGS_DEFAULTS };
@@ -834,7 +834,7 @@ async function updateSettings(db, input, actor) {
   try {
     await db.batch(stmts);
   } catch (err) {
-    if (isMissingTable(err)) throw new HttpError(503, "settings_unavailable", "apply migration 0005 first (npm run db:migrate)");
+    if (isMissingTable(err)) throw new HttpError(503, "settings_unavailable", "apply migration 0006 first (npm run db:migrate)");
     throw err;
   }
 }

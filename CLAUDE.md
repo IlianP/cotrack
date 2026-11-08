@@ -10,6 +10,6 @@
 - Keep references stable: never renumber, never reuse. Accepted ideas are converted (`/convert`), not edited.
 - UI language is German; code and API are English. The README exists in two languages: `README.md` (English, default) and `README.de.md` (German) – **change both together**. Methodology and prompt also exist in both languages: `docs/METHODIK.md` ↔ `docs/METHODOLOGY.md` and `docs/PROMPT.md` ↔ `docs/PROMPT.en.md` (current rules at the top of the methodology) – keep all four in sync. The footer language is selected with `lang=de|en` (`src/worker.js`); the English prompt asks for `en`.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
-- Instance settings (table `settings`, migration 0005; web app ☰ → Einstellungen; `GET/PATCH /api/settings`) set the footer's
+- Instance settings (table `settings`, migration 0006; web app ☰ → Einstellungen; `GET/PATCH /api/settings`) set the footer's
   default layout and group markers for API and MCP. Only the user token may change them; a `layout` in a request wins.
   Who controls what (prompt vs. server vs. settings) is explained in `docs/PROMPT.md` → "Wozu der Prompt?".

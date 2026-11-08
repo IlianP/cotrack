@@ -606,7 +606,7 @@ async function openSettings() {
     h("p", { class: "small" }, "Vorschau:"),
     preview,
     h("p", { class: "small" }, "Bittest du die KI im Gespräch ausdrücklich um ein anderes Format, geht das vor. Leeres Feld = Standard."),
-    !available ? h("p", { class: "small", style: "color:var(--danger)" }, "Noch nicht verfügbar: Die Datenbank braucht Migration 0005 (npm run db:migrate). Bis dahin gelten die Standards.") : null,
+    !available ? h("p", { class: "small", style: "color:var(--danger)" }, "Noch nicht verfügbar: Die Datenbank braucht Migration 0006 (npm run db:migrate). Bis dahin gelten die Standards.") : null,
     available && state.actor !== "user" ? h("p", { class: "small", style: "color:var(--danger)" }, "Nur mit deinem eigenen Token änderbar, nicht mit dem KI-Token.") : null,
     h("div", { class: "actions" },
       canEdit ? h("button", { type: "button", class: "btn", onclick: () => save({ footer_layout: null, footer_label_user: null, footer_label_ai: null }, "Standard wiederhergestellt") }, "Standard") : null,

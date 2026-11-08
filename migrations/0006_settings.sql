@@ -1,4 +1,4 @@
--- Instance settings (methodology v2.7, 2026-11-08): defaults the human chooses in the web app (☰ → Einstellungen),
+-- Instance settings (methodology v2.7, 2026-11-08; numbered 0006 because 0005 is taken by OAuth, PR #10): defaults the human chooses in the web app (☰ → Einstellungen),
 -- e.g. the footer layout and the group markers for "yours" / "the AI's". They shape what the server returns to
 -- every AI client (API and MCP); a parameter in a single request (e.g. layout=single) still wins.
 -- One row per key; a missing row means the built-in default in src/worker.js (SETTINGS_DEFAULTS).
