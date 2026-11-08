@@ -50,8 +50,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **MCP-Server** – funktioniert mit Claude (claude.ai, Claude Code) und ChatGPT; die Antworten sind kompakter Text, um
   Tokens zu sparen.
 - **Live** – die Web-App übernimmt Änderungen von dir oder einer KI innerhalb weniger Sekunden.
-- **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe (oder `layout=single` für eine Zeile); eine kurze
-  „neu / erledigt“-Zeile für Antworten, die etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
+- **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
+  Web-App ein (☰ → Einstellungen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
+  etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode, **kein Build-Schritt, keine Abhängigkeiten** (reiner
@@ -73,20 +74,79 @@ KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js
 
 ## Selbst hosten
 
-Voraussetzungen: ein Cloudflare-Konto und Node.js.
+cotrack läuft in **deinem eigenen Cloudflare-Konto** – einen gemeinsamen, gehosteten Dienst gibt es nicht. Der
+**kostenlose Plan reicht** für den persönlichen Gebrauch: Workers Free erlaubt 100.000 Anfragen pro Tag, D1 Free 5 GB
+Speicher sowie 5 Millionen gelesene und 100.000 geschriebene Zeilen pro Tag
+([Workers-Limits](https://developers.cloudflare.com/workers/platform/limits/),
+[D1-Preise](https://developers.cloudflare.com/d1/platform/pricing/)). Deine Instanz bekommt eine kostenlose Adresse wie
+`https://cotrack.<deine-subdomain>.workers.dev`.
+
+Du brauchst:
+
+- ein [Cloudflare-Konto](https://dash.cloudflare.com/sign-up),
+- entweder **Node.js 22+** auf deinem Rechner (Weg A) oder nur ein **GitHub-Konto** (Weg B, alles im Browser),
+- zwei **Tokens**, die du dir selbst ausdenkst: `TOKEN_USER` für dich (Web-App) und `TOKEN_AI` für deine KI-Assistenten
+  (ihre Änderungen werden als „KI“ protokolliert). Nimm lange Zufallsfolgen (32+ Zeichen), z. B. `openssl rand -hex 24`
+  oder einen Passwort-Manager.
+
+### Weg A – Terminal
 
 ```bash
+git clone https://github.com/IlianP/cotrack.git && cd cotrack
 npm install
-npx wrangler d1 create cotrack-db          # die ID in wrangler.toml eintragen
-npm run db:migrate
-npx wrangler secret put TOKEN_USER         # z. B. openssl rand -hex 24
-npx wrangler secret put TOKEN_AI
-npm run deploy
+npx wrangler login                    # im Browser bei Cloudflare anmelden
+npx wrangler d1 create cotrack-db     # gibt eine database_id aus …
+#   … die in wrangler.toml eintragen: [[d1_databases]] → database_id
+npm run db:migrate                    # legt die Tabellen in deiner Datenbank an
+npx wrangler secret put TOKEN_USER    # deinen Token einfügen
+npx wrangler secret put TOKEN_AI      # den Token der KI einfügen
+npm run deploy                        # gibt deine URL aus
 ```
 
-Öffne die Worker-URL, gib `TOKEN_USER` ein und lege ein Projekt an. `TOKEN_AI` bekommt dein KI-Assistent.
-Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
-Migrationen mitbringen.
+### Weg B – nur im Browser (GitHub + Cloudflare-Dashboard)
+
+1. Dieses Repository auf GitHub **forken**.
+2. **Datenbank:** Cloudflare-Dashboard → *Storage & databases* → *D1 SQL database* → *Create database*, Name `cotrack-db`.
+   Die Datenbank-ID kopieren.
+3. In deinem Fork **`wrangler.toml`** bearbeiten (Stift-Symbol auf GitHub): `database_id` durch deine ersetzen und
+   committen.
+4. **Worker:** *Workers & Pages* → *Create application* → *Import a repository* (GitHub verbinden) → deinen Fork wählen →
+   Voreinstellungen lassen (der Name muss `cotrack` bleiben, wie in `wrangler.toml`) → *Save and Deploy*. Ab jetzt wird
+   jeder Push in deinen Fork automatisch veröffentlicht.
+5. **Tokens:** dein Worker → *Settings* → *Variables and Secrets* → *Add* → Typ *Secret*: `TOKEN_USER`, dann `TOKEN_AI`
+   → *Deploy*. Secrets bleiben bei späteren Deploys erhalten.
+6. **Tabellen** (einmal, und wieder, wenn ein Update eine neue Migration mitbringt): wrangler spielt die Dateien aus
+   `migrations/` ein. Ohne eigenes Terminal öffnest du deinen Fork in **GitHub Codespaces** (*Code* → *Codespaces* →
+   *Create codespace* – ein Terminal im Browser) und führst aus:
+   ```bash
+   npm install
+   npx wrangler login --device         # Anmeldung per Code (kein lokaler Browser nötig)
+   npm run db:migrate
+   ```
+   Bitte die Migrationsdateien nicht stattdessen in die D1-Konsole kopieren: wrangler merkt sich, welche Migrationen
+   gelaufen sind, die Konsole nicht – spätere Updates würden sie dann erneut ausführen und scheitern.
+7. `https://cotrack.<deine-subdomain>.workers.dev` öffnen.
+
+> **Tipp – lass die KI den Cloudflare-Teil machen.** Ist bei deinem Assistenten der
+> [Cloudflare-MCP-Server](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)
+> verbunden (`https://mcp.cloudflare.com/mcp`), kann er die Datenbank anlegen, die Secrets setzen und das Deployment
+> prüfen. Die Schritte oben bleiben die Referenz dafür, was er tun soll (auch Schritt 6: Migrationen per wrangler).
+
+### Erste Schritte
+
+1. Deine URL öffnen, mit `TOKEN_USER` anmelden, ein Projekt anlegen (☰ → *Neues Projekt*).
+2. Deine KI mit `TOKEN_AI` verbinden – siehe [KI verbinden](#ki-verbinden-mcp).
+3. Den benutzerdefinierten Prompt in Claude / ChatGPT einspielen: [docs/PROMPT.md](docs/PROMPT.md) –
+   [wozu es ihn braucht](docs/PROMPT.md#wozu-der-prompt--wer-regelt-was), obwohl cotrack einen Server hat.
+4. Optional: ☰ → *Einstellungen* – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und die
+   Kennzeichen für deine Punkte und die der KI (Standard 👤 / 🤖).
+5. Optional: eine `COTRACK.md` in deinen Repositories ([siehe unten](#repository-zuordnung)).
+
+### Updates
+
+Neue Version holen (Weg A: `git pull`; Weg B: *Sync fork* auf GitHub – Cloudflare veröffentlicht von selbst), danach
+gleich `npm run db:migrate` ausführen (Weg B: im Codespace) und bei Weg A `npm run deploy`. Neue Versionen können
+Migrationen mitbringen; ist nichts Neues dabei, schadet der Aufruf nicht.
 
 ## KI verbinden (MCP)
 
@@ -104,6 +164,10 @@ claude mcp add --transport http cotrack https://<dein-worker>/mcp --header "Auth
 
 Einrichtung für claude.ai und ChatGPT: [docs/MCP.md](docs/MCP.md). Eine URL mit Token darin ist ein Passwort –
 OAuth-Anmeldung steht auf der Roadmap.
+
+Danach den **benutzerdefinierten Prompt** einspielen ([docs/PROMPT.md](docs/PROMPT.md)). Der Server antwortet nur, wenn
+er gefragt wird; der Prompt sorgt dafür, dass die KI fragt – zu Beginn einer Session, bei neuen Punkten, für die
+Fußzeile. Wer was regelt (Prompt, Server, Einstellungen der Web-App): [Übersicht](docs/PROMPT.md#wozu-der-prompt--wer-regelt-was).
 
 ## Repository-Zuordnung
 
@@ -139,12 +203,13 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`, derzeit Standard: eine Zeile je Gruppe; `single`: eine Zeile; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | Änderungsprotokoll |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
+| GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (Standard `multi`, `👤`, `🤖`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |
 
 Statuswerte: `open`, `doing`, `blocked`, `done`, `dropped`. Besitzer: `user`, `ai` oder ein beliebiger Name
 (Standard: der Ersteller). Mit `seq` lässt sich eine bestehende Kennung übernehmen (z. B. `A3` aus einem Chat); eine

@@ -11,7 +11,7 @@ Technisch sind das nur JSON-Nachrichten (JSON-RPC 2.0), die per HTTP an **eine**
 | Schritt | Nachricht des KI-Clients | Antwort von cotrack |
 |---|---|---|
 | 1. Handschlag | `initialize` | Protokollversion, Name, kurze Gebrauchsanweisung (`instructions`) |
-| 2. Werkzeugliste | `tools/list` | die 9 Werkzeuge unten, mit Parametern |
+| 2. Werkzeugliste | `tools/list` | die 11 Werkzeuge unten, mit Parametern |
 | 3. Benutzung | `tools/call` mit Name + Argumenten | kurzer Text, z. B. `A11 angelegt: …` |
 
 Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut lesbar).
@@ -29,7 +29,7 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_add` | neuen Punkt anlegen | schreibt |
 | `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`) | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D | schreibt |
-| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (Standard: je Gruppe eine Zeile) oder `single` | liest |
+| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Einstellungen) | liest |
 | `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions) | liest |
 
 Bewusst **kein Löschen** per KI – Punkte werden mit `status: "dropped"` verworfen, Projekte archiviert, damit nichts verloren geht.
@@ -46,8 +46,9 @@ Damit das zuverlässig klappt, greifen drei Ebenen ineinander:
 1. **`instructions` des Servers** – cotrack schickt beim Verbinden eine Gebrauchsanweisung mit, die die Zuordnung beschreibt
    (`COTRACK.md` lesen, sonst `cotrack_projects` mit `repo`, sonst nachfragen). Clients, die sie weiterreichen (Claude Code tut das),
    brauchen nichts weiter.
-2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), v2.6: Teil 1 Basis + Teil 2 cotrack-Zusatz) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
-   nicht anzeigt (claude.ai, ChatGPT).
+2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), Text v2.6: Teil 1 Basis + Teil 2 cotrack-Zusatz) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
+   nicht anzeigt (claude.ai, ChatGPT). Warum es ihn neben dem Server braucht und wer was regelt:
+   [PROMPT.md → Wozu der Prompt?](PROMPT.md#wozu-der-prompt--wer-regelt-was)
 3. **Hinweis im Repository** (optional) – eine Zeile in `CLAUDE.md` bzw. `AGENTS.md`, z. B. „Offene Punkte: cotrack-Projekt siehe COTRACK.md“.
    Claude Code lädt diese Dateien von selbst; so klappt es auch ohne Prompt.
 
@@ -56,17 +57,18 @@ des Projekts die Rückfalllösung.
 
 ## Verbinden
 
-Adresse: `https://cotrack.ilianos1.workers.dev/mcp`. Anmeldung mit dem **KI-Token** (`cta_…`), damit Änderungen
-als „KI“ protokolliert werden.
+Adresse: `https://<dein-worker>.workers.dev/mcp` – die URL deiner eigenen Installation
+(siehe [README → Selbst hosten](../README.de.md#selbst-hosten)). Anmeldung mit dem **KI-Token** (`TOKEN_AI`), damit
+Änderungen als „KI“ protokolliert werden.
 
 **Claude Code** (Terminal / Cloud-Sessions, Token aus der Umgebungsvariable):
 ```bash
-claude mcp add --transport http cotrack https://cotrack.ilianos1.workers.dev/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack https://<dein-worker>.workers.dev/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
 ```
 
 **claude.ai und ChatGPT** können in ihren Connector-Dialogen (noch) keine eigenen Header senden. Deshalb nimmt
 cotrack den Token übergangsweise auch im Pfad an:
-`https://cotrack.ilianos1.workers.dev/mcp/<KI-Token>`
+`https://<dein-worker>.workers.dev/mcp/<KI-Token>`
 
 - **claude.ai:** Einstellungen → Connectors → „Benutzerdefinierten Connector hinzufügen“ → Name `cotrack`, URL wie oben.
 - **ChatGPT:** Einstellungen → Apps & Connectors → Erweitert → Entwicklermodus einschalten → „Erstellen“ →
@@ -80,7 +82,7 @@ dann meldest du dich beim Verbinden einmal an, und es steht kein Geheimnis in de
 ## Selbst ausprobieren
 
 ```bash
-curl -s https://cotrack.ilianos1.workers.dev/mcp \
+curl -s https://<dein-worker>.workers.dev/mcp \
   -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"cotrack_status","arguments":{"project":"cotrack"}}}'
 ```
