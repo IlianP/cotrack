@@ -67,18 +67,22 @@ AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.j
 
 ## Self-hosting
 
-Requirements: a Cloudflare account and Node.js.
+**New to Cloudflare?** Follow the step-by-step guide [docs/SETUP.md](docs/SETUP.md): it covers creating a free account,
+deploying, choosing tokens and connecting your AI – and which steps your AI assistant can do for you.
+
+Short version for those who know Cloudflare (requirements: a Cloudflare account and Node.js):
 
 ```bash
 npm install
+npx wrangler login
 npx wrangler d1 create cotrack-db          # put the id into wrangler.toml
 npm run db:migrate
+npm run deploy                             # prints your address, e.g. https://cotrack.<you>.workers.dev
 npx wrangler secret put TOKEN_USER         # e.g. openssl rand -hex 24
 npx wrangler secret put TOKEN_AI
-npm run deploy
 ```
 
-Open the worker URL, enter `TOKEN_USER`, create a project. Give `TOKEN_AI` to your AI assistant.
+Open your worker address, enter `TOKEN_USER`, create a project. Connect your AI with `<your-address>/mcp`.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)

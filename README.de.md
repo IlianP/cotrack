@@ -73,18 +73,22 @@ KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js ·
 
 ## Selbst hosten
 
-Voraussetzungen: ein Cloudflare-Konto und Node.js.
+**Neu bei Cloudflare?** Die Schritt-für-Schritt-Anleitung [docs/SETUP.de.md](docs/SETUP.de.md) führt durch alles: kostenloses
+Konto anlegen, veröffentlichen, Tokens festlegen, KI verbinden – und sagt, welche Schritte dein KI-Assistent übernehmen kann.
+
+Kurzfassung für alle, die Cloudflare kennen (Voraussetzungen: ein Cloudflare-Konto und Node.js):
 
 ```bash
 npm install
+npx wrangler login
 npx wrangler d1 create cotrack-db          # die ID in wrangler.toml eintragen
 npm run db:migrate
+npm run deploy                             # zeigt deine Adresse, z. B. https://cotrack.<du>.workers.dev
 npx wrangler secret put TOKEN_USER         # z. B. openssl rand -hex 24
 npx wrangler secret put TOKEN_AI
-npm run deploy
 ```
 
-Öffne die Worker-URL, gib `TOKEN_USER` ein und lege ein Projekt an. `TOKEN_AI` bekommt dein KI-Assistent.
+Öffne deine Worker-Adresse, gib `TOKEN_USER` ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`.
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.
 

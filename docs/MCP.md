@@ -11,7 +11,7 @@ Technisch sind das nur JSON-Nachrichten (JSON-RPC 2.0), die per HTTP an **eine**
 | Schritt | Nachricht des KI-Clients | Antwort von cotrack |
 |---|---|---|
 | 1. Handschlag | `initialize` | Protokollversion, Name, kurze Gebrauchsanweisung (`instructions`) |
-| 2. Werkzeugliste | `tools/list` | die 9 Werkzeuge unten, mit Parametern |
+| 2. Werkzeugliste | `tools/list` | die Werkzeuge unten, mit Parametern |
 | 3. Benutzung | `tools/call` mit Name + Argumenten | kurzer Text, z. B. `A11 angelegt: …` |
 
 Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut lesbar).
@@ -56,17 +56,20 @@ des Projekts die Rückfalllösung.
 
 ## Verbinden
 
-Adresse: `https://cotrack.ilianos1.workers.dev/mcp`. Claude Code und Skripte melden sich mit dem **KI-Token** (`cta_…`)
+`<deine-adresse>` ist die Adresse deiner cotrack-Installation, z. B. `https://cotrack.dein-name.workers.dev` – du bekommst sie
+beim Einrichten ([SETUP.de.md](SETUP.de.md), Schritt 7). Noch keine Installation? Dann zuerst die Anleitung durchgehen.
+
+Adresse: `<deine-adresse>/mcp`. Claude Code und Skripte melden sich mit dem **KI-Token** (`TOKEN_AI`)
 im Header an, claude.ai und ChatGPT per **OAuth** (siehe unten). In beiden Fällen werden Änderungen als „KI“ protokolliert.
 
 **Claude Code** (Terminal / Cloud-Sessions, Token aus der Umgebungsvariable):
 ```bash
-claude mcp add --transport http cotrack https://cotrack.ilianos1.workers.dev/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <deine-adresse>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
 ```
 
 **claude.ai und ChatGPT** verbinden sich per **OAuth** – es steht kein Geheimnis in der URL:
 
-1. Connector anlegen mit der URL `https://cotrack.ilianos1.workers.dev/mcp` (ohne Token).
+1. Connector anlegen mit der URL `<deine-adresse>/mcp` (ohne Token).
    - **claude.ai:** Einstellungen → Connectors → „Benutzerdefinierten Connector hinzufügen“ → Name `cotrack`, URL wie oben.
      Felder für OAuth-Client-ID/-Secret leer lassen – die App registriert sich selbst.
    - **ChatGPT:** Einstellungen → Apps & Connectors → Erweitert → Entwicklermodus einschalten → „Erstellen“ →
@@ -78,7 +81,7 @@ claude mcp add --transport http cotrack https://cotrack.ilianos1.workers.dev/mcp
 
 (Die Menünamen ändern sich bei beiden Apps gelegentlich.)
 
-**Übergangsweise** nimmt cotrack den KI-Token weiter auch im Pfad an: `https://cotrack.ilianos1.workers.dev/mcp/<KI-Token>`.
+**Übergangsweise** nimmt cotrack den KI-Token weiter auch im Pfad an: `<deine-adresse>/mcp/<KI-Token>`.
 Diese Form wird entfernt, sobald beide Apps per OAuth verbunden sind. ⚠ Eine URL mit Token ist ein Passwort: nicht teilen,
 nicht in Screenshots zeigen.
 
@@ -103,7 +106,7 @@ Skripte unverändert.
 ## Selbst ausprobieren
 
 ```bash
-curl -s https://cotrack.ilianos1.workers.dev/mcp \
+curl -s "<deine-adresse>/mcp" \
   -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"cotrack_status","arguments":{"project":"cotrack"}}}'
 ```
