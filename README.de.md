@@ -109,8 +109,8 @@ claude mcp add --transport http cotrack <deine-adresse>/mcp
 
 **claude.ai und ChatGPT** verbinden sich per **OAuth** ([`src/oauth.js`](src/oauth.js), ohne Bibliothek): Connector mit der
 URL `<deine-adresse>/mcp` anlegen; cotrack öffnet einmal eine Freigabeseite, du bestätigst mit deinem Token, und die
-App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in der URL. Die alte Form `/mcp/<token>`
-funktioniert übergangsweise noch und wird entfernt. Schritt für Schritt: [docs/MCP.md](docs/MCP.md).
+App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in der URL (die alte Form
+`/mcp/<token>` wurde entfernt). Schritt für Schritt: [docs/MCP.md](docs/MCP.md).
 
 ## Repository-Zuordnung
 

@@ -52,7 +52,11 @@ export default {
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
         return page(UI_HTML);
       }
-      if (url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")) return await handleMcp(request, env, url);
+      if (url.pathname === "/mcp") return await handleMcp(request, env, url);
+      // The old form /mcp/<token> was removed after the switch to OAuth (A31); say so instead of a bare 404.
+      if (url.pathname.startsWith("/mcp/")) {
+        return json({ error: "not_found", hint: "The token-in-URL form was removed. Connect to /mcp; sign-in is via OAuth." }, 404);
+      }
       const oauth = await handleOAuth(request, env, url);
       if (oauth) return oauth;
       if (url.pathname === "/api/health") return json({ ok: true, service: "cotrack" });

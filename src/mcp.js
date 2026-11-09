@@ -428,19 +428,17 @@ const CORS = {
 };
 
 /**
- * Entry point for /mcp and /mcp/<token>.
- * Accepted credentials:
- *   - "Authorization: Bearer <token>" with TOKEN_AI / TOKEN_USER (Claude Code, scripts),
- *   - "Authorization: Bearer cto_…" from OAuth (claude.ai, ChatGPT; see src/oauth.js) – always actor "ai",
- *   - the static token in the URL path, /mcp/<token> (transition only, to be removed once OAuth is in use).
+ * Entry point for /mcp. Credentials only ever come from the Authorization header:
+ *   - "Bearer cto_…" from OAuth (claude.ai, ChatGPT, Claude Code; see src/oauth.js) – always actor "ai",
+ *   - "Bearer <token>" with TOKEN_AI / TOKEN_USER (tools without a browser, scripts).
+ * The token-in-URL form /mcp/<token> was removed after the switch to OAuth (A31).
  * Without valid credentials the 401 carries WWW-Authenticate, which starts the OAuth flow in the client.
  */
 export async function handleMcp(request, env, url) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-  const pathToken = url.pathname.split("/")[2];
   const header = (request.headers.get("authorization") || "").match(/^Bearer\s+(\S+)\s*$/i);
-  const token = header ? header[1] : pathToken ? decodeURIComponent(pathToken) : null;
-  const actor = token ? (await tokenActor(token, env)) || (header ? await oauthActor(env.DB, token) : null) : null;
+  const token = header ? header[1] : null;
+  const actor = token ? (await tokenActor(token, env)) || (await oauthActor(env.DB, token)) : null;
   if (!actor) {
     return rpcResponse({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized" } }, 401, {
       "www-authenticate": wwwAuthenticate(url.origin, Boolean(token)),
