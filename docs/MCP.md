@@ -59,13 +59,24 @@ des Projekts die Rückfalllösung.
 `<deine-adresse>` ist die Adresse deiner cotrack-Installation, z. B. `https://cotrack.dein-name.workers.dev` – du bekommst sie
 beim Einrichten ([SETUP.de.md](SETUP.de.md), Schritt 7). Noch keine Installation? Dann zuerst die Anleitung durchgehen.
 
-Adresse: `<deine-adresse>/mcp`. Claude Code und Skripte melden sich mit dem **KI-Token** (`TOKEN_AI`)
-im Header an, claude.ai und ChatGPT per **OAuth** (siehe unten). In beiden Fällen werden Änderungen als „KI“ protokolliert.
+Adresse: `<deine-adresse>/mcp`. Alle KI-Assistenten melden sich per **OAuth** an: Du bestätigst einmal mit deinem Token
+(`TOKEN_USER`), der Assistent bekommt eigene Zugangsdaten, und seine Änderungen werden als „KI“ protokolliert.
 
-**Claude Code** (Terminal / Cloud-Sessions, Token aus der Umgebungsvariable):
+**Claude Code:**
 ```bash
-claude mcp add --transport http cotrack <deine-adresse>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <deine-adresse>/mcp
 ```
+Danach in Claude Code `/mcp` eingeben, `cotrack` wählen und anmelden; im Browser öffnet sich die Freigabeseite.
+
+**Sonderfall ohne Browser** (Cloud-Sessions, Skripte, `curl`): Dort klappt die Anmeldung per Freigabeseite nicht. Dafür gibt es
+einen zweiten, festen Token für KI-Werkzeuge:
+1. Wert würfeln wie in [SETUP.de.md](SETUP.de.md), Schritt 6, und mit `npx wrangler secret put TOKEN_AI` hinterlegen.
+2. Im Header mitschicken, z. B.
+   `claude mcp add --transport http cotrack <deine-adresse>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"`
+   (mit `COTRACK_TOKEN` = dein `TOKEN_AI`).
+
+Ohne `TOKEN_AI` funktioniert alles andere genauso; du kannst im Header auch `TOKEN_USER` schicken, dann werden die Änderungen
+aber als „Du“ statt „KI“ protokolliert.
 
 **claude.ai und ChatGPT** verbinden sich per **OAuth** – es steht kein Geheimnis in der URL:
 
@@ -100,8 +111,8 @@ Umgesetzt ohne Bibliothek in [`src/oauth.js`](../src/oauth.js), wie es die MCP-S
 | 7 | `POST /revoke` | Verbindung beenden |
 
 Gespeichert werden nur Hashes der Tokens und Codes (Migration `0005_oauth.sql`). OAuth-Tokens gelten nur für `/mcp`,
-nicht für die HTTP-API und nicht im Pfad. Die festen Tokens (`TOKEN_USER`, `TOKEN_AI`) funktionieren für Claude Code und
-Skripte unverändert.
+nicht für die HTTP-API und nicht im Pfad. Die festen Tokens (`TOKEN_USER`, optional `TOKEN_AI`) im Header
+funktionieren unverändert.
 
 ## Selbst ausprobieren
 

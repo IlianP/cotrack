@@ -12,5 +12,5 @@ database_id = "412df387-a458-4f9f-979a-ea66b9a0a2e0"   # the author's database: 
 migrations_dir = "migrations"
 
 # Secrets (set with `npx wrangler secret put <NAME>`):
-#   TOKEN_USER – token for the human (web UI, manual API use)
-#   TOKEN_AI   – token for AI assistants (Claude, ChatGPT, …)
+#   TOKEN_USER – your token (web UI, consent page when connecting an AI via OAuth, manual API use)
+#   TOKEN_AI   – optional: fixed token for AI tools without a browser (scripts, cloud sessions); changes count as "ai"

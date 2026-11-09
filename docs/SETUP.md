@@ -16,12 +16,12 @@ it can do steps 3 to 7 for you. You only:
 
 1. **Step 1:** create the Cloudflare account (no AI can do that for you).
 2. During **login (step 4)**, click "Allow" in the browser window that opens.
-3. Do **step 6 (tokens) yourself**, so your tokens don't end up in the chat history.
+3. Do **step 6 (token) yourself**, so your token doesn't end up in the chat history.
 
 Example request to your assistant:
 
 > Set up cotrack from https://github.com/IlianP/cotrack on my Cloudflare account, exactly following docs/SETUP.md,
-> steps 3, 4, 5 and 7. Skip step 6 (tokens), I'll do that myself. Tell me my cotrack address at the end.
+> steps 3, 4, 5 and 7. Skip step 6 (token), I'll do that myself; don't store anything in step 7. Tell me my cotrack address at the end.
 
 Then continue with steps 6 and 8.
 
@@ -90,32 +90,24 @@ Save, then create the tables (confirm the prompt with `y`):
 npm run db:migrate
 ```
 
-## 6. Choose two tokens (do this yourself)
+## 6. Choose your token (do this yourself)
 
-cotrack has no password login; it uses two secret tokens. **Cloudflare does not create them** – you generate them
-yourself (command below) and store them at Cloudflare in step 7. They are two different values:
+cotrack has no password login; it uses **one secret token** – a long random string that you keep like a password.
+**Cloudflare does not create it**: you generate it yourself and store it at Cloudflare in step 7. You need it for the web app
+and once whenever you connect an AI assistant.
 
-| Token | Who uses it |
-|---|---|
-| `TOKEN_USER` | you: the web app, and approving claude.ai/ChatGPT when they connect |
-| `TOKEN_AI` | AI assistants that need a fixed token (Claude Code, scripts) |
-
-Generate two random tokens (run twice; works on macOS, Windows and Linux):
+Generate the token (works on macOS, Windows and Linux):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 ```
 
-Store the first value as `TOKEN_USER` and the second as `TOKEN_AI` in a **password manager**. Anyone who knows a token
-can read and change your items. If you only use claude.ai or ChatGPT, day to day you only need `TOKEN_USER` (web app and
-consent page); create `TOKEN_AI` anyway, e.g. for Claude Code.
+Store the value in a **password manager**. Anyone who knows it can read and change your items.
 
-Replacing a token (e.g. because it was visible somewhere): generate a new value and store it again with the same command
-from step 7. Then use the new value everywhere the old one was used.
+Replacing the token (e.g. because it was visible somewhere): generate a new value and store it again as in step 7; then sign
+in to the web app with the new value. Connected AI assistants stay connected.
 
-You add the tokens in step 7, right after the first deploy.
-
-## 7. Publish and add the tokens
+## 7. Publish and store the token
 
 ```bash
 npm run deploy
@@ -130,26 +122,28 @@ https://cotrack.your-name.workers.dev
 
 **That is `<your-address>`.** Write it down.
 
-Now add the tokens. Each command asks for the value; paste the respective token:
+Now store the token. The command asks for the value; paste your token from step 6:
 
 ```bash
 npx wrangler secret put TOKEN_USER
-npx wrangler secret put TOKEN_AI
 ```
 
 Without a terminal you can do this in the browser: <https://dash.cloudflare.com> → **Workers & Pages** → **cotrack** →
-**Settings** → **Variables and Secrets** → **Add** → type "Secret", name `TOKEN_USER` or `TOKEN_AI`, paste the value, save.
+**Settings** → **Variables and Secrets** → **Add** → type "Secret", name `TOKEN_USER`, paste the value, save.
 
 ## 8. Try it and connect your AI
 
-1. Open `<your-address>` in the browser, enter `TOKEN_USER` and create a first project.
-2. Connect your AI assistant (details in [MCP.md](MCP.md), German):
-   - **claude.ai / ChatGPT:** add a connector with the URL `<your-address>/mcp` (no token). When connecting, the cotrack
-     consent page opens; enter `TOKEN_USER` and choose "Zugriff erlauben" (allow).
+1. Open `<your-address>` in the browser, enter your token and create a first project.
+2. Connect your AI assistant – always with just the address, no token (details in [MCP.md](MCP.md), German):
+   - **claude.ai / ChatGPT:** add a connector with the URL `<your-address>/mcp`. When connecting, the cotrack consent page
+     opens: enter your token and choose "Zugriff erlauben" (allow).
    - **Claude Code:**
      ```bash
-     claude mcp add --transport http cotrack <your-address>/mcp --header "Authorization: Bearer <TOKEN_AI>"
+     claude mcp add --transport http cotrack <your-address>/mcp
      ```
+     Then type `/mcp` in Claude Code, pick `cotrack` and authenticate; the same consent page opens in the browser.
+
+   The assistant gets its own short-lived credentials. It never sees your token, and its changes are logged as "AI".
 3. Install the matching prompt: [PROMPT.en.md](PROMPT.en.md) (part 1 + part 2).
 
 ## Updates
@@ -171,5 +165,5 @@ Optionally Cloudflare can publish automatically on every push: fork the reposito
 |---|---|
 | `wrangler: command not found` or `npx` unknown | Node.js is not installed, or the terminal was opened before installing it – reopen the terminal. |
 | `Couldn't find a D1 DB with the name or binding` | `database_id` in `wrangler.toml` is still the author's – repeat step 5. |
-| The web app says "unauthorized" | Token copied wrongly, or the tokens from step 7 are missing. |
+| The web app says "unauthorized" | Token copied wrongly, or the token from step 7 is missing. |
 | Error "no such table" | `npm run db:migrate` was not run. |

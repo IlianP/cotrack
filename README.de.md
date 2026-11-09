@@ -57,7 +57,7 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode, **kein Build-Schritt, keine Abhängigkeiten** (reiner
   Cloudflare Worker + D1).
 
-> **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch zwei Bearer-Tokens geschützt (kein Login,
+> **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
 > teilen. Siehe Roadmap. Die Web-App ist vorerst auf Deutsch, die Chat-Fußzeile gibt es auf Deutsch und Englisch (`lang`); Code und API sind englisch; dieses README
 > gibt es auf [Englisch](README.md) und Deutsch.
@@ -84,11 +84,12 @@ npx wrangler login
 npx wrangler d1 create cotrack-db          # die ID in wrangler.toml eintragen
 npm run db:migrate
 npm run deploy                             # zeigt deine Adresse, z. B. https://cotrack.<du>.workers.dev
-npx wrangler secret put TOKEN_USER         # z. B. openssl rand -hex 24
-npx wrangler secret put TOKEN_AI
+npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex 24
 ```
 
-Öffne deine Worker-Adresse, gib `TOKEN_USER` ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`.
+Öffne deine Worker-Adresse, gib deinen Token ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`
+(OAuth; du bestätigst einmal mit deinem Token). Optional `TOKEN_AI`: ein fester Token für KI-Werkzeuge ohne Browser, siehe
+[docs/MCP.md](docs/MCP.md).
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.
 
@@ -100,14 +101,14 @@ Migrationen mitbringen.
 `cotrack_update`, `cotrack_convert`, `cotrack_footer`, `cotrack_changes`. Ein Lösch-Tool gibt es bewusst nicht: Die KI
 verwirft Punkte (`status: "dropped"`), nichts geht verloren.
 
-Zum Beispiel Claude Code:
+Zum Beispiel Claude Code (danach `/mcp` → `cotrack` → anmelden):
 
 ```bash
-claude mcp add --transport http cotrack https://<dein-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <deine-adresse>/mcp
 ```
 
 **claude.ai und ChatGPT** verbinden sich per **OAuth** ([`src/oauth.js`](src/oauth.js), ohne Bibliothek): Connector mit der
-URL `https://<dein-worker>/mcp` anlegen; cotrack öffnet einmal eine Freigabeseite, du bestätigst mit `TOKEN_USER`, und die
+URL `<deine-adresse>/mcp` anlegen; cotrack öffnet einmal eine Freigabeseite, du bestätigst mit deinem Token, und die
 App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in der URL. Die alte Form `/mcp/<token>`
 funktioniert übergangsweise noch und wird entfernt. Schritt für Schritt: [docs/MCP.md](docs/MCP.md).
 

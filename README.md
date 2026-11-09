@@ -52,7 +52,7 @@ warnings – a one-glance status that survives across conversations.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
-> **Status:** early and used daily by its author. Access is protected by two bearer tokens only (no login, no roles) –
+> **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
 > fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app is
 > in German for now, the chat footer is available in German and English (`lang`); code and API are English; this README is available in English and [German](README.de.md).
 
@@ -78,11 +78,11 @@ npx wrangler login
 npx wrangler d1 create cotrack-db          # put the id into wrangler.toml
 npm run db:migrate
 npm run deploy                             # prints your address, e.g. https://cotrack.<you>.workers.dev
-npx wrangler secret put TOKEN_USER         # e.g. openssl rand -hex 24
-npx wrangler secret put TOKEN_AI
+npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 24
 ```
 
-Open your worker address, enter `TOKEN_USER`, create a project. Connect your AI with `<your-address>/mcp`.
+Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
+once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.md](docs/MCP.md).
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)
@@ -92,14 +92,14 @@ After pulling updates, run `npm run db:migrate` again before deploying – new v
 `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`, `cotrack_update`, `cotrack_convert`, `cotrack_footer`,
 `cotrack_changes`. There is deliberately no delete tool: the AI drops items (`status: "dropped"`), nothing is lost.
 
-Claude Code, for example:
+Claude Code, for example (then `/mcp` → `cotrack` → authenticate):
 
 ```bash
-claude mcp add --transport http cotrack https://<your-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <your-address>/mcp
 ```
 
 **claude.ai and ChatGPT** connect via **OAuth** ([`src/oauth.js`](src/oauth.js), no library): add a connector with the
-URL `https://<your-worker>/mcp`; cotrack opens a consent page once, you confirm with `TOKEN_USER`, and the app gets
+URL `<your-address>/mcp`; cotrack opens a consent page once, you confirm with your token, and the app gets
 short-lived tokens that act as `ai`. No secret appears in the URL. The old form `/mcp/<token>` still works during the
 transition and will be removed. Step by step (German): [docs/MCP.md](docs/MCP.md).
 

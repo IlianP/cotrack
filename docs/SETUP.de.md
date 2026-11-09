@@ -16,12 +16,12 @@ Wenn dein KI-Assistent selbst Befehle ausführen kann – z. B. **Claude Code** 
 
 1. **Schritt 1:** Cloudflare-Konto anlegen (das kann keine KI für dich).
 2. Beim **Login (Schritt 4)** im Browser auf „Allow“ klicken, wenn sich das Fenster öffnet.
-3. **Schritt 6 (Tokens) selbst** erledigen – so landen deine Tokens nicht im Chatverlauf.
+3. **Schritt 6 (Token) selbst** erledigen – so landet dein Token nicht im Chatverlauf.
 
 Beispiel für den Auftrag an deinen Assistenten:
 
 > Richte cotrack aus https://github.com/IlianP/cotrack auf meinem Cloudflare-Konto ein, genau nach docs/SETUP.de.md,
-> Schritt 3, 4, 5 und 7. Lass Schritt 6 (Tokens) aus, den mache ich selbst. Sag mir am Ende meine cotrack-Adresse.
+> Schritt 3, 4, 5 und 7. Lass Schritt 6 (Token) aus, den mache ich selbst; hinterlege in Schritt 7 nichts. Sag mir am Ende meine cotrack-Adresse.
 
 Danach machst du mit Schritt 6 und 8 weiter.
 
@@ -91,32 +91,24 @@ Speichern, dann die Tabellen anlegen (die Rückfrage mit `y` bestätigen):
 npm run db:migrate
 ```
 
-## 6. Zwei Tokens festlegen (selbst machen)
+## 6. Deinen Token festlegen (selbst machen)
 
-cotrack hat kein Login mit Passwort, sondern zwei geheime Tokens. **Cloudflare erzeugt sie nicht** – du würfelst sie
-selbst (Befehl unten) und hinterlegst sie dann in Schritt 7 bei Cloudflare. Es sind zwei verschiedene Werte:
+cotrack hat kein Login mit Passwort, sondern **einen geheimen Token** – eine lange Zufallszeichenfolge, die du dir wie ein
+Passwort aufbewahrst. **Cloudflare erzeugt ihn nicht**: Du würfelst ihn selbst und hinterlegst ihn in Schritt 7 bei Cloudflare.
+Du brauchst ihn für die Web-App und einmalig, wenn du einen KI-Assistenten verbindest.
 
-| Token | Wer ihn benutzt |
-|---|---|
-| `TOKEN_USER` | du: Web-App und Freigabe beim Verbinden von claude.ai/ChatGPT |
-| `TOKEN_AI` | KI-Assistenten, die einen festen Token brauchen (Claude Code, Skripte) |
-
-Zwei zufällige Tokens erzeugen (zweimal ausführen, funktioniert unter macOS, Windows und Linux):
+Token erzeugen (funktioniert unter macOS, Windows und Linux):
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 ```
 
-Den ersten Wert als `TOKEN_USER`, den zweiten als `TOKEN_AI` in einem **Passwort-Manager** speichern. Wer einen Token
-kennt, kann deine Punkte lesen und ändern. Nutzt du nur claude.ai oder ChatGPT, brauchst du im Alltag nur `TOKEN_USER`
-(Web-App und Freigabeseite); `TOKEN_AI` trotzdem anlegen, z. B. für Claude Code.
+Den angezeigten Wert in einem **Passwort-Manager** speichern. Wer ihn kennt, kann deine Punkte lesen und ändern.
 
-Einen Token austauschen (z. B. weil er irgendwo sichtbar war): neuen Wert würfeln und mit demselben Befehl aus Schritt 7
-erneut hinterlegen. Danach den neuen Wert überall eintragen, wo der alte benutzt wurde.
+Token austauschen (z. B. weil er irgendwo sichtbar war): neuen Wert würfeln und wie in Schritt 7 erneut hinterlegen; danach
+in der Web-App mit dem neuen Wert anmelden. Verbundene KI-Assistenten bleiben verbunden.
 
-Die Tokens hinterlegst du in Schritt 7, direkt nach dem ersten Deploy.
-
-## 7. Veröffentlichen und Tokens hinterlegen
+## 7. Veröffentlichen und Token hinterlegen
 
 ```bash
 npm run deploy
@@ -131,26 +123,29 @@ https://cotrack.dein-name.workers.dev
 
 **Das ist `<deine-adresse>`.** Notiere sie dir.
 
-Jetzt die Tokens hinterlegen. Jeder Befehl fragt nach dem Wert, dort den jeweiligen Token einfügen:
+Jetzt den Token hinterlegen. Der Befehl fragt nach dem Wert, dort deinen Token aus Schritt 6 einfügen:
 
 ```bash
 npx wrangler secret put TOKEN_USER
-npx wrangler secret put TOKEN_AI
 ```
 
 Ohne Terminal geht das auch im Browser: <https://dash.cloudflare.com> → **Workers & Pages** → **cotrack** → **Settings** →
-**Variables and Secrets** → **Add** → Typ „Secret“, Name `TOKEN_USER` bzw. `TOKEN_AI`, Wert einfügen, speichern.
+**Variables and Secrets** → **Add** → Typ „Secret“, Name `TOKEN_USER`, Wert einfügen, speichern.
 
 ## 8. Ausprobieren und KI verbinden
 
-1. `<deine-adresse>` im Browser öffnen, `TOKEN_USER` eingeben und ein erstes Projekt anlegen.
-2. KI-Assistent verbinden (Details in [MCP.md](MCP.md)):
-   - **claude.ai / ChatGPT:** Connector mit der URL `<deine-adresse>/mcp` anlegen (ohne Token). Beim Verbinden öffnet sich
-     die cotrack-Freigabeseite, dort `TOKEN_USER` eingeben und „Zugriff erlauben“ wählen.
+1. `<deine-adresse>` im Browser öffnen, deinen Token eingeben und ein erstes Projekt anlegen.
+2. KI-Assistent verbinden – überall nur mit der Adresse, ohne Token (Details in [MCP.md](MCP.md)):
+   - **claude.ai / ChatGPT:** Connector mit der URL `<deine-adresse>/mcp` anlegen. Beim Verbinden öffnet sich die
+     cotrack-Freigabeseite: deinen Token eingeben und „Zugriff erlauben“ wählen.
    - **Claude Code:**
      ```bash
-     claude mcp add --transport http cotrack <deine-adresse>/mcp --header "Authorization: Bearer <TOKEN_AI>"
+     claude mcp add --transport http cotrack <deine-adresse>/mcp
      ```
+     Dann in Claude Code `/mcp` eingeben, `cotrack` wählen und anmelden; im Browser erscheint dieselbe Freigabeseite.
+
+   Der Assistent bekommt dabei eigene, kurzlebige Zugangsdaten. Deinen Token sieht er nicht, und seine Änderungen werden als
+   „KI“ protokolliert.
 3. Den passenden Prompt einspielen: [PROMPT.md](PROMPT.md) (Teil 1 + Teil 2).
 
 ## Updates
@@ -172,5 +167,5 @@ Optional kann Cloudflare bei jedem Push automatisch veröffentlichen: Repository
 |---|---|
 | `wrangler: command not found` oder `npx` unbekannt | Node.js ist nicht installiert oder das Terminal wurde vor der Installation geöffnet – Terminal neu öffnen. |
 | `Couldn't find a D1 DB with the name or binding` | Die `database_id` in `wrangler.toml` ist noch die des Autors – Schritt 5 wiederholen. |
-| Web-App sagt „unauthorized“ | Token falsch kopiert oder Schritt 7 (Tokens hinterlegen) fehlt. |
+| Web-App sagt „unauthorized“ | Token falsch kopiert oder Schritt 7 (Token hinterlegen) fehlt. |
 | Fehler „no such table“ | `npm run db:migrate` wurde nicht ausgeführt. |
