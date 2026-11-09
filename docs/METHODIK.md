@@ -2,7 +2,7 @@
 
 [English](METHODOLOGY.md) · **Deutsch**
 
-## Gültig: Methodik v2.6 (Stand 7. November 2026)
+## Gültig: Methodik v2.7 (Stand 8. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -18,11 +18,18 @@
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
-  sprachunabhängig, kürzer. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“.
+  sprachunabhängig, kürzer. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“. Seit v2.7 lassen sich die Kennzeichen in
+  der Web-App ändern (☰ → Einstellungen, z. B. zurück auf „Du“/„KI“); 👤/🤖 bleibt der Standard.
 - **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤:`, `🤖:`, `💡`, `⚠️`),
   danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist vorerst der Standard, um die Übersicht auszuprobieren;
-  einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Rückkehr zum alten Standard: eine Konstante
-  (`FOOTER_LAYOUT_DEFAULT`) in `src/worker.js` und dieser Absatz.
+  einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Seit v2.7 wählst du den Standard
+  selbst in der Web-App (☰ → Einstellungen, gespeichert in cotrack); ein `layout` im einzelnen Aufruf geht vor.
+  Eine neue Installation startet mehrzeilig.
+- **Wer regelt was (v2.7):** Der **Prompt** regelt das Verhalten der KI (ob und wann sie cotrack nutzt, wann die Fußzeile
+  erscheint, Rückfall ohne cotrack). Der **Server** regelt, was er selbst durchsetzen kann (Kennungen, Protokoll, Aussehen
+  der Fußzeile). Die **Einstellungen der Web-App** geben den Standard für dieses Aussehen vor. Sie überschreiben den Prompt
+  nicht, sondern wirken, weil der cotrack-Zusatz im Prompt die Fußzeile an den Server übergibt. Übersicht:
+  [PROMPT.md → Wozu der Prompt?](PROMPT.md#wozu-der-prompt--wer-regelt-was)
 - **Führende Liste:** cotrack (Web-App + MCP-Connector). Die `docs/STATUS.md` eines Repositorys enthält nur einen Link
   zum Board, damit niemand bei jeder Änderung eine Datei pushen muss. Ohne cotrack gilt weiter die Liste in `STATUS.md`.
 - **Projekt-Kürzel (v2.4):** Jedes Projekt hat einen eindeutigen Slug (Identität) und optional ein **Kürzel** aus 2–4 Zeichen

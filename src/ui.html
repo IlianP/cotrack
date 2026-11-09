@@ -154,6 +154,11 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
 .menu-list { display: grid; gap: 6px; }
 .menu-list button { text-align: left; }
+.dlg h4 { margin: 4px 0 0; font-size: 14px; }
+.preview {
+  margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line);
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+}
 
 #toast {
   position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
@@ -550,6 +555,7 @@ function openMenu() {
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, "Kürzel für dieses Projekt festlegen") : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), "STATUS.md-Abschnitt kopiert")) }, "„Offene Punkte“ für STATUS.md kopieren") : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, "Fußzeile kopieren") : null,
+      h("button", { type: "button", class: "btn", onclick: go(openSettings) }, "⚙ Einstellungen"),
       h("a", { class: "btn", style: "display:flex;align-items:center;text-decoration:none", href: "https://github.com/IlianP/cotrack#api", target: "_blank", rel: "noopener" }, "API-Dokumentation ↗"),
       h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, "Abmelden")),
     h("p", { class: "small" }, `Angemeldet als: ${ownerLabel(state.actor)}`),
@@ -558,6 +564,62 @@ function openMenu() {
 }
 
 const currentProject = () => state.projects.find((p) => p.slug === state.project);
+
+// Instance settings: shape the footer the server returns to every AI (MCP and API). When it appears is up to the prompt.
+async function openSettings() {
+  let data;
+  try { data = await api("/settings"); } catch (err) { return toast("Fehler: " + err.message); }
+  const { settings: s, defaults: d, available } = data;
+  const canEdit = available && state.actor === "user";
+  const layout = h("select", { disabled: !canEdit },
+    h("option", { value: "multi", selected: s.footer_layout === "multi" }, "Mehrzeilig – je Gruppe eine Zeile"),
+    h("option", { value: "single", selected: s.footer_layout === "single" }, "Einzeilig – alles in einer Zeile"));
+  // An empty field means the built-in default (shown as placeholder).
+  const labelInput = (value, def) => h("input", { value: value === def ? "" : value, placeholder: `${def}  (Standard)`, maxlength: "16", disabled: !canEdit });
+  const user = labelInput(s.footer_label_user, d.footer_label_user);
+  const ai = labelInput(s.footer_label_ai, d.footer_label_ai);
+  const preview = h("pre", { class: "preview", "aria-live": "polite" });
+  const marker = (input, def) => input.value.trim().replace(/:+$/, "") || def;
+  const showPreview = () => {
+    const groups = [
+      `${marker(user, d.footer_label_user)}: D1 Lizenz wählen · A2 Prompt einspielen`,
+      `${marker(ai, d.footer_label_ai)}: A3 README überarbeiten`,
+      "💡 I4 Teilpunkte",
+      "⚠️ W1 Auth",
+    ];
+    preview.textContent = groups.join(layout.value === "single" ? " · " : "\n");
+  };
+  for (const el of [layout, user, ai]) el.addEventListener("input", showPreview);
+  showPreview();
+  const save = async (body, msg) => {
+    try {
+      await api("/settings", { method: "PATCH", body });
+      closeDialog(); toast(msg); renderFooter();
+    } catch (err) { toast("Fehler: " + err.message); }
+  };
+  const dlg = openDialog(
+    h("h3", null, "Einstellungen"),
+    h("h4", null, "Fußzeile für den Chat"),
+    h("p", { class: "small" }, "Gilt für die Fußzeile, die deine KI über cotrack holt (MCP und API), und für „Fußzeile kopieren“. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt."),
+    field("Standard-Layout", layout),
+    h("div", { class: "row2" }, field("Kennzeichen für deine Punkte", user), field("Kennzeichen für Punkte der KI", ai)),
+    h("p", { class: "small" }, "Vorschau:"),
+    preview,
+    h("p", { class: "small" }, "Bittest du die KI im Gespräch ausdrücklich um ein anderes Format, geht das vor. Leeres Feld = Standard."),
+    !available ? h("p", { class: "small", style: "color:var(--danger)" }, "Noch nicht verfügbar: Die Datenbank braucht Migration 0006 (npm run db:migrate). Bis dahin gelten die Standards.") : null,
+    available && state.actor !== "user" ? h("p", { class: "small", style: "color:var(--danger)" }, "Nur mit deinem eigenen Token änderbar, nicht mit dem KI-Token.") : null,
+    h("div", { class: "actions" },
+      canEdit ? h("button", { type: "button", class: "btn", onclick: () => save({ footer_layout: null, footer_label_user: null, footer_label_ai: null }, "Standard wiederhergestellt") }, "Standard") : null,
+      h("span", { class: "spacer" }),
+      h("button", { type: "button", class: "btn", onclick: closeDialog }, "Schließen"),
+      canEdit ? h("button", { class: "primary" }, "Speichern") : null),
+  );
+  dlg.querySelector("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!canEdit) return closeDialog();
+    save({ footer_layout: layout.value, footer_label_user: user.value.trim() || null, footer_label_ai: ai.value.trim() || null }, "Einstellungen gespeichert");
+  });
+}
 
 function openSetCode() {
   const p = currentProject();

@@ -1,4 +1,4 @@
-# Custom prompt (Claude & ChatGPT) – Methodology v2.6
+# Custom prompt (Claude & ChatGPT) – Methodology v2.7 (prompt text unchanged since v2.6)
 
 **English** · [Deutsch](PROMPT.md)
 
@@ -11,11 +11,39 @@ The prompt has **two parts**:
 
 With cotrack, the footer format comes from the server (`cotrack_footer`), not from the prompt – so there is only one source.
 
+## Why a prompt? – Who controls what
+
+cotrack is a server: it stores, checks and answers – but only when the AI asks. Whether and when it asks is in the
+prompt. That is why you need both.
+
+| What | Where | Why there |
+|---|---|---|
+| Whether the AI keeps a list; when it calls cotrack (start, new items, completed ones); handover | **Prompt** | The server cannot make the AI do anything, it only answers. |
+| When the footer appears (on "Status?", at the end of larger pieces of work, roughly every four answers; otherwise the short line) | **Prompt** | Only the AI knows when an answer ends. |
+| What the footer looks like (groups, order, at most eight entries, ▶/⏸, single- or multi-line, 👤/🤖) | **Server**, default set in the **web app** (☰ → Einstellungen) | One source for all chats and programs. |
+| References (never reused), dependencies, who changed what | **Server** | The database enforces it. |
+| Which project the conversation belongs to | **The AI**, from `COTRACK.md` or `cotrack_projects` | The server cannot see the repository. |
+| Working without cotrack (fallback) | **Prompt**, part 1 | – |
+
+**Do the web app settings override the prompt?** Not by themselves. They take effect because part 2 tells the AI: never
+build the footer yourself, fetch it from cotrack and reproduce it exactly. With an older prompt without part 2, the AI may
+build the line itself – then the prompt wins. If you change the markers, you can change them in part 1 too, so the
+fallback looks the same.
+
+**And the server's instructions?** When connecting, cotrack sends a short usage note (`instructions`). Claude Code passes
+it on to the AI, claude.ai and ChatGPT not reliably. The prompt, in contrast, applies in every chat. If they contradict
+each other: the look comes from the server, the behaviour from the prompt.
+
+## Installing and versions
+
 Replace the personal settings of both programs with these parts (part 1 followed by part 2). Changes compared to v1:
 T is dropped; actions (A) belong to you or the AI, visible from "👤:"/"🤖:"; decisions (D) are a category of their own;
 ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
 v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
-v2.6: The footer groups are called "👤:" (your items) and "🤖:" (the AI's) instead of "Du:" and "🤖KI:"; warnings follow "⚠️".
+v2.7: You set the footer layout (single-/multi-line) and markers in the web app (☰ → Einstellungen).
+**The prompt text is almost unchanged since v2.6** – the only change: the footer example in part 1 shows "⚠️" instead of "⚠"
+(relevant only without cotrack; with cotrack the footer comes from the server). If you installed v2.6, there is nothing else to do.
+v2.6: The footer groups are called "👤:" (your items) and "🤖:" (the AI's) instead of "Du:" and "🤖KI:".
 Also, the prompt is split in two (base + cotrack addendum), and with cotrack the footer comes only from the server.
 v2.5: The full footer is multi-line (one line per group, trial phase); the short line stays single-line.
 v2.4: Project assignment via `COTRACK.md`, project codes and qualified references ("CT:A14"), one footer block per project when several projects are involved.

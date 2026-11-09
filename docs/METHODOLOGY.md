@@ -6,7 +6,7 @@
 > (German, default) or `new: … · done: …` (`lang=en`). The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.6 (as of 7 November 2026)
+## Current: Methodology v2.7 (as of 8 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -22,11 +22,18 @@
 - **Footer:** full only on "Status?", at the end of larger pieces of work, or roughly every four answers;
   when items change just the short line "neu: … · erledigt: …"; otherwise nothing at all.
 - **Group markers (v2.6):** The footer shows `👤:` for your items and `🤖:` for the AI's (instead of "Du:" and "🤖KI:") –
-  language-independent and shorter. In the text, responsibility is still called "Du" (you) and "KI" (AI).
+  language-independent and shorter. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
+  markers can be changed in the web app (☰ → Einstellungen, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
 - **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤:`, `🤖:`, `💡`, `⚠️`),
   followed if needed by the line "neu: … · erledigt: …". This is the default for now, to try out the overview;
-  single-line output is still available with `layout=single`. The short line is always one line. Reverting to the old default:
-  one constant (`FOOTER_LAYOUT_DEFAULT`) in `src/worker.js` and this paragraph.
+  single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
+  default yourself in the web app (☰ → Einstellungen, stored in cotrack); a `layout` in a single request wins.
+  A new installation starts multi-line.
+- **Who controls what (v2.7):** The **prompt** controls the AI's behaviour (whether and when it uses cotrack, when the footer
+  appears, fallback without cotrack). The **server** controls what it can enforce itself (references, audit trail, the look of
+  the footer). The **web app settings** set the default for that look. They do not override the prompt; they take effect
+  because the cotrack addendum in the prompt hands the footer over to the server. Overview:
+  [PROMPT.en.md → Why a prompt?](PROMPT.en.md#why-a-prompt--who-controls-what)
 - **Leading list:** cotrack (web app + MCP connector). A repository's `docs/STATUS.md` contains only a link to the board, so
   nobody has to push a file on every change. Without cotrack, the list in `STATUS.md` remains authoritative.
 - **Project code (v2.4):** Every project has a unique slug (identity) and optionally a **code** of 2–4 characters (two letters,

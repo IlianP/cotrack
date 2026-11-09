@@ -50,8 +50,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **MCP-Server** – funktioniert mit Claude (claude.ai, Claude Code) und ChatGPT; die Antworten sind kompakter Text, um
   Tokens zu sparen.
 - **Live** – die Web-App übernimmt Änderungen von dir oder einer KI innerhalb weniger Sekunden.
-- **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe (oder `layout=single` für eine Zeile); eine kurze
-  „neu / erledigt“-Zeile für Antworten, die etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
+- **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
+  Web-App ein (☰ → Einstellungen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
+  etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode, **kein Build-Schritt, keine Abhängigkeiten** (reiner
@@ -74,9 +75,11 @@ KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js ·
 ## Selbst hosten
 
 **Neu bei Cloudflare?** Die Schritt-für-Schritt-Anleitung [docs/SETUP.de.md](docs/SETUP.de.md) führt durch alles: kostenloses
-Konto anlegen, veröffentlichen, Tokens festlegen, KI verbinden – und sagt, welche Schritte dein KI-Assistent übernehmen kann.
+Konto anlegen, veröffentlichen (im Terminal oder nur im Browser), Token festlegen, KI verbinden – und sagt, welche Schritte dein
+KI-Assistent übernehmen kann. cotrack läuft in **deinem eigenen Cloudflare-Konto**; der kostenlose Plan reicht für den
+persönlichen Gebrauch.
 
-Kurzfassung für alle, die Cloudflare kennen (Voraussetzungen: ein Cloudflare-Konto und Node.js):
+Kurzfassung für alle, die Cloudflare kennen (Voraussetzungen: ein Cloudflare-Konto und Node.js 22+):
 
 ```bash
 npm install
@@ -89,7 +92,7 @@ npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex
 
 Öffne deine Worker-Adresse, gib deinen Token ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`
 (OAuth; du bestätigst einmal mit deinem Token). Optional `TOKEN_AI`: ein fester Token für KI-Werkzeuge ohne Browser, siehe
-[docs/MCP.md](docs/MCP.md).
+[docs/MCP.md](docs/MCP.md). Layout und Kennzeichen der Fußzeile: ☰ → *Einstellungen* in der Web-App.
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.
 
@@ -111,6 +114,10 @@ claude mcp add --transport http cotrack <deine-adresse>/mcp
 URL `<deine-adresse>/mcp` anlegen; cotrack öffnet einmal eine Freigabeseite, du bestätigst mit deinem Token, und die
 App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in der URL (die alte Form
 `/mcp/<token>` wurde entfernt). Schritt für Schritt: [docs/MCP.md](docs/MCP.md).
+
+Danach den **benutzerdefinierten Prompt** einspielen ([docs/PROMPT.md](docs/PROMPT.md)). Der Server antwortet nur, wenn
+er gefragt wird; der Prompt sorgt dafür, dass die KI fragt – zu Beginn einer Session, bei neuen Punkten, für die
+Fußzeile. Wer was regelt (Prompt, Server, Einstellungen der Web-App): [Übersicht](docs/PROMPT.md#wozu-der-prompt--wer-regelt-was).
 
 ## Repository-Zuordnung
 
@@ -147,12 +154,13 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`, derzeit Standard: eine Zeile je Gruppe; `single`: eine Zeile; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | Änderungsprotokoll |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
+| GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (Standard `multi`, `👤`, `🤖`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |
 
 Statuswerte: `open`, `doing`, `blocked`, `done`, `dropped`. Besitzer: `user`, `ai` oder ein beliebiger Name
 (Standard: der Ersteller). Mit `seq` lässt sich eine bestehende Kennung übernehmen (z. B. `A3` aus einem Chat); eine
