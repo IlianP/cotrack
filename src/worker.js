@@ -26,7 +26,7 @@ const OWNER_LABELS = { user: "Du", ai: "KI" };
 const FOOTER_OWNER_LABELS = { user: "👤", ai: "🤖" };
 // Footer wording per language (`lang=de|en`, default de): only the "new / done" short line.
 const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { created: "new", done: "done" } };
-// Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (👤 / 🤖 / 💡 / ⚠),
+// Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (👤 / 🤖 / 💡 / ⚠️),
 // "single" = everything in one line. Built-in default only: since v2.7 the human picks the default in the
 // web app (setting `footer_layout`), and a `layout` parameter in a request wins over both.
 const FOOTER_LAYOUT_DEFAULT = "multi";
@@ -671,7 +671,7 @@ function shortLabel(item) {
 
 /**
  * Builds the one-line summary used at the end of chat answers, e.g.
- * "👤: D1 ▶A3 Lizenz · 🤖: A3 Konzept (+2) · 💡 I1 MCP · ⚠ W1 Auth · neu: A3 · erledigt: A1"
+ * "👤: D1 ▶A3 Lizenz · 🤖: A3 Konzept (+2) · 💡 I1 MCP · ⚠️ W1 Auth · neu: A3 · erledigt: A1"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
 // ref -> refs of OPEN items that wait for it (the reverse of waiting_on; nothing extra is stored).

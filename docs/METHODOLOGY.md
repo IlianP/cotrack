@@ -13,7 +13,7 @@
 | **A** | Action – for you ("Du") or the AI; responsibility can change, the reference stays | under "👤:" or "🤖:" |
 | **D** | Decision – yours to make, the AI prepares options; the outcome is recorded | under "👤:", before the actions |
 | **I** | Idea – if accepted it becomes A or D, if declined it is "dropped" | 💡 |
-| **W** | Warning/risk – stays until resolved or explicitly accepted; problems that have occurred become A/D | ⚠ |
+| **W** | Warning/risk – stays until resolved or explicitly accepted; problems that have occurred become A/D | ⚠️ |
 
 - **Numbering:** per category, never reused.
 - **Dependencies:** only "A4 waits for D2" is stored. What is displayed is the sequence: **"D2 ▶A4"** (D2 first, then A4),
@@ -24,7 +24,7 @@
 - **Group markers (v2.6):** The footer shows `👤:` for your items and `🤖:` for the AI's (instead of "Du:" and "🤖KI:") –
   language-independent and shorter. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
   markers can be changed in the web app (☰ → Einstellungen, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
-- **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤:`, `🤖:`, `💡`, `⚠`),
+- **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤:`, `🤖:`, `💡`, `⚠️`),
   followed if needed by the line "neu: … · erledigt: …". This is the default for now, to try out the overview;
   single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
   default yourself in the web app (☰ → Einstellungen, stored in cotrack); a `layout` in a single request wins.

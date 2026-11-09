@@ -14,7 +14,7 @@ an [MCP server](docs/MCP.md) (or the HTTP API). Every item has a stable referenc
 👤: D5 Lizenz wählen · A13 Prompt einspielen
 🤖: A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
-⚠ W1 Auth · W3 Tokens rotieren
+⚠️ W1 Auth · W3 Tokens rotieren
 ```
 
 That is the *chat footer* cotrack generates for the end of an AI answer: yours first, then the AI's, then ideas and
@@ -27,7 +27,7 @@ warnings – a one-glance status that survives across conversations.
 ## How it works
 
 1. **One list per project.** A project is usually a GitHub repository. Items are grouped in four categories:
-   **A** action (yours or the AI's) · **D** decision · **I** idea (💡) · **W** warning (⚠).
+   **A** action (yours or the AI's) · **D** decision · **I** idea (💡) · **W** warning (⚠️).
 2. **Both sides write to it.** You use the web app; the AI calls tools such as `cotrack_status` at the start of a
    session and `cotrack_add` / `cotrack_update` while it works. Every change records who made it.
 3. **Sessions stay in sync.** A new conversation loads a compact status (or only the changes since the last one),

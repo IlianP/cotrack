@@ -41,7 +41,8 @@ T is dropped; actions (A) belong to you or the AI, visible from "👤:"/"🤖:";
 ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
 v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
 v2.7: You set the footer layout (single-/multi-line) and markers in the web app (☰ → Einstellungen).
-**The prompt text is unchanged since v2.6** – if you installed v2.6, there is nothing to do.
+**The prompt text is almost unchanged since v2.6** – the only change: the footer example in part 1 shows "⚠️" instead of "⚠"
+(relevant only without cotrack; with cotrack the footer comes from the server). If you installed v2.6, there is nothing else to do.
 v2.6: The footer groups are called "👤:" (your items) and "🤖:" (the AI's) instead of "Du:" and "🤖KI:".
 Also, the prompt is split in two (base + cotrack addendum), and with cotrack the footer comes only from the server.
 v2.5: The full footer is multi-line (one line per group, trial phase); the short line stays single-line.
@@ -60,7 +61,7 @@ D = Decision that I have to make. You prepare options with a recommendation. Onc
 I = Idea or suggestion, not yet decided. If I agree, it becomes A or D; if I decline, it is dropped.
 W = Warning or risk. Stays until it is resolved or I explicitly accept it. A problem that has occurred immediately becomes A or D.
 Dependencies: If A4 waits for D2, write "D2 ▶A4" (D2 comes first, A4 follows; several: "D2 ▶A4,A5"). In the footer, ▶ appears only on the preceding item of a pair; if that item is not in the line, write "A4 ⏸D2" on the waiting item. Do not show completed predecessors any more. In lists ("Status?") both notations may appear. Every draft, design, document or artifact you create gets a reference with a link.
-Footer: Show the full footer, each group on its own line ("👤: D1 … · A2 …", below it "🤖: A3 … (+2)", then "💡 I1 … (+5)", then "⚠ W1 …"; my items first, decisions before actions, at most eight entries of 1–3 words), only on "Status?", at the end of a larger piece of work, or when I have not seen it for about four answers. If items change in an answer, the short line "new: … · done: …" is enough. For short answers without changes, both are omitted.
+Footer: Show the full footer, each group on its own line ("👤: D1 … · A2 …", below it "🤖: A3 … (+2)", then "💡 I1 … (+5)", then "⚠️ W1 …"; my items first, decisions before actions, at most eight entries of 1–3 words), only on "Status?", at the end of a larger piece of work, or when I have not seen it for about four answers. If items change in an answer, the short line "new: … · done: …" is enough. For short answers without changes, both are omitted.
 "Status?": full list with short description, origin (link or file), status and blockers.
 "Handover" or end of a longer piece of work:
 With file or repository access: Write all open points into the "Offene Punkte" (open points) section of the project's status file, e.g. docs/STATUS.md. One line per item: reference, keyword, link/source, status. Remove completed items. If there is no status file, suggest creating one.
