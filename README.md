@@ -46,8 +46,9 @@ warnings – a one-glance status that survives across conversations.
   ([details below](#linking-a-repository)).
 - **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
-- **Chat footer** – the summary above, one line per group (or `layout=single` for one line); a short
-  "new / done" line for answers that change things; one block per project when several are in play.
+- **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
+  (☰ → Einstellungen), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
+  per project when several are in play.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
@@ -68,9 +69,10 @@ AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.j
 ## Self-hosting
 
 **New to Cloudflare?** Follow the step-by-step guide [docs/SETUP.md](docs/SETUP.md): it covers creating a free account,
-deploying, choosing tokens and connecting your AI – and which steps your AI assistant can do for you.
+deploying (in a terminal or only in the browser), your token and connecting your AI – and which steps your AI assistant
+can do for you. cotrack runs on **your own Cloudflare account**; the free plan is enough for personal use.
 
-Short version for those who know Cloudflare (requirements: a Cloudflare account and Node.js):
+Short version for those who know Cloudflare (requirements: a Cloudflare account and Node.js 22+):
 
 ```bash
 npm install
@@ -83,6 +85,7 @@ npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 
 
 Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
 once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.md](docs/MCP.md).
+Footer layout and markers: ☰ → *Einstellungen* in the web app.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)
@@ -102,6 +105,10 @@ claude mcp add --transport http cotrack <your-address>/mcp
 URL `<your-address>/mcp`; cotrack opens a consent page once, you confirm with your token, and the app gets
 short-lived tokens that act as `ai`. No secret appears in the URL (the old form `/mcp/<token>` has been removed).
 Step by step (German): [docs/MCP.md](docs/MCP.md).
+
+Then install the **custom prompt** ([docs/PROMPT.en.md](docs/PROMPT.en.md)). The server only answers when it is asked;
+the prompt is what makes the AI ask – at the start of a session, for new items, for the footer. Who controls what
+(prompt, server, web app settings): [overview](docs/PROMPT.en.md#why-a-prompt--who-controls-what).
 
 ## Linking a repository
 
@@ -138,12 +145,13 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3` |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`, the default for now: one line per group; `single`: one line; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=` | change log |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
+| GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (defaults `multi`, `👤`, `🤖`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |
 
 Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name (default: the creator).
 `seq` lets you import an existing reference (e.g. `A3` from a chat); a reference that was ever used is rejected.

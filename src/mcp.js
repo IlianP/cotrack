@@ -22,6 +22,8 @@ import {
   updateProject,
   splitRef,
   footerFor,
+  footerStyle,
+  getSettings,
   normLayout,
   normLang,
   listKinds,
@@ -46,8 +48,10 @@ A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nu
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
 cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Fußzeile sparsam: Ändern sich in einer
 Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die volle Fußzeile (cotrack_footer) nur auf Nachfrage („Stand?“),
-am Ende größerer Arbeiten oder etwa alle vier Antworten. Die volle Fußzeile ist (Probephase) mehrzeilig: jede Gruppe
-(👤, 🤖, 💡, ⚠) in einer eigenen Zeile; gib sie genau so wieder. Mit layout "single" gibt es sie einzeilig. Mit lang "en" (passend zu einem englischen Prompt/Gespräch) lauten „neu / erledigt“ new / done (👤 und 🤖 gelten in jeder Sprache). Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
+am Ende größerer Arbeiten oder etwa alle vier Antworten. Baue die Fußzeile nie selbst: Ihr Format (ein- oder mehrzeilig, Kennzeichen
+der Gruppen, Standard 👤 = Nutzer, 🤖 = KI, dazu 💡 und ⚠) stellt der Nutzer in der Web-App ein; gib sie genau so wieder, wie cotrack_footer
+sie liefert. layout nur setzen, wenn der Nutzer im Gespräch ausdrücklich ein anderes Format will. Mit lang "en" (passend zu einem englischen
+Prompt/Gespräch) lauten „neu / erledigt“ new / done. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
 Projekt-Zuordnung: Welches Projekt zur Unterhaltung gehört, bestimmst du, nicht der Server. Gehört ein Repository dazu, lies einmal beim Start
 (und wenn ein Repository hinzukommt) die Datei COTRACK.md im Repo-Root: „project:“ ist der Slug, „code:“ das Kürzel. Fehlt sie, finde das Projekt
 mit cotrack_projects (Parameter repo = "owner/name"). Ohne Treffer oder bei Mehrdeutigkeit frage den Nutzer einmal; lege nie von dir aus ein Projekt an.
@@ -210,15 +214,21 @@ const TOOLS = [
     name: "cotrack_footer",
     title: "Fußzeile",
     description:
-      "Nur die Fußzeile für das Ende einer Antwort (eine Zeile). Mit since (ISO-Zeit) auch „neu“ und „erledigt“; mit delta nur diese Kurzzeile. " +
-      "Bei mehreren Projekten (durch Komma getrennt) eine Zeile je Projekt, mit Kürzel davor („CT ▸ …“); Projekte ohne Inhalt entfallen.",
+      "Die Fußzeile für das Ende einer Antwort, im Format aus den Einstellungen der Web-App (Standard: je Gruppe eine Zeile); genau so wiedergeben. " +
+      "Mit since (ISO-Zeit) auch „neu“ und „erledigt“; mit delta nur diese Kurzzeile (immer einzeilig). " +
+      "Bei mehreren Projekten (durch Komma getrennt) ein Block je Projekt, mit Kürzel davor („CT ▸ …“); Projekte ohne Inhalt entfallen.",
     inputSchema: {
       type: "object",
       properties: {
         project: { type: "string", description: "Ein Projekt oder mehrere durch Komma, z. B. \"CT,TS\" (Slug oder Kürzel)" },
         since: { type: "string", description: "ISO-Zeitpunkt, z. B. Session-Beginn" },
         delta: { type: "boolean", description: "Nur „neu: … · erledigt: …“ (braucht since); leer, wenn nichts geändert wurde" },
-        layout: { type: "string", enum: ["multi", "single"], description: "multi = jede Gruppe eine Zeile (Standard in der Probephase), single = alles in einer Zeile" },
+        layout: {
+          type: "string",
+          enum: ["multi", "single"],
+          description:
+            "Weglassen: dann gilt die Einstellung des Nutzers in der Web-App. Nur setzen, wenn er im Gespräch ausdrücklich ein anderes Format will (multi = jede Gruppe eine Zeile, single = alles in einer Zeile).",
+        },
         lang: { type: "string", enum: ["de", "en"], description: "Sprache der Beschriftungen: de (Standard: neu, erledigt) oder en (new, done); 👤 und 🤖 sind sprachunabhängig. Immer passend zur Sprache des Gesprächs setzen." },
       },
       required: ["project"],
@@ -288,11 +298,12 @@ async function callTool(name, args, db, actor) {
       // Read the cursor BEFORE the items: a write in between is then replayed by
       // cotrack_changes instead of being skipped.
       const stand = await latestEvent(db, project.slug);
-      const [items, kinds] = await Promise.all([
+      const [items, kinds, settings] = await Promise.all([
         listItems(db, { project: project.slug, status: "open" }),
         listKinds(db, true),
+        getSettings(db),
       ]);
-      const footer = buildFooter(items, kinds) || "(nichts offen)";
+      const footer = buildFooter(items, kinds, footerStyle(settings)) || "(nichts offen)";
       return `Projekt: ${projectTitle(project)}\nFußzeile:${footer.includes("\n") ? "\n" : " "}${footer}\nStand: ${stand}\n\n${itemsAsText(items, kinds)}`;
     }
     case "cotrack_list": {
@@ -366,7 +377,7 @@ async function callTool(name, args, db, actor) {
 }
 
 // Compact but complete: every changed field of an event, long texts shortened.
-const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "source", "due", "body", "to", "name", "repo", "code"];
+const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "source", "due", "body", "to", "name", "repo", "code", "archived"];
 function describeChange(e) {
   if (!e.data) return "";
   const d = JSON.parse(e.data);
@@ -396,7 +407,7 @@ async function handleMessage(msg, db, actor) {
       return reply({
         protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "cotrack", title: "cotrack – offene Punkte", version: "0.4.0" },
+        serverInfo: { name: "cotrack", title: "cotrack – offene Punkte", version: "0.5.0" },
         instructions: INSTRUCTIONS,
       });
     }

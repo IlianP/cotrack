@@ -29,7 +29,7 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_add` | neuen Punkt anlegen | schreibt |
 | `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`) | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D | schreibt |
-| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (Standard: je Gruppe eine Zeile) oder `single` | liest |
+| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Einstellungen) | liest |
 | `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions) | liest |
 
 Bewusst **kein Löschen** per KI – Punkte werden mit `status: "dropped"` verworfen, Projekte archiviert, damit nichts verloren geht.
@@ -46,8 +46,9 @@ Damit das zuverlässig klappt, greifen drei Ebenen ineinander:
 1. **`instructions` des Servers** – cotrack schickt beim Verbinden eine Gebrauchsanweisung mit, die die Zuordnung beschreibt
    (`COTRACK.md` lesen, sonst `cotrack_projects` mit `repo`, sonst nachfragen). Clients, die sie weiterreichen (Claude Code tut das),
    brauchen nichts weiter.
-2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), v2.6: Teil 1 Basis + Teil 2 cotrack-Zusatz) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
-   nicht anzeigt (claude.ai, ChatGPT).
+2. **Benutzerdefinierter Prompt** ([PROMPT.md](PROMPT.md), Text v2.6: Teil 1 Basis + Teil 2 cotrack-Zusatz) – gilt in allen Chats, auch wo ein Client die Server-Anweisung
+   nicht anzeigt (claude.ai, ChatGPT). Warum es ihn neben dem Server braucht und wer was regelt:
+   [PROMPT.md → Wozu der Prompt?](PROMPT.md#wozu-der-prompt--wer-regelt-was)
 3. **Hinweis im Repository** (optional) – eine Zeile in `CLAUDE.md` bzw. `AGENTS.md`, z. B. „Offene Punkte: cotrack-Projekt siehe COTRACK.md“.
    Claude Code lädt diese Dateien von selbst; so klappt es auch ohne Prompt.
 

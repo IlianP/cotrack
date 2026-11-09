@@ -26,9 +26,17 @@ const OWNER_LABELS = { user: "Du", ai: "KI" };
 const FOOTER_OWNER_LABELS = { user: "👤", ai: "🤖" };
 // Footer wording per language (`lang=de|en`, default de): only the "new / done" short line.
 const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { created: "new", done: "done" } };
-// Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (Du / KI / 💡 / ⚠),
-// "single" = everything in one line. Change this constant to switch the default back.
+// Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (👤 / 🤖 / 💡 / ⚠),
+// "single" = everything in one line. Built-in default only: since v2.7 the human picks the default in the
+// web app (setting `footer_layout`), and a `layout` parameter in a request wins over both.
 const FOOTER_LAYOUT_DEFAULT = "multi";
+// Instance settings (table `settings`, migration 0006; web app ☰ → Einstellungen). A missing row – or a database
+// without the table – means these built-in defaults.
+const SETTINGS_DEFAULTS = Object.freeze({
+  footer_layout: FOOTER_LAYOUT_DEFAULT,
+  footer_label_user: FOOTER_OWNER_LABELS.user,
+  footer_label_ai: FOOTER_OWNER_LABELS.ai,
+});
 const OWNER_ALIASES = { user: "user", du: "user", me: "user", ich: "user", human: "user", ai: "ai", ki: "ai" };
 const STATUS_LABELS = { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" };
 
@@ -107,6 +115,16 @@ async function route(req, db, url, actor) {
   const q = url.searchParams;
 
   if (seg.length === 1 && seg[0] === "me" && method === "GET") return json({ actor });
+
+  // Instance settings: everyone may read them (the AI gets their effect through the footer), only the human changes them.
+  if (seg.length === 1 && seg[0] === "settings") {
+    if (method === "GET") return json(await readSettings(db));
+    if (method === "PATCH") {
+      if (actor !== "user") throw new HttpError(403, "forbidden", "settings can only be changed with the user token");
+      await updateSettings(db, await readJson(req), actor);
+      return json(await readSettings(db));
+    }
+  }
 
   if (seg.length === 1 && seg[0] === "version" && method === "GET") {
     const row = await db.prepare("SELECT COALESCE(MAX(id), 0) AS v FROM events").first();
@@ -194,22 +212,22 @@ async function route(req, db, url, actor) {
           .all();
         return json({ events: results.map((e) => ({ ...e, data: e.data ? JSON.parse(e.data) : null })) });
       }
-      if (sub === "footer" || sub === "status.md") {
+      if (sub === "footer") {
+        const textLine = await footerFor(db, [project.slug], {
+          max: clampInt(q.get("max"), 1, 30, 8),
+          since: q.get("since") || null,
+          delta: q.get("delta") === "1",
+          layout: normLayout(q.get("layout")),
+          lang: normLang(q.get("lang")),
+        });
+        if (q.get("format") === "text") return plain(textLine);
+        return json({ footer: textLine });
+      }
+      if (sub === "status.md") {
         const [items, kinds] = await Promise.all([
           listItems(db, { project: project.slug, status: "all" }),
           listKinds(db, true),
         ]);
-        if (sub === "footer") {
-          const textLine = buildFooter(items, kinds, {
-            max: clampInt(q.get("max"), 1, 30, 8),
-            since: q.get("since") || null,
-            deltaOnly: q.get("delta") === "1",
-            layout: normLayout(q.get("layout")),
-            lang: normLang(q.get("lang")),
-          });
-          if (q.get("format") === "text") return plain(textLine);
-          return json({ footer: textLine });
-        }
         return plain(buildStatusMarkdown(project, items, kinds, url.origin), "text/markdown; charset=utf-8");
       }
     }
@@ -669,7 +687,11 @@ export function successorMap(items) {
   return map;
 }
 
-export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de" } = {}) {
+export function buildFooter(
+  items,
+  kinds,
+  { max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de", labels = FOOTER_OWNER_LABELS } = {},
+) {
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const groups = new Map();
   for (const it of items) {
@@ -679,7 +701,7 @@ export function buildFooter(items, kinds, { max = 8, since = null, deltaOnly = f
     if (!k || k.actionable) {
       const owner = it.owner || "user";
       key = `o:${owner}`;
-      label = `${FOOTER_OWNER_LABELS[owner] || owner}:`;
+      label = `${labels[owner] || FOOTER_OWNER_LABELS[owner] || owner}:`;
       weight = owner === "user" ? 0 : owner === "ai" ? 1 : 2;
     } else {
       key = `k:${k.code}`;
@@ -744,11 +766,84 @@ export function normLang(v) {
   return String(v ?? "").toLowerCase().startsWith("en") ? "en" : "de";
 }
 
+// "single" | "multi", or null when not given (or unknown): then the web app setting applies.
 export function normLayout(v) {
-  const s = String(v ?? "").toLowerCase();
+  const s = String(v ?? "").trim().toLowerCase();
   if (["single", "line", "einzeilig"].includes(s)) return "single";
   if (["multi", "lines", "mehrzeilig"].includes(s)) return "multi";
-  return FOOTER_LAYOUT_DEFAULT;
+  return null;
+}
+
+// Layout and group markers for buildFooter: a layout given in the request wins, otherwise the setting.
+export function footerStyle(settings, layout = null) {
+  return {
+    layout: layout || settings.footer_layout,
+    labels: { user: settings.footer_label_user, ai: settings.footer_label_ai },
+  };
+}
+
+/* -------------------------------------------------------------- settings */
+
+const SETTING_KEYS = Object.keys(SETTINGS_DEFAULTS);
+const isMissingTable = (err) => /no such table/i.test(String(err?.message ?? err));
+
+// { settings, defaults, available }. `available` is false while migration 0006 is not applied yet – everything
+// keeps working with the built-in defaults, only saving is not possible.
+export async function readSettings(db) {
+  const settings = { ...SETTINGS_DEFAULTS };
+  let rows = [];
+  let available = true;
+  try {
+    ({ results: rows } = await db.prepare("SELECT key, value FROM settings").all());
+  } catch (err) {
+    if (!isMissingTable(err)) throw err;
+    available = false;
+  }
+  for (const r of rows) if (SETTING_KEYS.includes(r.key)) settings[r.key] = r.value;
+  return { settings, defaults: SETTINGS_DEFAULTS, available };
+}
+
+export async function getSettings(db) {
+  return (await readSettings(db)).settings;
+}
+
+// null = back to the built-in default (the row is deleted).
+function normSetting(key, v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (key === "footer_layout") {
+    const layout = normLayout(v);
+    if (!layout) throw new HttpError(400, "invalid_field", "footer_layout (multi|single)");
+    return layout;
+  }
+  // Group markers ("👤", "Du", …): short and on one line; the footer adds the ":" itself.
+  const s = text(v, key, 16)?.replace(/:+$/, "").trim();
+  if (!s) return null;
+  if (/[\r\n\t·]/.test(s)) throw new HttpError(400, "invalid_field", `${key} (one line, without "·")`);
+  return s;
+}
+
+async function updateSettings(db, input, actor) {
+  const unknown = Object.keys(input).filter((k) => !SETTING_KEYS.includes(k));
+  if (unknown.length) throw new HttpError(400, "unknown_setting", unknown.join(", "));
+  const t = now();
+  const stmts = SETTING_KEYS.filter((key) => key in input).map((key) => {
+    const value = normSetting(key, input[key]);
+    return value === null
+      ? db.prepare("DELETE FROM settings WHERE key = ?").bind(key)
+      : db
+          .prepare(
+            `INSERT INTO settings (key, value, updated_at, updated_by) VALUES (?, ?, ?, ?)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at, updated_by = excluded.updated_by`,
+          )
+          .bind(key, value, t, actor);
+  });
+  if (!stmts.length) return;
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    if (isMissingTable(err)) throw new HttpError(503, "settings_unavailable", "apply migration 0006 first (npm run db:migrate)");
+    throw err;
+  }
 }
 
 /**
@@ -770,18 +865,20 @@ export function buildMultiFooter(entries, kinds, opts = {}) {
     .join("\n");
 }
 
-// Footer for one or more projects given by slug or code; a single project keeps the plain one-line format.
-export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = FOOTER_LAYOUT_DEFAULT, lang = "de" } = {}) {
+// Footer for one or more projects given by slug or code; a single project has no project label.
+// layout: "multi" | "single" from the request, or null for the web app setting.
+export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = null, lang = "de" } = {}) {
   const projects = [];
   for (const key of keys) {
     const p = await getProject(db, key);
     if (!projects.some((x) => x.slug === p.slug)) projects.push(p);
   }
-  const [kinds, ...lists] = await Promise.all([
+  const [kinds, settings, ...lists] = await Promise.all([
     listKinds(db, true),
+    getSettings(db),
     ...projects.map((p) => listItems(db, { project: p.slug, status: "all" })),
   ]);
-  const opts = { since, deltaOnly: delta, max, layout, lang };
+  const opts = { since, deltaOnly: delta, max, lang, ...footerStyle(settings, layout) };
   if (projects.length === 1) return buildFooter(lists[0], kinds, opts);
   return buildMultiFooter(projects.map((project, i) => ({ project, items: lists[i] })), kinds, opts);
 }

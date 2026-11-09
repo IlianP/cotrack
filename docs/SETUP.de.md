@@ -12,7 +12,7 @@ KI-Assistenten damit. Dauer: etwa 20 Minuten.
 ## Abkürzung: Dein KI-Assistent übernimmt Schritt 3 bis 7
 
 Wenn dein KI-Assistent selbst Befehle ausführen kann – z. B. **Claude Code** im Terminal – oder einen
-**Cloudflare-Connector (MCP)** hat, kann er Schritt 3 bis 7 für dich erledigen. Du machst nur:
+**[Cloudflare-Connector (MCP)](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)** (`https://mcp.cloudflare.com/mcp`) hat, kann er Schritt 3 bis 7 für dich erledigen. Du machst nur:
 
 1. **Schritt 1:** Cloudflare-Konto anlegen (das kann keine KI für dich).
 2. Beim **Login (Schritt 4)** im Browser auf „Allow“ klicken, wenn sich das Fenster öffnet.
@@ -28,15 +28,19 @@ Danach machst du mit Schritt 6 und 8 weiter.
 ## Was du brauchst
 
 - Ein **Cloudflare-Konto** (kostenlos; Schritt 1). Eine eigene Domain brauchst du nicht.
-- **Node.js** in einer aktuellen LTS-Version (20 oder neuer): <https://nodejs.org> → „LTS“ herunterladen und installieren.
+- **Node.js** in einer aktuellen LTS-Version (22 oder neuer – das aktuelle `wrangler` braucht sie): <https://nodejs.org> → „LTS“ herunterladen und installieren.
 - Ein **Terminal**: unter macOS „Terminal“, unter Windows „PowerShell“, unter Linux dein gewohntes Terminal.
 - Optional **git**. Ohne git lädst du den Code als ZIP herunter (Schritt 2).
+
+> **Kein Terminal?** Alles geht auch im Browser mit einem GitHub-Konto – siehe
+> [Nur im Browser](#nur-im-browser-github--cloudflare-dashboard).
 
 ## 1. Cloudflare-Konto anlegen
 
 1. <https://dash.cloudflare.com/sign-up> öffnen, E-Mail und Passwort eingeben.
 2. Die Bestätigungs-E-Mail öffnen und den Link anklicken.
-3. Fertig. Der kostenlose Tarif reicht für cotrack. Fragt Cloudflare nach einer Domain oder einem Tarif, kannst du das
+3. Fertig. Der kostenlose Tarif reicht für cotrack (Workers: 100.000 Anfragen pro Tag; D1: 5 GB, 5 Millionen gelesene und
+   100.000 geschriebene Zeilen pro Tag – [Workers-Limits](https://developers.cloudflare.com/workers/platform/limits/), [D1-Preise](https://developers.cloudflare.com/d1/platform/pricing/)). Fragt Cloudflare nach einer Domain oder einem Tarif, kannst du das
    überspringen.
 
 ## 2. Code holen
@@ -146,7 +150,35 @@ Ohne Terminal geht das auch im Browser: <https://dash.cloudflare.com> → **Work
 
    Der Assistent bekommt dabei eigene, kurzlebige Zugangsdaten. Deinen Token sieht er nicht, und seine Änderungen werden als
    „KI“ protokolliert.
-3. Den passenden Prompt einspielen: [PROMPT.md](PROMPT.md) (Teil 1 + Teil 2).
+3. Den passenden Prompt einspielen: [PROMPT.md](PROMPT.md) (Teil 1 + Teil 2) –
+   [wozu es ihn braucht](PROMPT.md#wozu-der-prompt--wer-regelt-was), obwohl cotrack einen Server hat.
+4. Optional: in der Web-App ☰ → **Einstellungen** – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und
+   die Kennzeichen für deine Punkte und die der KI (Standard 👤 / 🤖).
+
+## Nur im Browser: GitHub + Cloudflare-Dashboard
+
+Ohne Node.js und Terminal – dafür brauchst du zusätzlich ein GitHub-Konto. Cloudflare baut dann direkt aus deiner Kopie des
+Repositorys.
+
+1. Cloudflare-Konto anlegen (Schritt 1) und <https://github.com/IlianP/cotrack> auf GitHub **forken**.
+2. **Datenbank:** <https://dash.cloudflare.com> → **Storage & databases** → **D1 SQL database** → **Create database**, Name
+   `cotrack-db`. Die Datenbank-ID kopieren.
+3. In deinem Fork **`wrangler.toml`** öffnen (Stift-Symbol), `database_id` durch deine ID ersetzen und committen.
+4. **Worker:** **Workers & Pages** → **Create application** → **Import a repository** (GitHub verbinden) → dein Fork. Den Namen
+   `cotrack` lassen (wie in `wrangler.toml`), als Build-Befehl `npm run db:migrate` und als Deploy-Befehl `npx wrangler deploy`
+   eintragen → **Save and Deploy**. Der Build legt die Tabellen an; ab jetzt wird jeder Push in deinen Fork veröffentlicht.
+5. **Token:** einen langen Zufallswert (32+ Zeichen) vom Passwort-Manager erzeugen lassen und hinterlegen: **cotrack** →
+   **Settings** → **Variables and Secrets** → **Add** → Typ „Secret“, Name `TOKEN_USER` → speichern. Secrets bleiben bei
+   späteren Deploys erhalten.
+6. Deine Adresse steht auf der Übersichtsseite des Workers. Weiter mit Schritt 8.
+
+Updates: **Sync fork** auf GitHub – Cloudflare baut, migriert und veröffentlicht von selbst.
+
+Meldet das Build-Protokoll, dass die Migration gescheitert ist (z. B. fehlende Berechtigung für D1), führe sie einmal aus einem
+Terminal aus: `npm install`, `npx wrangler login`, `npm run db:migrate`. Ein Terminal im Browser genügt, z. B. **GitHub
+Codespaces** (auf deinem Fork: **Code → Codespaces → Create codespace**; dort mit `npx wrangler login --device` anmelden).
+Bitte die Migrationsdateien nicht in die D1-Konsole kopieren: Sie merkt sich nicht, welche Migrationen gelaufen sind, und spätere
+Updates würden dann scheitern.
 
 ## Updates
 
@@ -169,3 +201,5 @@ Optional kann Cloudflare bei jedem Push automatisch veröffentlichen: Repository
 | `Couldn't find a D1 DB with the name or binding` | Die `database_id` in `wrangler.toml` ist noch die des Autors – Schritt 5 wiederholen. |
 | Web-App sagt „unauthorized“ | Token falsch kopiert oder Schritt 7 (Token hinterlegen) fehlt. |
 | Fehler „no such table“ | `npm run db:migrate` wurde nicht ausgeführt. |
+| npm warnt `EBADENGINE`, oder wrangler startet nicht | Node.js ist zu alt – aktuelle LTS-Version installieren (22 oder neuer). |
+| Einstellungen melden „Noch nicht verfügbar … Migration“ | Nach dem Update fehlt `npm run db:migrate`. |
