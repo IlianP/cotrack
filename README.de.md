@@ -58,7 +58,7 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode, **kein Build-Schritt, keine Abhängigkeiten** (reiner
   Cloudflare Worker + D1).
 
-> **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch zwei Bearer-Tokens geschützt (kein Login,
+> **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
 > teilen. Siehe Roadmap. Die Web-App ist vorerst auf Deutsch, die Chat-Fußzeile gibt es auf Deutsch und Englisch (`lang`); Code und API sind englisch; dieses README
 > gibt es auf [Englisch](README.md) und Deutsch.
@@ -68,102 +68,52 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 ```
 Browser (src/ui.html) ────────┐
                               ├─► Cloudflare Worker ─► D1 (SQLite)
-KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js
-                                  Bearer-Token → Akteur "user" | "ai"
+KI (MCP oder HTTP-API) ───────┘   src/worker.js · src/mcp.js · src/oauth.js
+                                  Bearer-Token oder OAuth → Akteur "user" | "ai"
 ```
 
 ## Selbst hosten
 
-cotrack läuft in **deinem eigenen Cloudflare-Konto** – einen gemeinsamen, gehosteten Dienst gibt es nicht. Der
-**kostenlose Plan reicht** für den persönlichen Gebrauch: Workers Free erlaubt 100.000 Anfragen pro Tag, D1 Free 5 GB
-Speicher sowie 5 Millionen gelesene und 100.000 geschriebene Zeilen pro Tag
-([Workers-Limits](https://developers.cloudflare.com/workers/platform/limits/),
-[D1-Preise](https://developers.cloudflare.com/d1/platform/pricing/)). Deine Instanz bekommt eine kostenlose Adresse wie
-`https://cotrack.<deine-subdomain>.workers.dev`.
+**Neu bei Cloudflare?** Die Schritt-für-Schritt-Anleitung [docs/SETUP.de.md](docs/SETUP.de.md) führt durch alles: kostenloses
+Konto anlegen, veröffentlichen (im Terminal oder nur im Browser), Token festlegen, KI verbinden – und sagt, welche Schritte dein
+KI-Assistent übernehmen kann. cotrack läuft in **deinem eigenen Cloudflare-Konto**; der kostenlose Plan reicht für den
+persönlichen Gebrauch.
 
-Du brauchst:
-
-- ein [Cloudflare-Konto](https://dash.cloudflare.com/sign-up),
-- entweder **Node.js 22+** auf deinem Rechner (Weg A) oder nur ein **GitHub-Konto** (Weg B, alles im Browser),
-- zwei **Tokens**, die du dir selbst ausdenkst: `TOKEN_USER` für dich (Web-App) und `TOKEN_AI` für deine KI-Assistenten
-  (ihre Änderungen werden als „KI“ protokolliert). Nimm lange Zufallsfolgen (32+ Zeichen), z. B. `openssl rand -hex 24`
-  oder einen Passwort-Manager.
-
-### Weg A – Terminal
+Kurzfassung für alle, die Cloudflare kennen (Voraussetzungen: ein Cloudflare-Konto und Node.js 22+):
 
 ```bash
-git clone https://github.com/IlianP/cotrack.git && cd cotrack
 npm install
-npx wrangler login                    # im Browser bei Cloudflare anmelden
-npx wrangler d1 create cotrack-db     # gibt eine database_id aus …
-#   … die in wrangler.toml eintragen: [[d1_databases]] → database_id
-npm run db:migrate                    # legt die Tabellen in deiner Datenbank an
-npx wrangler secret put TOKEN_USER    # deinen Token einfügen
-npx wrangler secret put TOKEN_AI      # den Token der KI einfügen
-npm run deploy                        # gibt deine URL aus
+npx wrangler login
+npx wrangler d1 create cotrack-db          # die ID in wrangler.toml eintragen
+npm run db:migrate
+npm run deploy                             # zeigt deine Adresse, z. B. https://cotrack.<du>.workers.dev
+npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex 24
 ```
 
-### Weg B – nur im Browser (GitHub + Cloudflare-Dashboard)
-
-1. Dieses Repository auf GitHub **forken**.
-2. **Datenbank:** Cloudflare-Dashboard → *Storage & databases* → *D1 SQL database* → *Create database*, Name `cotrack-db`.
-   Die Datenbank-ID kopieren.
-3. In deinem Fork **`wrangler.toml`** bearbeiten (Stift-Symbol auf GitHub): `database_id` durch deine ersetzen und
-   committen.
-4. **Worker:** *Workers & Pages* → *Create application* → *Import a repository* (GitHub verbinden) → deinen Fork wählen →
-   Voreinstellungen lassen (der Name muss `cotrack` bleiben, wie in `wrangler.toml`) → *Save and Deploy*. Ab jetzt wird
-   jeder Push in deinen Fork automatisch veröffentlicht.
-5. **Tokens:** dein Worker → *Settings* → *Variables and Secrets* → *Add* → Typ *Secret*: `TOKEN_USER`, dann `TOKEN_AI`
-   → *Deploy*. Secrets bleiben bei späteren Deploys erhalten.
-6. **Tabellen** (einmal, und wieder, wenn ein Update eine neue Migration mitbringt): wrangler spielt die Dateien aus
-   `migrations/` ein. Ohne eigenes Terminal öffnest du deinen Fork in **GitHub Codespaces** (*Code* → *Codespaces* →
-   *Create codespace* – ein Terminal im Browser) und führst aus:
-   ```bash
-   npm install
-   npx wrangler login --device         # Anmeldung per Code (kein lokaler Browser nötig)
-   npm run db:migrate
-   ```
-   Bitte die Migrationsdateien nicht stattdessen in die D1-Konsole kopieren: wrangler merkt sich, welche Migrationen
-   gelaufen sind, die Konsole nicht – spätere Updates würden sie dann erneut ausführen und scheitern.
-7. `https://cotrack.<deine-subdomain>.workers.dev` öffnen.
-
-> **Tipp – lass die KI den Cloudflare-Teil machen.** Ist bei deinem Assistenten der
-> [Cloudflare-MCP-Server](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)
-> verbunden (`https://mcp.cloudflare.com/mcp`), kann er die Datenbank anlegen, die Secrets setzen und das Deployment
-> prüfen. Die Schritte oben bleiben die Referenz dafür, was er tun soll (auch Schritt 6: Migrationen per wrangler).
-
-### Erste Schritte
-
-1. Deine URL öffnen, mit `TOKEN_USER` anmelden, ein Projekt anlegen (☰ → *Neues Projekt*).
-2. Deine KI mit `TOKEN_AI` verbinden – siehe [KI verbinden](#ki-verbinden-mcp).
-3. Den benutzerdefinierten Prompt in Claude / ChatGPT einspielen: [docs/PROMPT.md](docs/PROMPT.md) –
-   [wozu es ihn braucht](docs/PROMPT.md#wozu-der-prompt--wer-regelt-was), obwohl cotrack einen Server hat.
-4. Optional: ☰ → *Einstellungen* – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und die
-   Kennzeichen für deine Punkte und die der KI (Standard 👤 / 🤖).
-5. Optional: eine `COTRACK.md` in deinen Repositories ([siehe unten](#repository-zuordnung)).
-
-### Updates
-
-Neue Version holen (Weg A: `git pull`; Weg B: *Sync fork* auf GitHub – Cloudflare veröffentlicht von selbst), danach
-gleich `npm run db:migrate` ausführen (Weg B: im Codespace) und bei Weg A `npm run deploy`. Neue Versionen können
-Migrationen mitbringen; ist nichts Neues dabei, schadet der Aufruf nicht.
+Öffne deine Worker-Adresse, gib deinen Token ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`
+(OAuth; du bestätigst einmal mit deinem Token). Optional `TOKEN_AI`: ein fester Token für KI-Werkzeuge ohne Browser, siehe
+[docs/MCP.md](docs/MCP.md). Layout und Kennzeichen der Fußzeile: ☰ → *Einstellungen* in der Web-App.
+Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
+Migrationen mitbringen.
 
 ## KI verbinden (MCP)
 
-`POST /mcp` (oder `/mcp/<token>` für Clients, die keine Header senden können) spricht das Model Context Protocol
+`POST /mcp` spricht das Model Context Protocol
 (Streamable HTTP, zustandslos, ohne Bibliothek in [`src/mcp.js`](src/mcp.js) umgesetzt). Tools: `cotrack_projects`,
 `cotrack_project_create`, `cotrack_project_update`, `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`,
 `cotrack_update`, `cotrack_convert`, `cotrack_footer`, `cotrack_changes`. Ein Lösch-Tool gibt es bewusst nicht: Die KI
 verwirft Punkte (`status: "dropped"`), nichts geht verloren.
 
-Zum Beispiel Claude Code:
+Zum Beispiel Claude Code (danach `/mcp` → `cotrack` → anmelden):
 
 ```bash
-claude mcp add --transport http cotrack https://<dein-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <deine-adresse>/mcp
 ```
 
-Einrichtung für claude.ai und ChatGPT: [docs/MCP.md](docs/MCP.md). Eine URL mit Token darin ist ein Passwort –
-OAuth-Anmeldung steht auf der Roadmap.
+**claude.ai und ChatGPT** verbinden sich per **OAuth** ([`src/oauth.js`](src/oauth.js), ohne Bibliothek): Connector mit der
+URL `<deine-adresse>/mcp` anlegen; cotrack öffnet einmal eine Freigabeseite, du bestätigst mit deinem Token, und die
+App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in der URL (die alte Form
+`/mcp/<token>` wurde entfernt). Schritt für Schritt: [docs/MCP.md](docs/MCP.md).
 
 Danach den **benutzerdefinierten Prompt** einspielen ([docs/PROMPT.md](docs/PROMPT.md)). Der Server antwortet nur, wenn
 er gefragt wird; der Prompt sorgt dafür, dass die KI fragt – zu Beginn einer Session, bei neuen Punkten, für die
@@ -190,7 +140,8 @@ Projekt. Details: [docs/MCP.md](docs/MCP.md), [docs/METHODIK.md](docs/METHODIK.m
 
 ## API
 
-Alle Endpunkte außer `/` und `/api/health` erfordern `Authorization: Bearer <token>`.
+Alle Endpunkte außer `/`, `/api/health` und den OAuth-Endpunkten für MCP-Clients (`/.well-known/…`, `/register`,
+`/authorize`, `/token`, `/revoke`; siehe [docs/MCP.md](docs/MCP.md)) erfordern `Authorization: Bearer <token>`.
 Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festgehalten wird.
 
 | Methode | Pfad | Zweck |
@@ -226,7 +177,6 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 ## Roadmap
 
-- OAuth für den MCP-Server (kein Token in der URL)
 - Abgleich mit `docs/STATUS.md` in GitHub-Repositories
 - WebSocket-Live-Updates (Durable Objects) statt Polling
 - Richtiger Login (Cloudflare Access / OAuth) und Mehrbenutzerbetrieb

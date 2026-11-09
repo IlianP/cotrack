@@ -8,9 +8,9 @@ rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = false }]
 [[d1_databases]]
 binding = "DB"
 database_name = "cotrack-db"
-database_id = "412df387-a458-4f9f-979a-ea66b9a0a2e0"   # replace with your own when self-hosting
+database_id = "412df387-a458-4f9f-979a-ea66b9a0a2e0"   # the author's database: replace with your own (docs/SETUP.md, step 5)
 migrations_dir = "migrations"
 
 # Secrets (set with `npx wrangler secret put <NAME>`):
-#   TOKEN_USER – token for the human (web UI, manual API use)
-#   TOKEN_AI   – token for AI assistants (Claude, ChatGPT, …)
+#   TOKEN_USER – your token (web UI, consent page when connecting an AI via OAuth, manual API use)
+#   TOKEN_AI   – optional: fixed token for AI tools without a browser (scripts, cloud sessions); changes count as "ai"

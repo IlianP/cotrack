@@ -36,6 +36,7 @@ import {
   buildFooter,
   itemsAsText,
 } from "./worker.js";
+import { oauthActor, wwwAuthenticate } from "./oauth.js";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const OWNER_LABELS = { user: "Du", ai: "KI" };
@@ -434,20 +435,26 @@ const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "POST, OPTIONS",
   "access-control-allow-headers": "authorization, content-type, mcp-protocol-version, mcp-session-id",
+  "access-control-expose-headers": "www-authenticate, mcp-session-id",
 };
 
 /**
- * Entry point for /mcp and /mcp/<token>.
- * The token can come from the Authorization header (Claude Code, scripts) or from the URL path
- * (web apps like claude.ai and ChatGPT, whose connector dialogs cannot send custom headers).
+ * Entry point for /mcp. Credentials only ever come from the Authorization header:
+ *   - "Bearer cto_…" from OAuth (claude.ai, ChatGPT, Claude Code; see src/oauth.js) – always actor "ai",
+ *   - "Bearer <token>" with TOKEN_AI / TOKEN_USER (tools without a browser, scripts).
+ * The token-in-URL form /mcp/<token> was removed after the switch to OAuth (A31).
+ * Without valid credentials the 401 carries WWW-Authenticate, which starts the OAuth flow in the client.
  */
 export async function handleMcp(request, env, url) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-  const pathToken = url.pathname.split("/")[2];
   const header = (request.headers.get("authorization") || "").match(/^Bearer\s+(\S+)\s*$/i);
-  const token = header ? header[1] : pathToken ? decodeURIComponent(pathToken) : null;
-  const actor = token ? await tokenActor(token, env) : null;
-  if (!actor) return rpcResponse({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized" } }, 401);
+  const token = header ? header[1] : null;
+  const actor = token ? (await tokenActor(token, env)) || (await oauthActor(env.DB, token)) : null;
+  if (!actor) {
+    return rpcResponse({ jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized" } }, 401, {
+      "www-authenticate": wwwAuthenticate(url.origin, Boolean(token)),
+    });
+  }
   if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: { allow: "POST", ...CORS } });
 
   let body;
@@ -464,9 +471,9 @@ export async function handleMcp(request, env, url) {
   return answer ? rpcResponse(answer) : new Response(null, { status: 202, headers: CORS });
 }
 
-function rpcResponse(data, status = 200) {
+function rpcResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", "cache-control": "no-store", ...CORS },
+    headers: { "content-type": "application/json", "cache-control": "no-store", ...CORS, ...extraHeaders },
   });
 }

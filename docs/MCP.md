@@ -11,7 +11,7 @@ Technisch sind das nur JSON-Nachrichten (JSON-RPC 2.0), die per HTTP an **eine**
 | Schritt | Nachricht des KI-Clients | Antwort von cotrack |
 |---|---|---|
 | 1. Handschlag | `initialize` | Protokollversion, Name, kurze Gebrauchsanweisung (`instructions`) |
-| 2. Werkzeugliste | `tools/list` | die 11 Werkzeuge unten, mit Parametern |
+| 2. Werkzeugliste | `tools/list` | die Werkzeuge unten, mit Parametern |
 | 3. Benutzung | `tools/call` mit Name + Argumenten | kurzer Text, z. B. `A11 angelegt: …` |
 
 Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut lesbar).
@@ -57,32 +57,67 @@ des Projekts die Rückfalllösung.
 
 ## Verbinden
 
-Adresse: `https://<dein-worker>.workers.dev/mcp` – die URL deiner eigenen Installation
-(siehe [README → Selbst hosten](../README.de.md#selbst-hosten)). Anmeldung mit dem **KI-Token** (`TOKEN_AI`), damit
-Änderungen als „KI“ protokolliert werden.
+`<deine-adresse>` ist die Adresse deiner cotrack-Installation, z. B. `https://cotrack.dein-name.workers.dev` – du bekommst sie
+beim Einrichten ([SETUP.de.md](SETUP.de.md), Schritt 7). Noch keine Installation? Dann zuerst die Anleitung durchgehen.
 
-**Claude Code** (Terminal / Cloud-Sessions, Token aus der Umgebungsvariable):
+Adresse: `<deine-adresse>/mcp`. Alle KI-Assistenten melden sich per **OAuth** an: Du bestätigst einmal mit deinem Token
+(`TOKEN_USER`), der Assistent bekommt eigene Zugangsdaten, und seine Änderungen werden als „KI“ protokolliert.
+
+**Claude Code:**
 ```bash
-claude mcp add --transport http cotrack https://<dein-worker>.workers.dev/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <deine-adresse>/mcp
 ```
+Danach in Claude Code `/mcp` eingeben, `cotrack` wählen und anmelden; im Browser öffnet sich die Freigabeseite.
 
-**claude.ai und ChatGPT** können in ihren Connector-Dialogen (noch) keine eigenen Header senden. Deshalb nimmt
-cotrack den Token übergangsweise auch im Pfad an:
-`https://<dein-worker>.workers.dev/mcp/<KI-Token>`
+**Sonderfall ohne Browser** (Cloud-Sessions, Skripte, `curl`): Dort klappt die Anmeldung per Freigabeseite nicht. Dafür gibt es
+einen zweiten, festen Token für KI-Werkzeuge:
+1. Wert würfeln wie in [SETUP.de.md](SETUP.de.md), Schritt 6, und mit `npx wrangler secret put TOKEN_AI` hinterlegen.
+2. Im Header mitschicken, z. B.
+   `claude mcp add --transport http cotrack <deine-adresse>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"`
+   (mit `COTRACK_TOKEN` = dein `TOKEN_AI`).
 
-- **claude.ai:** Einstellungen → Connectors → „Benutzerdefinierten Connector hinzufügen“ → Name `cotrack`, URL wie oben.
-- **ChatGPT:** Einstellungen → Apps & Connectors → Erweitert → Entwicklermodus einschalten → „Erstellen“ →
-  Name `cotrack`, URL wie oben, Authentifizierung „Keine“.
+Ohne `TOKEN_AI` funktioniert alles andere genauso; du kannst im Header auch `TOKEN_USER` schicken, dann werden die Änderungen
+aber als „Du“ statt „KI“ protokolliert.
+
+**claude.ai und ChatGPT** verbinden sich per **OAuth** – es steht kein Geheimnis in der URL:
+
+1. Connector anlegen mit der URL `<deine-adresse>/mcp` (ohne Token).
+   - **claude.ai:** Einstellungen → Connectors → „Benutzerdefinierten Connector hinzufügen“ → Name `cotrack`, URL wie oben.
+     Felder für OAuth-Client-ID/-Secret leer lassen – die App registriert sich selbst.
+   - **ChatGPT:** Einstellungen → Apps & Connectors → Erweitert → Entwicklermodus einschalten → „Erstellen“ →
+     Name `cotrack`, URL wie oben, Authentifizierung **„OAuth“**.
+2. Beim Verbinden öffnet sich die cotrack-Seite „cotrack verbinden“. Dort deinen **Nutzer-Token** eingeben (derselbe wie in
+   der Web-App, nicht der KI-Token) und „Zugriff erlauben“ wählen.
+3. Fertig. Die App bekommt einen Zugangstoken für eine Stunde, den sie selbst erneuert (bis zu 30 Tage ohne Nutzung).
+   Änderungen über den Connector werden als „KI“ protokolliert. Trennen in der App beendet die Verbindung.
 
 (Die Menünamen ändern sich bei beiden Apps gelegentlich.)
 
-⚠ Die URL mit Token ist ein Passwort: nicht teilen, nicht in Screenshots zeigen. Der saubere Weg ist OAuth –
-dann meldest du dich beim Verbinden einmal an, und es steht kein Geheimnis in der URL (offener Punkt A12).
+Die frühere Form mit Token in der URL (`<deine-adresse>/mcp/<Token>`) gibt es nicht mehr. Ein alter Connector mit dieser
+URL bekommt „not_found“: löschen und wie oben neu anlegen.
+
+### So funktioniert die Anmeldung (OAuth 2.1)
+
+Umgesetzt ohne Bibliothek in [`src/oauth.js`](../src/oauth.js), wie es die MCP-Spezifikation vorsieht:
+
+| Schritt | Adresse | Zweck |
+|---|---|---|
+| 1 | `POST /mcp` ohne Token | Antwort `401` mit `WWW-Authenticate`: Hinweis, wo die Anmeldung beschrieben ist |
+| 2 | `/.well-known/oauth-protected-resource/mcp` | welcher Anmeldedienst `/mcp` schützt |
+| 3 | `/.well-known/oauth-authorization-server` | wo sich Apps registrieren, anmelden und Tokens holen |
+| 4 | `POST /register` | die App registriert sich selbst (Dynamic Client Registration) |
+| 5 | `/authorize` | Freigabeseite: du bestätigst mit dem Nutzer-Token; Rückgabe eines Einmal-Codes (PKCE S256 Pflicht) |
+| 6 | `POST /token` | Code → Zugangstoken (1 Stunde) + Erneuerungstoken (30 Tage, bei jeder Nutzung neu) |
+| 7 | `POST /revoke` | Verbindung beenden |
+
+Gespeichert werden nur Hashes der Tokens und Codes (Migration `0005_oauth.sql`). OAuth-Tokens gelten nur für `/mcp`,
+nicht für die HTTP-API und nicht im Pfad. Die festen Tokens (`TOKEN_USER`, optional `TOKEN_AI`) im Header
+funktionieren unverändert.
 
 ## Selbst ausprobieren
 
 ```bash
-curl -s https://<dein-worker>.workers.dev/mcp \
+curl -s "<deine-adresse>/mcp" \
   -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"cotrack_status","arguments":{"project":"cotrack"}}}'
 ```

@@ -53,7 +53,7 @@ warnings – a one-glance status that survives across conversations.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
-> **Status:** early and used daily by its author. Access is protected by two bearer tokens only (no login, no roles) –
+> **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
 > fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app is
 > in German for now, the chat footer is available in German and English (`lang`); code and API are English; this README is available in English and [German](README.de.md).
 
@@ -62,98 +62,49 @@ warnings – a one-glance status that survives across conversations.
 ```
 Browser (src/ui.html) ────────┐
                               ├─► Cloudflare Worker ─► D1 (SQLite)
-AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.js
-                                  Bearer token → actor "user" | "ai"
+AI (MCP or HTTP API) ─────────┘   src/worker.js · src/mcp.js · src/oauth.js
+                                  Bearer token or OAuth → actor "user" | "ai"
 ```
 
 ## Self-hosting
 
-cotrack runs on **your own Cloudflare account** – there is no shared hosted service. The **free plan is enough** for
-personal use: Workers Free allows 100,000 requests per day, D1 Free 5 GB of storage and 5 million rows read / 100,000
-written per day ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/),
-[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)). Your instance gets a free address like
-`https://cotrack.<your-subdomain>.workers.dev`.
+**New to Cloudflare?** Follow the step-by-step guide [docs/SETUP.md](docs/SETUP.md): it covers creating a free account,
+deploying (in a terminal or only in the browser), your token and connecting your AI – and which steps your AI assistant
+can do for you. cotrack runs on **your own Cloudflare account**; the free plan is enough for personal use.
 
-You need:
-
-- a [Cloudflare account](https://dash.cloudflare.com/sign-up),
-- either **Node.js 22+** on your computer (option A) or only a **GitHub account** (option B, everything in the browser),
-- two **tokens** you make up yourself: `TOKEN_USER` for you (web app) and `TOKEN_AI` for your AI assistants (their
-  changes are logged as "AI"). Use long random strings (32+ characters), e.g. `openssl rand -hex 24` or a password manager.
-
-### Option A – terminal
+Short version for those who know Cloudflare (requirements: a Cloudflare account and Node.js 22+):
 
 ```bash
-git clone https://github.com/IlianP/cotrack.git && cd cotrack
 npm install
-npx wrangler login                    # sign in to Cloudflare in the browser
-npx wrangler d1 create cotrack-db     # prints a database_id …
-#   … put it into wrangler.toml: [[d1_databases]] → database_id
-npm run db:migrate                    # creates the tables in your database
-npx wrangler secret put TOKEN_USER    # paste your token
-npx wrangler secret put TOKEN_AI      # paste the AI's token
-npm run deploy                        # prints your URL
+npx wrangler login
+npx wrangler d1 create cotrack-db          # put the id into wrangler.toml
+npm run db:migrate
+npm run deploy                             # prints your address, e.g. https://cotrack.<you>.workers.dev
+npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 24
 ```
 
-### Option B – browser only (GitHub + Cloudflare dashboard)
-
-1. **Fork** this repository on GitHub.
-2. **Database:** Cloudflare dashboard → *Storage & databases* → *D1 SQL database* → *Create database*, name `cotrack-db`.
-   Copy its database ID.
-3. In your fork, edit **`wrangler.toml`** (pencil icon on GitHub): replace the `database_id` with yours and commit.
-4. **Worker:** *Workers & Pages* → *Create application* → *Import a repository* (connect GitHub) → choose your fork → keep
-   the defaults (the name must stay `cotrack`, as in `wrangler.toml`) → *Save and Deploy*. From now on, every push to your
-   fork is deployed automatically.
-5. **Tokens:** your Worker → *Settings* → *Variables and Secrets* → *Add* → type *Secret*: `TOKEN_USER`, then `TOKEN_AI`
-   → *Deploy*. Secrets are kept across later deploys.
-6. **Tables** (once, and again when an update brings a new migration): wrangler applies the files in `migrations/`.
-   Without a terminal of your own, open your fork in **GitHub Codespaces** (*Code* → *Codespaces* → *Create codespace* –
-   a terminal in the browser) and run:
-   ```bash
-   npm install
-   npx wrangler login --device         # sign in with a code (no local browser needed)
-   npm run db:migrate
-   ```
-   Please don't paste the migration files into the D1 console instead: wrangler records which migrations have run,
-   the console does not – later updates would then try to run them again and fail.
-7. Open `https://cotrack.<your-subdomain>.workers.dev`.
-
-> **Tip – let your AI do the Cloudflare part.** If your assistant has the
-> [Cloudflare MCP server](https://developers.cloudflare.com/agents/model-context-protocol/cloudflare/servers-for-cloudflare/)
-> connected (`https://mcp.cloudflare.com/mcp`), it can create the database, set the secrets and check the deployment
-> for you. The steps above remain the reference for what it should do (including step 6: migrations via wrangler).
-
-### First steps
-
-1. Open your URL, sign in with `TOKEN_USER`, create a project (☰ → *Neues Projekt*; the web app is German for now).
-2. Connect your AI with `TOKEN_AI` – see [Connect your AI](#connect-your-ai-mcp).
-3. Install the custom prompt in Claude / ChatGPT: [docs/PROMPT.en.md](docs/PROMPT.en.md) –
-   [why it is needed](docs/PROMPT.en.md#why-a-prompt--who-controls-what) although cotrack has a server.
-4. Optional: ☰ → *Einstellungen* – the footer layout (one line per group or a single line) and the markers for your
-   items and the AI's (default 👤 / 🤖).
-5. Optional: a `COTRACK.md` in your repositories ([see below](#linking-a-repository)).
-
-### Updates
-
-Get the new version (option A: `git pull`; option B: *Sync fork* on GitHub – Cloudflare redeploys by itself), then run
-`npm run db:migrate` right away (option B: in a codespace) and, for option A, `npm run deploy`. New versions may bring
-migrations; running it when there is nothing new does no harm.
+Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
+once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.md](docs/MCP.md).
+Footer layout and markers: ☰ → *Einstellungen* in the web app.
+After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)
 
-`POST /mcp` (or `/mcp/<token>` for clients that cannot send headers) speaks the Model Context Protocol
+`POST /mcp` speaks the Model Context Protocol
 (Streamable HTTP, stateless, implemented without a library in [`src/mcp.js`](src/mcp.js)). Tools: `cotrack_projects`, `cotrack_project_create`, `cotrack_project_update`,
 `cotrack_status`, `cotrack_list`, `cotrack_get`, `cotrack_add`, `cotrack_update`, `cotrack_convert`, `cotrack_footer`,
 `cotrack_changes`. There is deliberately no delete tool: the AI drops items (`status: "dropped"`), nothing is lost.
 
-Claude Code, for example:
+Claude Code, for example (then `/mcp` → `cotrack` → authenticate):
 
 ```bash
-claude mcp add --transport http cotrack https://<your-worker>/mcp --header "Authorization: Bearer $COTRACK_TOKEN"
+claude mcp add --transport http cotrack <your-address>/mcp
 ```
 
-Setup for claude.ai and ChatGPT (German): [docs/MCP.md](docs/MCP.md). A URL with a token in it is a password –
-OAuth sign-in is on the roadmap.
+**claude.ai and ChatGPT** connect via **OAuth** ([`src/oauth.js`](src/oauth.js), no library): add a connector with the
+URL `<your-address>/mcp`; cotrack opens a consent page once, you confirm with your token, and the app gets
+short-lived tokens that act as `ai`. No secret appears in the URL (the old form `/mcp/<token>` has been removed).
+Step by step (German): [docs/MCP.md](docs/MCP.md).
 
 Then install the **custom prompt** ([docs/PROMPT.en.md](docs/PROMPT.en.md)). The server only answers when it is asked;
 the prompt is what makes the AI ask – at the start of a session, for new items, for the footer. Who controls what
@@ -180,7 +131,8 @@ Details: [docs/MCP.md](docs/MCP.md), [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## API
 
-All endpoints except `/` and `/api/health` require `Authorization: Bearer <token>`.
+All endpoints except `/`, `/api/health` and the OAuth endpoints for MCP clients (`/.well-known/…`, `/register`,
+`/authorize`, `/token`, `/revoke`; see [docs/MCP.md](docs/MCP.md)) require `Authorization: Bearer <token>`.
 The token decides the actor (`user` or `ai`) recorded on every change.
 
 | Method | Path | Purpose |
@@ -215,7 +167,6 @@ curl -s -X PATCH -H "Authorization: Bearer $COTRACK_TOKEN" -H 'content-type: app
 
 ## Roadmap
 
-- OAuth for the MCP server (no token in the URL)
 - Sync with `docs/STATUS.md` in GitHub repositories
 - WebSocket live updates (Durable Objects) instead of polling
 - Proper login (Cloudflare Access / OAuth) and multi-user support
