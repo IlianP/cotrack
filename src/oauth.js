@@ -2,7 +2,7 @@
  * OAuth 2.1 for the MCP server (decided 2026-11-08, D11) – without a library, like the rest of cotrack.
  *
  * Why: claude.ai and ChatGPT cannot send an Authorization header from their connector dialogs, so until now
- * the AI token had to sit in the URL (/mcp/<token>). With OAuth the connector URL is just /mcp; on connecting,
+ * the AI token had to sit in the URL (/mcp/<token>, removed since). With OAuth the connector URL is just /mcp; on connecting,
  * the client opens a cotrack consent page once, the human confirms with their user token, and the client
  * receives short-lived tokens. No secret appears in the URL.
  *

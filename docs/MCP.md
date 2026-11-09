@@ -92,9 +92,8 @@ aber als „Du“ statt „KI“ protokolliert.
 
 (Die Menünamen ändern sich bei beiden Apps gelegentlich.)
 
-**Übergangsweise** nimmt cotrack den KI-Token weiter auch im Pfad an: `<deine-adresse>/mcp/<KI-Token>`.
-Diese Form wird entfernt, sobald beide Apps per OAuth verbunden sind. ⚠ Eine URL mit Token ist ein Passwort: nicht teilen,
-nicht in Screenshots zeigen.
+Die frühere Form mit Token in der URL (`<deine-adresse>/mcp/<Token>`) gibt es nicht mehr. Ein alter Connector mit dieser
+URL bekommt „not_found“: löschen und wie oben neu anlegen.
 
 ### So funktioniert die Anmeldung (OAuth 2.1)
 

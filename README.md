@@ -100,8 +100,8 @@ claude mcp add --transport http cotrack <your-address>/mcp
 
 **claude.ai and ChatGPT** connect via **OAuth** ([`src/oauth.js`](src/oauth.js), no library): add a connector with the
 URL `<your-address>/mcp`; cotrack opens a consent page once, you confirm with your token, and the app gets
-short-lived tokens that act as `ai`. No secret appears in the URL. The old form `/mcp/<token>` still works during the
-transition and will be removed. Step by step (German): [docs/MCP.md](docs/MCP.md).
+short-lived tokens that act as `ai`. No secret appears in the URL (the old form `/mcp/<token>` has been removed).
+Step by step (German): [docs/MCP.md](docs/MCP.md).
 
 ## Linking a repository
 
