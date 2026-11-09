@@ -15,7 +15,7 @@ demselben Stand.
 👤: D5 Lizenz wählen · A13 Prompt einspielen
 🤖: A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
-⚠ W1 Auth · W3 Tokens rotieren
+⚠️ W1 Auth · W3 Tokens rotieren
 ```
 
 Das ist die *Chat-Fußzeile*, die cotrack für das Ende einer KI-Antwort erzeugt: zuerst deine Punkte, dann die der KI,
@@ -28,7 +28,7 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 ## So funktioniert es
 
 1. **Eine Liste pro Projekt.** Ein Projekt ist meist ein GitHub-Repository. Die Punkte sind in vier Kategorien
-   gegliedert: **A** Aufgabe (deine oder die der KI) · **D** Entscheidung · **I** Idee (💡) · **W** Warnung (⚠).
+   gegliedert: **A** Aufgabe (deine oder die der KI) · **D** Entscheidung · **I** Idee (💡) · **W** Warnung (⚠️).
 2. **Beide Seiten schreiben hinein.** Du nutzt die Web-App; die KI ruft zu Sessionbeginn Tools wie `cotrack_status` auf
    und während der Arbeit `cotrack_add` / `cotrack_update`. Jede Änderung hält fest, wer sie gemacht hat.
 3. **Sessions bleiben synchron.** Eine neue Unterhaltung lädt einen kompakten Status (oder nur die Änderungen seit dem

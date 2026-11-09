@@ -40,14 +40,14 @@ const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const OWNER_LABELS = { user: "Du", ai: "KI" };
 
 const INSTRUCTIONS = `cotrack führt die offenen Punkte eines Projekts, gemeinsam für Mensch und KI.
-Kategorien: A Aufgabe (owner "user" = Du oder "ai" = KI), D Entscheidung (trifft der Mensch), I Idee (💡), W Warnung/Risiko (⚠).
+Kategorien: A Aufgabe (owner "user" = Du oder "ai" = KI), D Entscheidung (trifft der Mensch), I Idee (💡), W Warnung/Risiko (⚠️).
 Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2". Anzeige: "D2 ▶A4" = D2 kommt zuerst,
 A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nur wenn D2 nicht in der Zeile steht).
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
 cotrack_update (status "done") abschließen. Zugesagte Ideen mit cotrack_convert in A oder D umwandeln. Fußzeile sparsam: Ändern sich in einer
 Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die volle Fußzeile (cotrack_footer) nur auf Nachfrage („Stand?“),
 am Ende größerer Arbeiten oder etwa alle vier Antworten. Die volle Fußzeile ist (Probephase) mehrzeilig: jede Gruppe
-(👤, 🤖, 💡, ⚠) in einer eigenen Zeile; gib sie genau so wieder. Mit layout "single" gibt es sie einzeilig. Mit lang "en" (passend zu einem englischen Prompt/Gespräch) lauten „neu / erledigt“ new / done (👤 und 🤖 gelten in jeder Sprache). Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
+(👤, 🤖, 💡, ⚠️) in einer eigenen Zeile; gib sie genau so wieder. Mit layout "single" gibt es sie einzeilig. Mit lang "en" (passend zu einem englischen Prompt/Gespräch) lauten „neu / erledigt“ new / done (👤 und 🤖 gelten in jeder Sprache). Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
 Projekt-Zuordnung: Welches Projekt zur Unterhaltung gehört, bestimmst du, nicht der Server. Gehört ein Repository dazu, lies einmal beim Start
 (und wenn ein Repository hinzukommt) die Datei COTRACK.md im Repo-Root: „project:“ ist der Slug, „code:“ das Kürzel. Fehlt sie, finde das Projekt
 mit cotrack_projects (Parameter repo = "owner/name"). Ohne Treffer oder bei Mehrdeutigkeit frage den Nutzer einmal; lege nie von dir aus ein Projekt an.

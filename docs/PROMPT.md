@@ -16,7 +16,7 @@ Diese Teile in den persönlichen Einstellungen beider Programme ersetzen (Teil 1
 T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤:“/„🤖:“; Entscheidungen (D) sind eine eigene Kategorie;
 Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
 v2.3: Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben.
-v2.6: Die Gruppen der Fußzeile heißen „👤:“ (deine Punkte) und „🤖:“ (die der KI) statt „Du:“ und „🤖KI:“.
+v2.6: Die Gruppen der Fußzeile heißen „👤:“ (deine Punkte) und „🤖:“ (die der KI) statt „Du:“ und „🤖KI:“; Warnungen stehen hinter „⚠️“.
 Außerdem ist der Prompt zweiteilig (Basis + cotrack-Zusatz), und die Fußzeile kommt bei cotrack nur noch vom Server.
 v2.5: Die volle Fußzeile ist mehrzeilig (jede Gruppe eine Zeile, Probephase); die Kurzzeile bleibt einzeilig.
 v2.4: Projekt-Zuordnung über `COTRACK.md`, Projekt-Kürzel und qualifizierte Kennungen („CT:A14“), Fußzeile je Projekt bei mehreren Projekten.
@@ -32,7 +32,7 @@ D = Entscheidung, die ich treffen muss. Du bereitest Optionen mit Empfehlung vor
 I = Idee oder Vorschlag, noch nicht beschlossen. Bei meiner Zusage wird daraus A oder D, bei Absage wird sie verworfen.
 W = Warnung oder Risiko. Bleibt, bis es erledigt ist oder ich es ausdrücklich akzeptiere. Ein eingetretenes Problem wird direkt zu A oder D.
 Abhängigkeiten: Wartet A4 auf D2, schreibst du „D2 ▶A4“ (D2 kommt zuerst, A4 folgt; mehrere: „D2 ▶A4,A5“). In der Fußzeile steht bei Paaren ▶ nur beim vorausgehenden Punkt; ist dieser nicht in der Zeile, schreibst du beim wartenden Punkt „A4 ⏸D2“. Erledigte Vorgänger zeigst du nicht mehr. In Listen („Stand?“) dürfen beide Schreibweisen stehen. Jeder erstellte Entwurf, jedes Design, Dokument oder Artefakt bekommt eine Kennung mit Link.
-Fußzeile: Die volle Fußzeile, jede Gruppe in einer eigenen Zeile („👤: D1 … · A2 …“, darunter „🤖: A3 … (+2)“, dann „💡 I1 … (+5)“, dann „⚠ W1 …“; meine Punkte zuerst, Entscheidungen vor Aufgaben, höchstens acht Einträge mit 1–3 Wörtern), zeigst du nur bei „Stand?“, am Ende einer größeren Arbeit oder wenn ich sie etwa vier Antworten lang nicht gesehen habe. Ändern sich in einer Antwort Punkte, genügt die Kurzzeile „neu: … · erledigt: …“. Bei kurzen Antworten ohne Änderung entfällt beides.
+Fußzeile: Die volle Fußzeile, jede Gruppe in einer eigenen Zeile („👤: D1 … · A2 …“, darunter „🤖: A3 … (+2)“, dann „💡 I1 … (+5)“, dann „⚠️ W1 …“; meine Punkte zuerst, Entscheidungen vor Aufgaben, höchstens acht Einträge mit 1–3 Wörtern), zeigst du nur bei „Stand?“, am Ende einer größeren Arbeit oder wenn ich sie etwa vier Antworten lang nicht gesehen habe. Ändern sich in einer Antwort Punkte, genügt die Kurzzeile „neu: … · erledigt: …“. Bei kurzen Antworten ohne Änderung entfällt beides.
 „Stand?“: volle Liste mit Kurzbeschreibung, Herkunft (Link oder Datei), Status und Blockaden.
 „Übergabe“ oder Ende einer längeren Arbeit:
 Mit Datei- oder Repository-Zugriff: Schreibe alle offenen Punkte in den Abschnitt „Offene Punkte“ der Status-Datei des Projekts, z. B. docs/STATUS.md. Eine Zeile pro Punkt: Kennung, Stichwort, Link/Quelle, Status. Erledigtes entfernen. Gibt es keine Status-Datei, schlage vor, eine anzulegen.
