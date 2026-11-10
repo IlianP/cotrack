@@ -127,6 +127,22 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
   border: 1px solid var(--line); background: var(--surface);
 }
 
+/* jump bar: only while the board is a single column (phones); sits in the sticky top bar */
+.jump { display: none; }
+.jump button {
+  flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; height: 34px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted);
+  font-variant-numeric: tabular-nums; font-size: 13.5px;
+}
+.jump button .kbadge { min-width: 20px; height: 20px; font-size: 12px; border-radius: 6px; }
+.jump button[aria-current="true"] { color: var(--text); font-weight: 600; border-color: var(--kc); box-shadow: inset 0 -2px 0 var(--kc); }
+@media (max-width: 625px) { /* 2 × 290px columns + gap + padding no longer fit */
+  .top { flex-wrap: wrap; row-gap: 8px; }
+  .jump { display: flex; flex: 1 0 100%; gap: 6px; }
+  .jump:empty { display: none; }
+  .filters input[type=search] { flex-basis: 110px; min-width: 0; max-width: none; } /* search + Du/KI share one row */
+}
+
 /* board */
 .board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; }
 .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
@@ -243,6 +259,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   <span id="live" class="live" title="Live-Verbindung"></span>
   <span class="spacer"></span>
   <button id="menuBtn" class="icon-btn" aria-label="Menü">☰</button>
+  <nav id="jump" class="jump" aria-label="Zu Kategorie springen"></nav>
 </header>
 
 <main>
@@ -255,6 +272,11 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
       <button data-view="all" aria-pressed="false">Alle</button>
     </div>
     <input type="search" id="search" placeholder="Suchen …" aria-label="Suchen">
+    <div class="chips" id="ownerChips" role="group" aria-label="Zuständig">
+      <button data-owner="" aria-pressed="true" title="Alle Zuständigen">Alle</button>
+      <button data-owner="user" aria-pressed="false" title="Nur Punkte, die bei dir liegen">👤 Du</button>
+      <button data-owner="ai" aria-pressed="false" title="Nur Punkte, die bei der KI liegen">🤖 KI</button>
+    </div>
   </div>
 
   <form id="add" class="add" autocomplete="off" hidden>
@@ -292,7 +314,7 @@ const ALL = "*";
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
-  view: "open", q: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
+  view: "open", q: "", owner: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
 
@@ -465,6 +487,7 @@ function render(before) {
   const board = $("#board");
   if (!state.project) {
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, "Noch kein Projekt. Lege über ☰ ein neues an.")));
+    $("#jump").replaceChildren();
     return;
   }
   // Inactive kinds (e.g. legacy "T") only get a column while they still have items in view.
@@ -472,16 +495,52 @@ function render(before) {
   const known = new Set(state.allKinds.map((k) => k.code));
   const extra = [...new Set(state.items.map((i) => i.kind).filter((c) => !known.has(c)))]
     .map((c) => ({ code: c, name: c, color: "#6b7280" }));
-  board.replaceChildren(...[...state.kinds, ...legacy, ...extra].map((k) => {
-    const list = state.items.filter((i) => i.kind === k.code);
-    return h("section", { class: "col", style: `--kc:${k.color || "#6b7280"}` },
+  // Owner filter (Du/KI): only kinds someone is responsible for; an item without owner falls back to the kind's default.
+  const cols = [...state.kinds, ...legacy, ...extra].filter((k) => !state.owner || k.actionable)
+    .map((k) => ({ k, list: state.items.filter((i) => i.kind === k.code && (!state.owner || (i.owner || k.default_owner) === state.owner)) }));
+  board.replaceChildren(...cols.map(({ k, list }) => {
+    return h("section", { class: "col", "data-kind": k.code, style: `--kc:${k.color || "#6b7280"}` },
       h("header", { class: "col-head" },
         h("span", { class: "kbadge" }, k.code), h("h2", null, k.name), h("span", { class: "count" }, list.length)),
       list.length
         ? h("ul", { class: "items" }, list.map((it) => renderItem(it, k, before)))
         : h("p", { class: "empty" }, state.view === "open" ? "Nichts offen 🎉" : "Keine Einträge"));
   }));
+  renderJump(cols);
 }
+
+/* jump bar (phones): one button per column, scrolls to it; the column in view is marked */
+function renderJump(cols) {
+  $("#jump").replaceChildren(...cols.map(({ k, list }) => h("button", {
+    type: "button", "data-kind": k.code, style: `--kc:${k.color || "#6b7280"}`, title: k.name,
+    "aria-label": `${k.name}: ${list.length}`, onclick: () => jumpTo(k.code),
+  }, h("span", { class: "kbadge" }, k.code), String(list.length))));
+  markJump();
+}
+function jumpTo(code) {
+  const col = document.querySelector(`#board .col[data-kind="${CSS.escape(code)}"]`);
+  if (!col) return;
+  // The first column goes back to the very top, so the filters are visible again.
+  const first = col === document.querySelector("#board .col[data-kind]");
+  const top = first ? 0 : col.getBoundingClientRect().top + window.scrollY - $(".top").offsetHeight - 10;
+  const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  window.scrollTo({ top: Math.max(0, top), behavior: smooth ? "smooth" : "auto" });
+}
+function markJump() {
+  const btns = [...$("#jump").children];
+  if (!btns.length || !$("#jump").offsetParent) return;
+  const cols = [...document.querySelectorAll("#board .col[data-kind]")];
+  const line = $(".top").getBoundingClientRect().bottom + 20;
+  const atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+  let cur = cols[0];
+  for (const c of cols) if (c.getBoundingClientRect().top <= line) cur = c;
+  if (atEnd && cols.length) cur = cols[cols.length - 1];
+  for (const b of btns) b.setAttribute("aria-current", String(b.dataset.kind === cur?.dataset.kind));
+}
+let jumpRaf = 0;
+const onScrollJump = () => { if (!jumpRaf) jumpRaf = requestAnimationFrame(() => { jumpRaf = 0; markJump(); }); };
+window.addEventListener("scroll", onScrollJump, { passive: true });
+window.addEventListener("resize", onScrollJump);
 
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
@@ -565,6 +624,12 @@ $("#viewChips").addEventListener("click", (e) => {
   state.view = b.dataset.view;
   for (const x of $("#viewChips").children) x.setAttribute("aria-pressed", String(x === b));
   refresh(true);
+});
+$("#ownerChips").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.owner = b.dataset.owner;
+  for (const x of $("#ownerChips").children) x.setAttribute("aria-pressed", String(x === b));
+  render();
 });
 let searchT;
 $("#search").addEventListener("input", (e) => { clearTimeout(searchT); searchT = setTimeout(() => { state.q = e.target.value.trim(); refresh(true); }, 250); });
