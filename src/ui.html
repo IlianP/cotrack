@@ -168,6 +168,7 @@ dialog {
   padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
 }
 dialog::backdrop { background: rgb(0 0 0 / .4); }
+dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dlg { padding: 18px; display: grid; gap: 12px; }
 .dlg h3 { margin: 0; font-size: 17px; display: flex; gap: 8px; align-items: center; }
 .dlg label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -252,6 +253,7 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
 </footer>
 
 <dialog id="dlg"></dialog>
+<dialog id="ask" class="ask"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -652,12 +654,74 @@ $("#psel").addEventListener("focusout", (e) => { if (!$("#psel").contains(e.rela
 /* ---------------------------------------------------------- dialogs */
 function openDialog(...content) {
   const d = $("#dlg");
-  d.replaceChildren(h("form", { class: "dlg", method: "dialog" }, ...content));
+  const form = h("form", { class: "dlg", method: "dialog" }, ...content);
+  d.replaceChildren(form);
+  delete d.dataset.locked; // showLogin sets it: that dialog cannot be dismissed
+  delete d.dataset.closing;
+  if ($("#ask").open) $("#ask").close();
   if (!d.open) d.showModal();
+  dialogInitial = formValues(form);
   return d;
 }
-const closeDialog = () => $("#dlg").close();
+const closeDialog = () => {
+  const d = $("#dlg");
+  if ($("#ask").open) $("#ask").close();
+  if (d.open) { d.dataset.closing = "1"; d.close(); }
+};
 const field = (label, input) => h("label", null, label, input);
+
+// Values of all fields, to tell whether something was changed since the dialog opened.
+let dialogInitial = "";
+const formValues = (form) => JSON.stringify([...form.elements].map((el) => (el.type === "checkbox" || el.type === "radio" ? el.checked : el.value ?? "")));
+
+// Cancel, Escape and a click outside all land here: close right away, or ask first if fields were changed.
+function dismissDialog() {
+  const d = $("#dlg");
+  if (!d.open || d.dataset.locked || $("#ask").open) return;
+  const form = d.querySelector("form");
+  if (!form || formValues(form) === dialogInitial) return closeDialog();
+  const canSave = !!form.querySelector("button.primary:not([disabled])");
+  const ask = $("#ask");
+  const keep = () => ask.close();
+  ask.replaceChildren(h("form", { class: "dlg", method: "dialog" },
+    h("h3", null, "Änderungen speichern?"),
+    h("p", { class: "small" }, "Du hast in diesem Fenster etwas geändert."),
+    h("div", { class: "actions" },
+      h("button", { type: "button", class: "btn danger", onclick: closeDialog }, "Verwerfen"),
+      h("span", { class: "spacer" }),
+      h("button", { type: "button", class: "btn", onclick: keep }, "Weiter bearbeiten"),
+      canSave ? h("button", { type: "button", class: "primary", onclick: () => { keep(); form.requestSubmit(form.querySelector("button.primary")); } }, "Speichern") : null)));
+  ask.showModal();
+  ask.querySelector(canSave ? "button.primary" : ".btn:not(.danger)").focus();
+}
+
+// Click on the backdrop (outside the box). Both press and release must be outside, so selecting text in a field
+// and letting go outside does not close the dialog.
+function onBackdrop(d, fn) {
+  const outside = (e) => {
+    const r = d.getBoundingClientRect();
+    return e.target === d && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom);
+  };
+  let down = false;
+  d.addEventListener("pointerdown", (e) => { down = outside(e); });
+  d.addEventListener("click", (e) => { if (down && outside(e)) fn(); down = false; });
+}
+onBackdrop($("#dlg"), dismissDialog);
+onBackdrop($("#ask"), () => $("#ask").close());
+$("#dlg").addEventListener("cancel", (e) => { e.preventDefault(); dismissDialog(); });
+// Browsers may close a modal on a repeated Escape without a cancelable cancel event (Chrome does without a click
+// in between). If that dialog had to stay (login) or holds changes, bring it back and ask.
+$("#dlg").addEventListener("close", () => {
+  const d = $("#dlg");
+  if (d.open) return; // another dialog was opened in the meantime
+  if (d.dataset.closing) { delete d.dataset.closing; return; }
+  const form = d.querySelector("form");
+  const dirty = form && formValues(form) !== dialogInitial;
+  if (!d.dataset.locked && !dirty) return;
+  if ($("#ask").open) $("#ask").close(); // the question must end up on top of the dialog again
+  d.showModal();
+  if (dirty) dismissDialog();
+});
 
 function openEdit(it) {
   const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
@@ -709,7 +773,7 @@ function openEdit(it) {
       h("button", { type: "button", class: "btn danger", onclick: del }, "Löschen"),
       h("button", { type: "button", class: "btn", onclick: () => copy(`${it.ref} ${it.title}`) }, "Kopieren"),
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"),
+      h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"),
       h("button", { type: "submit", class: "primary" }, "Speichern")),
   );
   d.querySelector("form").addEventListener("submit", save);
@@ -782,7 +846,7 @@ async function openSettings() {
     h("div", { class: "actions" },
       canEdit ? h("button", { type: "button", class: "btn", onclick: () => save({ footer_layout: null, footer_label_user: null, footer_label_ai: null }, "Standard wiederhergestellt") }, "Standard") : null,
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: closeDialog }, "Schließen"),
+      h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Schließen"),
       canEdit ? h("button", { class: "primary" }, "Speichern") : null),
   );
   dlg.querySelector("form").addEventListener("submit", (e) => {
@@ -799,7 +863,7 @@ function openSetCode() {
     h("h3", null, `Kürzel für ${p.name}`),
     h("p", { class: "small" }, "Zwei Buchstaben, dann optional Buchstaben oder Ziffern. Einmal festgelegt, lässt es sich nicht mehr ändern."),
     field("Kürzel", code),
-    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"), h("button", { class: "primary" }, "Festlegen")),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"), h("button", { class: "primary" }, "Festlegen")),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -833,7 +897,7 @@ function openNewProject() {
     h("h3", null, "Neues Projekt"),
     field("GitHub-Repository", repo), field("Slug (URL)", slug), h("div", { class: "row2" }, field("Name", name), field("Kürzel", code)),
     h("p", { class: "small" }, "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern."),
-    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"), h("button", { class: "primary" }, "Anlegen")),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"), h("button", { class: "primary" }, "Anlegen")),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -853,7 +917,7 @@ function showLogin(msg) {
     field("Token", input),
     h("div", { class: "actions" }, h("button", { class: "primary" }, "Anmelden")),
   );
-  d.addEventListener("cancel", (e) => e.preventDefault(), { once: true });
+  d.dataset.locked = "1";
   d.querySelector("form").addEventListener("submit", (e) => {
     e.preventDefault(); state.token = input.value.trim(); store.set("cotrack.token", state.token); closeDialog(); boot();
   });
