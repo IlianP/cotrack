@@ -607,6 +607,9 @@ $("#projectBtn").addEventListener("keydown", (e) => {
 });
 $("#projectSearch").addEventListener("input", () => { picker.active = 0; renderPicker(); });
 $("#projectSearch").addEventListener("keydown", (e) => {
+  // While an input method (e.g. Japanese, Chinese) is composing, Enter/arrows/Escape belong to it. Safari reports
+  // the confirming Enter with isComposing false but keyCode 229.
+  if (e.isComposing || e.keyCode === 229) return;
   const n = picker.options.length;
   if (e.key === "ArrowDown" && n) { e.preventDefault(); setPickerActive((picker.active + 1) % n); }
   else if (e.key === "ArrowUp" && n) { e.preventDefault(); setPickerActive((picker.active - 1 + n) % n); }
