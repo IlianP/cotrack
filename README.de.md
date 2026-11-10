@@ -55,7 +55,7 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
-- Responsiv (Smartphone, Tablet, Desktop), Dark Mode, **kein Build-Schritt, keine Abhängigkeiten** (reiner
+- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), **kein Build-Schritt, keine Abhängigkeiten** (reiner
   Cloudflare Worker + D1).
 
 > **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,

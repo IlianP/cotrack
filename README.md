@@ -51,7 +51,7 @@ warnings – a one-glance status that survives across conversations.
   per project when several are in play.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
-- Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
+- Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
 > **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
 > fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app is
