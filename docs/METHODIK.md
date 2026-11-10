@@ -42,6 +42,11 @@
 - **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt einen Block:
   einzeilig `CT ▸ 👤: … · 🤖: …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
   an dem gerade gearbeitet wird; bei Unklarheit fragen. Abhängigkeiten über Projektgrenzen gibt es vorerst nicht.
+- **PrioFlow (optional, Skill):** Statt selbst aus der Liste auszuwählen, rufst du den Skill `prioflow` auf. Das Modell
+  bewertet die offenen Punkte (macht andere frei, schnell erledigt, Frist und Alter, Wirkung aufs Projektziel; Warnungen
+  als Gewicht), schlägt die drei nächsten vor und führt dich der Reihe nach durch, bis du „Stopp“ sagst. Die Bewertung
+  macht das Modell, nicht der Server – so lassen sich Modell und Denkaufwand frei wählen. Kein Teil des Prompts:
+  [skills/de/prioflow/SKILL.md](../skills/de/prioflow/SKILL.md).
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).

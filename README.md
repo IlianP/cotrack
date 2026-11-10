@@ -49,6 +49,8 @@ warnings – a one-glance status that survives across conversations.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
   (☰ → Einstellungen), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
   per project when several are in play.
+- **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
+  ([details below](#prioflow-what-is-next)).
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
 - Responsive (phone, tablet, desktop), dark mode, **no build step, no dependencies** (plain Cloudflare Worker + D1).
@@ -109,6 +111,31 @@ Step by step (German): [docs/MCP.md](docs/MCP.md).
 Then install the **custom prompt** ([docs/PROMPT.en.md](docs/PROMPT.en.md)). The server only answers when it is asked;
 the prompt is what makes the AI ask – at the start of a session, for new items, for the footer. Who controls what
 (prompt, server, web app settings): [overview](docs/PROMPT.en.md#why-a-prompt--who-controls-what).
+
+## PrioFlow: what is next?
+
+Instead of picking items from the list yourself, you call the **PrioFlow** skill. The AI fetches all open items, rates
+them, proposes the next three and starts with the first one right away: for a decision with options and a
+recommendation, for a task with one concrete first step. It records the result in cotrack immediately and takes the
+next item until you say "stop". It weighs what unblocks other items, what is quick to do, what has a deadline or has been
+lying around, and what moves the project forward most; warnings count as weight. Along the way it offers its own tasks,
+and from ten open ideas on there is a short idea round.
+
+The model does the rating, not the server. A different model or more reasoning effort changes the result without any
+change to cotrack.
+
+| Where | Setup | Call |
+|---|---|---|
+| Claude Code, in this repository | already there (`.claude/skills/prioflow`, German) | `/prioflow` |
+| Claude Code, in all projects | copy the folder `skills/en/prioflow` to `~/.claude/skills/` | `/prioflow` |
+| claude.ai | upload a ZIP of the folder: Customize → Skills → "+" → Upload a skill (needs code execution) | "PrioFlow" or "PrioFlow!" |
+
+```bash
+cd skills/en && zip -r prioflow.zip prioflow
+```
+
+Arguments: `all` (all projects), `ideas` (straight to the idea round) or a project code. The German version is in
+[`skills/de/prioflow`](skills/de/prioflow/SKILL.md). The skill needs no line in the prompt; it is not set up for ChatGPT.
 
 ## Linking a repository
 
