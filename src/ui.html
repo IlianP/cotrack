@@ -168,6 +168,7 @@ dialog {
   padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
 }
 dialog::backdrop { background: rgb(0 0 0 / .4); }
+dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dlg { padding: 18px; display: grid; gap: 12px; }
 .dlg h3 { margin: 0; font-size: 17px; display: flex; gap: 8px; align-items: center; }
 .dlg label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -192,8 +193,11 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
   position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
   background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 14px;
   opacity: 0; pointer-events: none; transition: .2s; z-index: 20; max-width: calc(100vw - 32px);
+  display: flex; align-items: center; gap: 10px;
 }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+#toast.show.has-action { pointer-events: auto; }
+#toast button { background: none; border: 0; padding: 2px 4px; color: inherit; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
 
 @media (max-width: 560px) {
   .brand span { display: none; }
@@ -249,6 +253,7 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
 </footer>
 
 <dialog id="dlg"></dialog>
+<dialog id="ask" class="ask"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -265,7 +270,7 @@ const ALL = "*";
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
-  view: "open", q: "", kinds: [], projects: [], items: [], version: -1,
+  view: "open", q: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
 
@@ -297,9 +302,14 @@ async function api(path, { method = "GET", body } = {}) {
 }
 const P = (slug) => "/projects/" + encodeURIComponent(slug);
 
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800);
+// action: optional { label, onclick } – shown as a button; such toasts stay longer.
+function toast(msg, action) {
+  const t = $("#toast");
+  const hide = () => t.classList.remove("show");
+  t.replaceChildren(h("span", null, msg), ...(action ? [h("button", { type: "button", onclick: () => { hide(); action.onclick(); } }, action.label)] : []));
+  t.classList.toggle("has-action", !!action);
+  t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(hide, action ? 6000 : 1800);
 }
 async function copy(text, label = "Kopiert") {
   try { await navigator.clipboard.writeText(text); toast(label); }
@@ -313,7 +323,9 @@ const ownerLabel = (o) => OWNER_LABELS[o] || o || "–";
 async function boot() {
   if (!state.token) return showLogin();
   try {
-    const [me, kinds] = await Promise.all([api("/me"), api("/kinds?all=1")]);
+    // Global version is read before the project list, so a project created in between is picked up by the next poll.
+    const [me, kinds, ver] = await Promise.all([api("/me"), api("/kinds?all=1"), api("/version")]);
+    state.globalVersion = ver.version;
     state.actor = me.actor; state.allKinds = kinds.kinds; state.kinds = kinds.kinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
@@ -328,12 +340,22 @@ async function boot() {
   } catch (e) { if (e.message !== "unauthorized") toast("Fehler: " + e.message); }
 }
 
-async function loadProjects() {
+// notify: point out projects that appeared since the last load (e.g. created by an AI via MCP).
+async function loadProjects(notify) {
+  const known = new Set(state.projects.map((p) => p.slug));
   state.projects = (await api("/projects")).projects;
+  const added = notify && loadProjects.done ? state.projects.filter((p) => !known.has(p.slug)) : [];
+  loadProjects.done = true;
   if (state.project !== ALL && !state.projects.some((p) => p.slug === state.project)) {
     state.project = state.projects[0]?.slug || "";
   }
   renderProjects();
+  if (added.length === 1) {
+    const p = added[0];
+    toast(`Neues Projekt: ${p.code ? p.code + " · " : ""}${p.name}`, p.slug === state.project ? null : { label: "Öffnen", onclick: () => selectProject(p.slug) });
+  } else if (added.length > 1) {
+    toast(`${added.length} neue Projekte: ${added.map((p) => p.name).join(", ")}`);
+  }
 }
 
 async function refresh(force) {
@@ -353,14 +375,23 @@ async function refresh(force) {
 }
 
 async function poll() {
-  if (document.hidden || !state.token || !state.project) return;
+  if (document.hidden || !state.token) return;
   const project = state.project;
   try {
-    const v = await api(project === ALL ? "/version" : P(project) + "/version");
+    const v = await api(!project || project === ALL ? "/version" : P(project) + "/version");
     if (project !== state.project) return;
+    // Any change in any project (new, renamed or archived projects, counts) reloads the project list.
+    const global = v.global ?? v.version;
+    if (global !== state.globalVersion) {
+      if (state.globalVersion !== -1) await loadProjects(true);
+      state.globalVersion = global;
+    }
+    // The list changed the selection (first project appeared, current one archived): poll the new one.
+    // null (unlike -1 from selectProject) means its board has not been loaded yet.
+    if (project !== state.project) { state.version = null; return poll(); }
     // Only acknowledge a version once the refresh for it succeeded, so a failed refresh is retried.
     if (v.version !== state.version) {
-      if (state.version !== -1) { await refresh(false); loadProjects(); }
+      if (state.version !== -1) await refresh(state.version === null);
       if (project === state.project) state.version = v.version;
     }
     setLive(true);
@@ -623,12 +654,74 @@ $("#psel").addEventListener("focusout", (e) => { if (!$("#psel").contains(e.rela
 /* ---------------------------------------------------------- dialogs */
 function openDialog(...content) {
   const d = $("#dlg");
-  d.replaceChildren(h("form", { class: "dlg", method: "dialog" }, ...content));
+  const form = h("form", { class: "dlg", method: "dialog" }, ...content);
+  d.replaceChildren(form);
+  delete d.dataset.locked; // showLogin sets it: that dialog cannot be dismissed
+  delete d.dataset.closing;
+  if ($("#ask").open) $("#ask").close();
   if (!d.open) d.showModal();
+  dialogInitial = formValues(form);
   return d;
 }
-const closeDialog = () => $("#dlg").close();
+const closeDialog = () => {
+  const d = $("#dlg");
+  if ($("#ask").open) $("#ask").close();
+  if (d.open) { d.dataset.closing = "1"; d.close(); }
+};
 const field = (label, input) => h("label", null, label, input);
+
+// Values of all fields, to tell whether something was changed since the dialog opened.
+let dialogInitial = "";
+const formValues = (form) => JSON.stringify([...form.elements].map((el) => (el.type === "checkbox" || el.type === "radio" ? el.checked : el.value ?? "")));
+
+// Cancel, Escape and a click outside all land here: close right away, or ask first if fields were changed.
+function dismissDialog() {
+  const d = $("#dlg");
+  if (!d.open || d.dataset.locked || $("#ask").open) return;
+  const form = d.querySelector("form");
+  if (!form || formValues(form) === dialogInitial) return closeDialog();
+  const canSave = !!form.querySelector("button.primary:not([disabled])");
+  const ask = $("#ask");
+  const keep = () => ask.close();
+  ask.replaceChildren(h("form", { class: "dlg", method: "dialog" },
+    h("h3", null, "Änderungen speichern?"),
+    h("p", { class: "small" }, "Du hast in diesem Fenster etwas geändert."),
+    h("div", { class: "actions" },
+      h("button", { type: "button", class: "btn danger", onclick: closeDialog }, "Verwerfen"),
+      h("span", { class: "spacer" }),
+      h("button", { type: "button", class: "btn", onclick: keep }, "Weiter bearbeiten"),
+      canSave ? h("button", { type: "button", class: "primary", onclick: () => { keep(); form.requestSubmit(form.querySelector("button.primary")); } }, "Speichern") : null)));
+  ask.showModal();
+  ask.querySelector(canSave ? "button.primary" : ".btn:not(.danger)").focus();
+}
+
+// Click on the backdrop (outside the box). Both press and release must be outside, so selecting text in a field
+// and letting go outside does not close the dialog.
+function onBackdrop(d, fn) {
+  const outside = (e) => {
+    const r = d.getBoundingClientRect();
+    return e.target === d && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom);
+  };
+  let down = false;
+  d.addEventListener("pointerdown", (e) => { down = outside(e); });
+  d.addEventListener("click", (e) => { if (down && outside(e)) fn(); down = false; });
+}
+onBackdrop($("#dlg"), dismissDialog);
+onBackdrop($("#ask"), () => $("#ask").close());
+$("#dlg").addEventListener("cancel", (e) => { e.preventDefault(); dismissDialog(); });
+// Browsers may close a modal on a repeated Escape without a cancelable cancel event (Chrome does without a click
+// in between). If that dialog had to stay (login) or holds changes, bring it back and ask.
+$("#dlg").addEventListener("close", () => {
+  const d = $("#dlg");
+  if (d.open) return; // another dialog was opened in the meantime
+  if (d.dataset.closing) { delete d.dataset.closing; return; }
+  const form = d.querySelector("form");
+  const dirty = form && formValues(form) !== dialogInitial;
+  if (!d.dataset.locked && !dirty) return;
+  if ($("#ask").open) $("#ask").close(); // the question must end up on top of the dialog again
+  d.showModal();
+  if (dirty) dismissDialog();
+});
 
 function openEdit(it) {
   const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
@@ -680,7 +773,7 @@ function openEdit(it) {
       h("button", { type: "button", class: "btn danger", onclick: del }, "Löschen"),
       h("button", { type: "button", class: "btn", onclick: () => copy(`${it.ref} ${it.title}`) }, "Kopieren"),
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"),
+      h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"),
       h("button", { type: "submit", class: "primary" }, "Speichern")),
   );
   d.querySelector("form").addEventListener("submit", save);
@@ -753,7 +846,7 @@ async function openSettings() {
     h("div", { class: "actions" },
       canEdit ? h("button", { type: "button", class: "btn", onclick: () => save({ footer_layout: null, footer_label_user: null, footer_label_ai: null }, "Standard wiederhergestellt") }, "Standard") : null,
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: closeDialog }, "Schließen"),
+      h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Schließen"),
       canEdit ? h("button", { class: "primary" }, "Speichern") : null),
   );
   dlg.querySelector("form").addEventListener("submit", (e) => {
@@ -770,7 +863,7 @@ function openSetCode() {
     h("h3", null, `Kürzel für ${p.name}`),
     h("p", { class: "small" }, "Zwei Buchstaben, dann optional Buchstaben oder Ziffern. Einmal festgelegt, lässt es sich nicht mehr ändern."),
     field("Kürzel", code),
-    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"), h("button", { class: "primary" }, "Festlegen")),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"), h("button", { class: "primary" }, "Festlegen")),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -804,7 +897,7 @@ function openNewProject() {
     h("h3", null, "Neues Projekt"),
     field("GitHub-Repository", repo), field("Slug (URL)", slug), h("div", { class: "row2" }, field("Name", name), field("Kürzel", code)),
     h("p", { class: "small" }, "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern."),
-    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: closeDialog }, "Abbrechen"), h("button", { class: "primary" }, "Anlegen")),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"), h("button", { class: "primary" }, "Anlegen")),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -824,7 +917,7 @@ function showLogin(msg) {
     field("Token", input),
     h("div", { class: "actions" }, h("button", { class: "primary" }, "Anmelden")),
   );
-  d.addEventListener("cancel", (e) => e.preventDefault(), { once: true });
+  d.dataset.locked = "1";
   d.querySelector("form").addEventListener("submit", (e) => {
     e.preventDefault(); state.token = input.value.trim(); store.set("cotrack.token", state.token); closeDialog(); boot();
   });
