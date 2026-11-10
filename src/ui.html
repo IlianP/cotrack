@@ -321,7 +321,9 @@ const ownerLabel = (o) => OWNER_LABELS[o] || o || "–";
 async function boot() {
   if (!state.token) return showLogin();
   try {
-    const [me, kinds] = await Promise.all([api("/me"), api("/kinds?all=1")]);
+    // Global version is read before the project list, so a project created in between is picked up by the next poll.
+    const [me, kinds, ver] = await Promise.all([api("/me"), api("/kinds?all=1"), api("/version")]);
+    state.globalVersion = ver.version;
     state.actor = me.actor; state.allKinds = kinds.kinds; state.kinds = kinds.kinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
@@ -382,11 +384,12 @@ async function poll() {
       if (state.globalVersion !== -1) await loadProjects(true);
       state.globalVersion = global;
     }
-    // The list changed the selection (first project appeared, current one archived): show the new one.
-    if (project !== state.project) { state.version = -1; await refresh(true); return poll(); }
+    // The list changed the selection (first project appeared, current one archived): poll the new one.
+    // null (unlike -1 from selectProject) means its board has not been loaded yet.
+    if (project !== state.project) { state.version = null; return poll(); }
     // Only acknowledge a version once the refresh for it succeeded, so a failed refresh is retried.
     if (v.version !== state.version) {
-      if (state.version !== -1) await refresh(false);
+      if (state.version !== -1) await refresh(state.version === null);
       if (project === state.project) state.version = v.version;
     }
     setLive(true);
