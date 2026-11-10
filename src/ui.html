@@ -40,9 +40,37 @@ button { cursor: pointer; }
 }
 .brand { font-weight: 700; letter-spacing: -.02em; font-size: 18px; white-space: nowrap; }
 .brand b { color: var(--accent); }
-.top select {
-  min-width: 0; flex: 1 1 auto; max-width: 340px; padding: 7px 10px; border-radius: 10px;
-  border: 1px solid var(--line); background: var(--surface);
+/* project picker: a button that opens a searchable list (name, code, repository, slug) */
+.psel { position: relative; min-width: 0; flex: 1 1 auto; max-width: 340px; }
+.psel-btn {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface); text-align: left;
+}
+.psel-btn > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psel-caret { color: var(--muted); font-size: 11px; flex: none; }
+.psel-pop {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: min(420px, calc(100vw - 32px));
+  display: grid; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: 0 8px 28px rgb(0 0 0 / .16);
+}
+.psel-pop[hidden] { display: none; }
+.psel-pop input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+.psel-list { list-style: none; margin: 0; padding: 0; max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+.psel-list li[role="option"] {
+  display: grid; grid-template-columns: 3.4em minmax(0, 1fr) auto; gap: 0 8px; align-items: baseline;
+  padding: 7px 8px; border-radius: 8px; cursor: pointer;
+}
+.psel-list li[aria-selected="true"] { background: var(--surface-2); }
+.psel-list li.cur .psel-name { color: var(--accent); font-weight: 600; }
+.psel-code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+.psel-name, .psel-repo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psel-count { font-size: 12px; color: var(--muted); }
+.psel-repo { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
+.psel-empty { padding: 10px 8px; color: var(--muted); font-size: 13px; }
+/* narrow screens: the list spans the whole top bar (its containing block) instead of starting at the button */
+@media (max-width: 560px) {
+  .psel { position: static; }
+  .psel-pop { left: 16px; right: 16px; width: auto; top: calc(100% + 4px); }
 }
 .live { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; transition: background .3s; }
 .live.on { background: #16a34a; box-shadow: 0 0 0 3px color-mix(in srgb, #16a34a 25%, transparent); }
@@ -177,8 +205,17 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
 <body>
 <header class="top">
   <div class="brand">co<b>track</b></div>
-  <label class="sr" for="project">Projekt</label>
-  <select id="project"></select>
+  <div class="psel" id="psel">
+    <button type="button" id="projectBtn" class="psel-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="projectPop">
+      <span id="projectLabel"></span><span class="psel-caret" aria-hidden="true">▼</span>
+    </button>
+    <div id="projectPop" class="psel-pop" hidden>
+      <input id="projectSearch" type="search" role="combobox" aria-label="Projekt suchen" aria-autocomplete="list"
+        aria-expanded="true" aria-controls="projectList" placeholder="Name, Kürzel oder Repo …" autocomplete="off"
+        autocapitalize="off" spellcheck="false" enterkeyhint="go">
+      <ul id="projectList" class="psel-list" role="listbox" aria-label="Projekte"></ul>
+    </div>
+  </div>
   <span id="live" class="live" title="Live-Verbindung"></span>
   <span class="spacer"></span>
   <button id="menuBtn" class="icon-btn" aria-label="Menü">☰</button>
@@ -332,13 +369,14 @@ async function poll() {
 function setLive(ok) { const l = $("#live"); l.className = "live " + (ok ? "on" : "off"); l.title = ok ? "Live: verbunden" : "Keine Verbindung"; }
 
 /* ---------------------------------------------------------- render */
+const projectLabel = (p) => `${p.code ? p.code + " · " : ""}${p.name}${p.open_count ? ` (${p.open_count})` : ""}`;
 function renderProjects() {
-  const sel = $("#project");
-  sel.replaceChildren(
-    ...state.projects.map((p) => h("option", { value: p.slug }, `${p.code ? p.code + " · " : ""}${p.name}${p.open_count ? ` (${p.open_count})` : ""}`)),
-    h("option", { value: ALL }, "Alle Projekte"),
-  );
-  sel.value = state.project;
+  const cur = currentProject();
+  const label = state.project === ALL ? "Alle Projekte" : cur ? projectLabel(cur) : "Kein Projekt";
+  $("#projectLabel").textContent = label;
+  $("#projectBtn").title = cur?.repo ? `${label} – ${cur.repo}` : label;
+  $("#projectBtn").setAttribute("aria-label", "Projekt: " + label);
+  if (picker.open) renderPicker();
   const disabled = state.project === ALL || !state.project;
   $("#add").setAttribute("aria-disabled", disabled);
   $("#footerText").parentElement.hidden = state.project === ALL;
@@ -464,7 +502,6 @@ $("#viewChips").addEventListener("click", (e) => {
 });
 let searchT;
 $("#search").addEventListener("input", (e) => { clearTimeout(searchT); searchT = setTimeout(() => { state.q = e.target.value.trim(); refresh(true); }, 250); });
-$("#project").addEventListener("change", (e) => selectProject(e.target.value));
 // The bar shows the compact single line; the copy button gives the chat format (default layout).
 const copyFooter = async () => copy((await api(P(state.project) + "/footer")).footer, "Fußzeile kopiert");
 $("#copyFooter").addEventListener("click", () => copyFooter().catch((err) => toast("Fehler: " + err.message)));
@@ -477,6 +514,111 @@ function selectProject(slug) {
   history.replaceState(null, "", "#" + encodeURIComponent(slug));
   renderProjects(); refresh(true); poll();
 }
+
+/* ---------------------------------------------------------- project picker */
+// Searchable project selection (A43): every word typed must appear in the name, code, repository or slug.
+// Case and accents are ignored; exact code and word-start hits come first, otherwise the list order stays.
+const picker = { open: false, active: 0, options: [] };
+const fold = (s) => String(s ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+const ALL_OPTION = { slug: ALL, all: true, name: "Alle Projekte" };
+
+function pickerMatches(query) {
+  const terms = fold(query).split(/\s+/).filter(Boolean);
+  if (!terms.length) return [...state.projects, ALL_OPTION];
+  const hits = [];
+  state.projects.forEach((p, i) => {
+    const fields = [p.code, p.name, p.repo, p.slug].map(fold);
+    const hay = fields.join("\n");
+    if (!terms.every((t) => hay.includes(t))) return;
+    const words = hay.split(/[^\p{L}\p{N}]+/u);
+    const rank = fields[0] && fields[0] === terms.join(" ") ? 0 : words.some((w) => w.startsWith(terms[0])) ? 1 : 2;
+    hits.push({ p, rank, i });
+  });
+  hits.sort((a, b) => a.rank - b.rank || a.i - b.i);
+  const out = hits.map((x) => x.p);
+  if (terms.every((t) => "alle projekte".includes(t))) out.push(ALL_OPTION);
+  return out;
+}
+
+function renderPicker() {
+  picker.options = pickerMatches($("#projectSearch").value);
+  picker.active = Math.min(picker.active, Math.max(picker.options.length - 1, 0));
+  const list = $("#projectList");
+  list.replaceChildren(
+    ...picker.options.map((p, i) =>
+      h("li", { id: "popt-" + i, role: "option", class: p.slug === state.project ? "cur" : "", "aria-selected": "false",
+          onmousemove: () => setPickerActive(i), onclick: () => choosePicker(i) },
+        h("span", { class: "psel-code" }, p.all ? "" : p.code || ""),
+        h("span", { class: "psel-name" }, p.name),
+        h("span", { class: "psel-count", title: "offene Punkte" }, p.open_count ? String(p.open_count) : ""),
+        p.repo ? h("span", { class: "psel-repo" }, p.repo) : null,
+      ),
+    ),
+  );
+  if (!picker.options.length) list.append(h("li", { class: "psel-empty", role: "presentation" }, "Kein Projekt gefunden"));
+  setPickerActive(picker.active);
+}
+
+function setPickerActive(i) {
+  const list = $("#projectList");
+  list.querySelector('[aria-selected="true"]')?.setAttribute("aria-selected", "false");
+  picker.active = i;
+  const el = picker.options.length ? $("#popt-" + i) : null;
+  const input = $("#projectSearch");
+  if (!el) { input.removeAttribute("aria-activedescendant"); return; }
+  el.setAttribute("aria-selected", "true");
+  input.setAttribute("aria-activedescendant", el.id);
+  el.scrollIntoView({ block: "nearest" });
+}
+
+function openPicker(text = "") {
+  const input = $("#projectSearch");
+  input.value = text;
+  picker.open = true;
+  picker.active = text ? 0 : Math.max(0, pickerMatches("").findIndex((p) => p.slug === state.project));
+  $("#projectPop").hidden = false;
+  $("#projectBtn").setAttribute("aria-expanded", "true");
+  renderPicker();
+  input.focus();
+}
+
+function closePicker(refocus = false) {
+  if (!picker.open) return;
+  picker.open = false;
+  $("#projectPop").hidden = true;
+  $("#projectBtn").setAttribute("aria-expanded", "false");
+  if (refocus) $("#projectBtn").focus();
+}
+
+function choosePicker(i) {
+  const p = picker.options[i];
+  if (!p) return;
+  closePicker(true);
+  if (p.slug !== state.project) selectProject(p.slug);
+}
+
+$("#projectBtn").addEventListener("click", () => (picker.open ? closePicker(true) : openPicker()));
+// While open, a click on the button only closes (Safari does not focus buttons, so focusout would close and reopen).
+$("#projectBtn").addEventListener("mousedown", (e) => { if (picker.open) e.preventDefault(); });
+$("#projectBtn").addEventListener("keydown", (e) => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openPicker(); }
+  // Typing on the closed button starts a search right away.
+  else if (e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); openPicker(e.key); }
+});
+$("#projectSearch").addEventListener("input", () => { picker.active = 0; renderPicker(); });
+$("#projectSearch").addEventListener("keydown", (e) => {
+  // While an input method (e.g. Japanese, Chinese) is composing, Enter/arrows/Escape belong to it. Safari reports
+  // the confirming Enter with isComposing false but keyCode 229.
+  if (e.isComposing || e.keyCode === 229) return;
+  const n = picker.options.length;
+  if (e.key === "ArrowDown" && n) { e.preventDefault(); setPickerActive((picker.active + 1) % n); }
+  else if (e.key === "ArrowUp" && n) { e.preventDefault(); setPickerActive((picker.active - 1 + n) % n); }
+  else if (e.key === "Enter") { e.preventDefault(); choosePicker(picker.active); }
+  else if (e.key === "Escape") { e.preventDefault(); closePicker(true); }
+});
+// Clicks inside the list must not take the focus away from the search field (that would close the list first).
+$("#projectPop").addEventListener("mousedown", (e) => { if (e.target !== $("#projectSearch")) e.preventDefault(); });
+$("#psel").addEventListener("focusout", (e) => { if (!$("#psel").contains(e.relatedTarget)) closePicker(); });
 
 /* ---------------------------------------------------------- dialogs */
 function openDialog(...content) {
