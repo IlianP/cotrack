@@ -53,6 +53,8 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
   Web-App ein (☰ → Einstellungen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
+- **PrioFlow** – ein Skill, mit dem die KI die offenen Punkte bewertet und dich durch die nächsten führt
+  ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode, **kein Build-Schritt, keine Abhängigkeiten** (reiner
@@ -118,6 +120,32 @@ App bekommt kurzlebige Tokens, die als `ai` handeln. Es steht kein Geheimnis in 
 Danach den **benutzerdefinierten Prompt** einspielen ([docs/PROMPT.md](docs/PROMPT.md)). Der Server antwortet nur, wenn
 er gefragt wird; der Prompt sorgt dafür, dass die KI fragt – zu Beginn einer Session, bei neuen Punkten, für die
 Fußzeile. Wer was regelt (Prompt, Server, Einstellungen der Web-App): [Übersicht](docs/PROMPT.md#wozu-der-prompt--wer-regelt-was).
+
+## PrioFlow: Was ist als Nächstes dran?
+
+Statt dir selbst Punkte aus der Liste herauszusuchen, rufst du den Skill **PrioFlow** auf. Die KI holt alle offenen
+Punkte, bewertet sie, schlägt die drei nächsten vor und fängt sofort mit dem ersten an: bei einer Entscheidung mit
+Optionen und Empfehlung, bei einer Aufgabe mit einem konkreten ersten Schritt. Das Ergebnis trägt sie gleich in cotrack
+ein und nimmt den nächsten Punkt, bis du „Stopp“ sagst. Sie wägt ab, was andere Punkte freimacht, was schnell erledigt
+ist, was eine Frist hat oder lange liegt und was das Projekt am meisten voranbringt; Warnungen zählen als Gewicht.
+Nebenbei bietet sie ihre eigenen Aufgaben an, und ab zehn offenen Ideen gibt es eine kurze Ideen-Runde.
+
+Die Bewertung macht das Modell, nicht der Server. Ein anderes Modell oder mehr Denkaufwand ändern das Ergebnis, ohne
+dass sich an cotrack etwas ändert.
+
+| Wo | Einrichten | Aufruf |
+|---|---|---|
+| Claude Code, in diesem Repository | schon da (`.claude/skills/prioflow`) | `/prioflow` |
+| Claude Code, in allen Projekten | Ordner `skills/de/prioflow` nach `~/.claude/skills/` kopieren | `/prioflow` |
+| claude.ai | ZIP des Ordners hochladen: Customize → Skills → „+“ → Upload a skill (braucht Code-Ausführung) | „PrioFlow“ oder „PrioFlow!“ |
+
+```bash
+cd skills/de && zip -r prioflow.zip prioflow
+```
+
+Zusätze: `alle` (alle Projekte), `ideen` (direkt zur Ideen-Runde) oder ein Projekt-Kürzel. Die englische Fassung liegt
+in [`skills/en/prioflow`](skills/en/prioflow/SKILL.md). Der Skill braucht keine Zeile im Prompt; für ChatGPT ist er
+nicht eingerichtet.
 
 ## Repository-Zuordnung
 

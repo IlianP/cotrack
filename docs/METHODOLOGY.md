@@ -48,6 +48,11 @@
   project: single-line `CT ▸ 👤: … · 🤖: …`, multi-line a `CT ▸` line with the group lines below. On changes, only projects
   with changes. New items belong to the project of the repo being worked on; if unclear, ask. Dependencies across project
   boundaries do not exist for now.
+- **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
+  the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
+  the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
+  so you can choose the model and the reasoning effort freely. Not part of the prompt:
+  [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
 
