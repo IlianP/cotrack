@@ -95,10 +95,18 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 
 /* quick add */
 .add {
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; margin: 0 0 14px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
 }
-.add[aria-disabled="true"] { opacity: .55; pointer-events: none; }
+.add[hidden] { display: none; }
+.add-toggle {
+  min-width: 34px; height: 34px; padding: 0; font-size: 22px; line-height: 1; border-radius: 8px;
+  display: inline-grid; place-items: center; color: var(--text);
+}
+.add-toggle span { display: block; transition: transform .15s; }
+.add-toggle[aria-expanded="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.add-toggle[aria-expanded="true"] span { transform: rotate(45deg); }
+.add-toggle:disabled { opacity: .45; cursor: not-allowed; }
 .seg { display: flex; gap: 4px; flex: none; }
 .seg button {
   border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px;
@@ -110,7 +118,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .hint { width: 100%; margin: 0; color: var(--muted); font-size: 12.5px; }
 
 /* filters */
-.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 10px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
 .chips { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 10px; }
 .chips button { border: 0; background: transparent; padding: 5px 12px; border-radius: 8px; color: var(--muted); }
 .chips button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
@@ -238,16 +246,9 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 </header>
 
 <main>
-  <form id="add" class="add" autocomplete="off">
-    <div id="kindSeg" class="seg" role="group" aria-label="Kategorie"></div>
-    <div id="ownerSeg" class="seg" role="group" aria-label="Verantwortlich"></div>
-    <label class="sr" for="addTitle">Neuer Punkt</label>
-    <input id="addTitle" placeholder="Neuer Punkt … z. B. „Lizenz wählen“" enterkeyhint="done">
-    <button class="primary" type="submit">Hinzufügen</button>
-    <p class="hint" id="addHint"></p>
-  </form>
-
   <div class="filters">
+    <button type="button" id="addToggle" class="icon-btn add-toggle" aria-expanded="false" aria-controls="add"
+      aria-label="Neuer Punkt" title="Neuer Punkt"><span aria-hidden="true">+</span></button>
     <div class="chips" id="viewChips" role="group" aria-label="Ansicht">
       <button data-view="open" aria-pressed="true">Offen</button>
       <button data-view="closed" aria-pressed="false">Erledigt</button>
@@ -255,6 +256,15 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
     </div>
     <input type="search" id="search" placeholder="Suchen …" aria-label="Suchen">
   </div>
+
+  <form id="add" class="add" autocomplete="off" hidden>
+    <div id="kindSeg" class="seg" role="group" aria-label="Kategorie"></div>
+    <div id="ownerSeg" class="seg" role="group" aria-label="Verantwortlich"></div>
+    <label class="sr" for="addTitle">Neuer Punkt</label>
+    <input id="addTitle" placeholder="Neuer Punkt … z. B. „Lizenz wählen“" enterkeyhint="done">
+    <button class="primary" type="submit">Hinzufügen</button>
+    <p class="hint" id="addHint"></p>
+  </form>
 
   <div id="board" class="board"></div>
 </main>
@@ -421,7 +431,8 @@ function renderProjects() {
   $("#projectBtn").setAttribute("aria-label", "Projekt: " + label);
   if (picker.open) renderPicker();
   const disabled = state.project === ALL || !state.project;
-  $("#add").setAttribute("aria-disabled", disabled);
+  $("#addToggle").disabled = disabled;
+  if (disabled) setAddOpen(false);
   $("#footerText").parentElement.hidden = state.project === ALL;
 }
 
@@ -518,6 +529,18 @@ async function setStatus(it, status) {
     await refresh(false);
   } catch (e) { toast("Fehler: " + e.message); }
 }
+
+// Quick add stays collapsed behind the "+" button left of the filters (rarely used).
+function setAddOpen(open) {
+  $("#add").hidden = !open;
+  $("#addToggle").setAttribute("aria-expanded", String(open));
+  $("#addToggle").title = open ? "Eingabe schließen" : "Neuer Punkt";
+  if (open) $("#addTitle").focus();
+}
+$("#addToggle").addEventListener("click", () => setAddOpen($("#add").hidden));
+$("#add").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.preventDefault(); setAddOpen(false); $("#addToggle").focus(); }
+});
 
 $("#add").addEventListener("submit", async (e) => {
   e.preventDefault();
