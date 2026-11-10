@@ -192,8 +192,11 @@ dialog::backdrop { background: rgb(0 0 0 / .4); }
   position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
   background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 14px;
   opacity: 0; pointer-events: none; transition: .2s; z-index: 20; max-width: calc(100vw - 32px);
+  display: flex; align-items: center; gap: 10px;
 }
 #toast.show { opacity: 1; transform: translateX(-50%); }
+#toast.show.has-action { pointer-events: auto; }
+#toast button { background: none; border: 0; padding: 2px 4px; color: inherit; font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
 
 @media (max-width: 560px) {
   .brand span { display: none; }
@@ -265,7 +268,7 @@ const ALL = "*";
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
-  view: "open", q: "", kinds: [], projects: [], items: [], version: -1,
+  view: "open", q: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
 
@@ -297,9 +300,14 @@ async function api(path, { method = "GET", body } = {}) {
 }
 const P = (slug) => "/projects/" + encodeURIComponent(slug);
 
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1800);
+// action: optional { label, onclick } – shown as a button; such toasts stay longer.
+function toast(msg, action) {
+  const t = $("#toast");
+  const hide = () => t.classList.remove("show");
+  t.replaceChildren(h("span", null, msg), ...(action ? [h("button", { type: "button", onclick: () => { hide(); action.onclick(); } }, action.label)] : []));
+  t.classList.toggle("has-action", !!action);
+  t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(hide, action ? 6000 : 1800);
 }
 async function copy(text, label = "Kopiert") {
   try { await navigator.clipboard.writeText(text); toast(label); }
@@ -328,12 +336,22 @@ async function boot() {
   } catch (e) { if (e.message !== "unauthorized") toast("Fehler: " + e.message); }
 }
 
-async function loadProjects() {
+// notify: point out projects that appeared since the last load (e.g. created by an AI via MCP).
+async function loadProjects(notify) {
+  const known = new Set(state.projects.map((p) => p.slug));
   state.projects = (await api("/projects")).projects;
+  const added = notify && loadProjects.done ? state.projects.filter((p) => !known.has(p.slug)) : [];
+  loadProjects.done = true;
   if (state.project !== ALL && !state.projects.some((p) => p.slug === state.project)) {
     state.project = state.projects[0]?.slug || "";
   }
   renderProjects();
+  if (added.length === 1) {
+    const p = added[0];
+    toast(`Neues Projekt: ${p.code ? p.code + " · " : ""}${p.name}`, p.slug === state.project ? null : { label: "Öffnen", onclick: () => selectProject(p.slug) });
+  } else if (added.length > 1) {
+    toast(`${added.length} neue Projekte: ${added.map((p) => p.name).join(", ")}`);
+  }
 }
 
 async function refresh(force) {
@@ -353,14 +371,22 @@ async function refresh(force) {
 }
 
 async function poll() {
-  if (document.hidden || !state.token || !state.project) return;
+  if (document.hidden || !state.token) return;
   const project = state.project;
   try {
-    const v = await api(project === ALL ? "/version" : P(project) + "/version");
+    const v = await api(!project || project === ALL ? "/version" : P(project) + "/version");
     if (project !== state.project) return;
+    // Any change in any project (new, renamed or archived projects, counts) reloads the project list.
+    const global = v.global ?? v.version;
+    if (global !== state.globalVersion) {
+      if (state.globalVersion !== -1) await loadProjects(true);
+      state.globalVersion = global;
+    }
+    // The list changed the selection (first project appeared, current one archived): show the new one.
+    if (project !== state.project) { state.version = -1; await refresh(true); return poll(); }
     // Only acknowledge a version once the refresh for it succeeded, so a failed refresh is retried.
     if (v.version !== state.version) {
-      if (state.version !== -1) { await refresh(false); loadProjects(); }
+      if (state.version !== -1) await refresh(false);
       if (project === state.project) state.version = v.version;
     }
     setLive(true);

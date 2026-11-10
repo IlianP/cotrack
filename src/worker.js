@@ -198,11 +198,14 @@ async function route(req, db, url, actor) {
     }
     if (seg.length === 3 && method === "GET") {
       if (sub === "version") {
+        // global: newest event of any project, so the web app notices new or archived projects too.
         const row = await db
-          .prepare("SELECT COALESCE(MAX(id), 0) AS v FROM events WHERE project_slug = ?")
+          .prepare(
+            "SELECT COALESCE((SELECT MAX(id) FROM events WHERE project_slug = ?), 0) AS v, COALESCE((SELECT MAX(id) FROM events), 0) AS g",
+          )
           .bind(project.slug)
           .first();
-        return json({ version: row.v });
+        return json({ version: row.v, global: row.g });
       }
       if (sub === "events") {
         const after = Number(q.get("after") || 0);
