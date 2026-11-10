@@ -89,7 +89,8 @@ Immer ein Punkt nach dem anderen. Der Kontext bleibt knapp: ein bis drei Sätze,
 **Aufgabe für den Nutzer (A, 👤)**
 - Bereite vor, was du vorbereiten kannst (Textentwurf, Befehl, Link), und gib dann einen konkreten ersten Schritt oder
   eine kurze Anleitung mit höchstens fünf Schritten.
-- Geht es im Chat (freigeben, eine Variante wählen), schließe den Punkt gleich ab.
+- Geht es im Chat (freigeben, eine Variante wählen), frag direkt danach und schließe den Punkt erst, wenn der Nutzer
+  geantwortet hat.
 - Geht es nur außerhalb (Konto anlegen, auf dem Gerät testen, im Browser anmelden): Anleitung geben, „Sag Bescheid, wenn
   erledigt“ und weiter zum nächsten Punkt. Am Ende der Runde fragst du einmal nach.
 

@@ -89,7 +89,8 @@ Always one item at a time. Keep the context short: one to three sentences on wha
 **Task for the user (A, 👤)**
 - Prepare what you can (draft text, command, link), then give one concrete first step or a short guide with at most
   five steps.
-- If it can be done in the chat (approve, pick a variant), close the item right away.
+- If it can be done in the chat (approve, pick a variant), ask for it right there and close the item only once the
+  user has answered.
 - If it can only be done elsewhere (create an account, test on a device, sign in in a browser): give the guide,
   "tell me when it's done", and move on to the next item. Ask once at the end of the round.
 
