@@ -298,12 +298,14 @@ async function callTool(name, args, db, actor) {
       // Read the cursor BEFORE the items: a write in between is then replayed by
       // cotrack_changes instead of being skipped.
       const stand = await latestEvent(db, project.slug);
-      const [items, kinds, settings] = await Promise.all([
-        listItems(db, { project: project.slug, status: "open" }),
+      // The footer gets all items (like cotrack_footer), so it knows which blockers are closed and drops their ⏸.
+      const [all, kinds, settings] = await Promise.all([
+        listItems(db, { project: project.slug, status: "all" }),
         listKinds(db, true),
         getSettings(db),
       ]);
-      const footer = buildFooter(items, kinds, footerStyle(settings)) || "(nichts offen)";
+      const items = all.filter((i) => ["open", "doing", "blocked"].includes(i.status));
+      const footer = buildFooter(all, kinds, footerStyle(settings)) || "(nichts offen)";
       return `Projekt: ${projectTitle(project)}\nFußzeile:${footer.includes("\n") ? "\n" : " "}${footer}\nStand: ${stand}\n\n${itemsAsText(items, kinds)}`;
     }
     case "cotrack_list": {
