@@ -14,3 +14,8 @@ migrations_dir = "migrations"
 # Secrets (set with `npx wrangler secret put <NAME>`):
 #   TOKEN_USER – your token (web UI, consent page when connecting an AI via OAuth, manual API use)
 #   TOKEN_AI   – optional: fixed token for AI tools without a browser (scripts, cloud sessions); changes count as "ai"
+
+# Workers Logs: request path, status and console output for debugging (e.g. MCP clients). Cloudflare masks the
+# Authorization header; secrets in request bodies are not logged. Free plan: 200k events/day, kept for 3 days.
+[observability]
+enabled = true
