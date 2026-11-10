@@ -57,12 +57,12 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
-- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), **kein Build-Schritt, keine Abhängigkeiten** (reiner
-  Cloudflare Worker + D1).
+- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), Deutsch und Englisch (folgt der
+  Sprache des Browsers oder per ☰), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
 
 > **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
-> teilen. Siehe Roadmap. Die Web-App ist vorerst auf Deutsch, die Chat-Fußzeile gibt es auf Deutsch und Englisch (`lang`); Code und API sind englisch; dieses README
+> teilen. Siehe Roadmap. Web-App und Chat-Fußzeile gibt es auf Deutsch und Englisch (Fußzeile: `lang`); Code und API sind englisch; dieses README
 > gibt es auf [Englisch](README.md) und Deutsch.
 
 ## Architektur
