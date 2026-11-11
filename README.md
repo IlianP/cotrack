@@ -47,7 +47,7 @@ warnings – a one-glance status that survives across conversations.
 - **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
-  (☰ → Settings), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
+  (☰ → Chat footer → Customize), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
   per project when several are in play.
 - **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
   ([details below](#prioflow-what-is-next)).
@@ -88,7 +88,7 @@ npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 
 
 Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
 once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.md](docs/MCP.md).
-Footer layout and markers: ☰ → *Settings* in the web app.
+Footer layout and markers: ☰ → *Chat footer → Customize* in the web app.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)

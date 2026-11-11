@@ -269,6 +269,19 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
 .menu-list { display: grid; gap: 6px; }
 .menu-list button { text-align: left; }
+/* menu: sections by scope (this device · projects · chat footer · access) */
+.dlg h4.sec {
+  margin: 2px 0 -4px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-size: 12.5px; font-weight: 650; color: var(--muted);
+}
+.dlg h3 + h4.sec { border-top: 0; padding-top: 0; }
+.menu-row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+/* labels may wrap (long project texts, other languages): the button grows instead of overflowing */
+.menu-list .btn, .menu-row .btn { height: auto; min-height: 38px; padding: 8px 14px; line-height: 1.3; }
+.menu-row .btn { display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
+.menu-row .btn.danger { color: var(--danger); }
+.close-x { margin: -6px -8px -6px auto; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 24px; line-height: 1; }
+.close-x:hover { background: var(--surface-2); }
 .theme-row { display: flex; align-items: center; gap: 8px; }
 .theme-row .seg button { min-width: 44px; font-size: 18px; }
 .theme-row .seg.txt button { min-width: 48px; font-size: 13px; }
@@ -430,14 +443,15 @@ const STRINGS = {
     history: (c, by, u, uby) => `Angelegt ${c} von ${by} · geändert ${u} von ${uby}`,
     accept: "Zusagen →", asKind: (code, name) => `als ${code} (${name})`,
     menuNewProject: "＋ Neues Projekt", menuSetCode: "Kürzel für dieses Projekt festlegen",
-    menuStatusMd: "„Offene Punkte“ für STATUS.md kopieren", statusMdCopied: "STATUS.md-Abschnitt kopiert",
-    menuCopyFooter: "Fußzeile kopieren", menuSettings: "⚙ Einstellungen", menuApi: "API-Dokumentation ↗",
+    menuStatusMd: "STATUS.md-Abschnitt kopieren", statusMdCopied: "STATUS.md-Abschnitt kopiert",
+    secDevice: "Dieses Gerät", secProjects: "Projekte", secFooter: "Chat-Fußzeile", secAccess: (who) => "Zugang · angemeldet als " + who,
+    footerCopy: "Kopieren", footerCustomize: "Anpassen …", menuApi: "API-Doku ↗",
     apiDocs: "https://github.com/IlianP/cotrack/blob/main/README.de.md#api",
-    signOut: "Abmelden", signedInAs: (who) => "Angemeldet als: " + who,
+    signOut: "Abmelden",
     appearance: "Darstellung", themeLight: "Hell", themeDark: "Dunkel", themeAuto: "Wie das System",
     language: "Sprache", langAuto: "Automatisch – nach der Sprache des Browsers",
-    settings: "Einstellungen", footerHeading: "Fußzeile für den Chat",
-    settingsIntro: "Gilt für die Fußzeile, die deine KI über cotrack holt (MCP und API), und für „Fußzeile kopieren“. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt.",
+    footerDialog: "Chat-Fußzeile anpassen",
+    settingsIntro: "Gilt auf allen Geräten: für jede KI, die die Fußzeile über cotrack holt (MCP und API), und für ☰ → Chat-Fußzeile → Kopieren. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt.",
     layoutMulti: "Mehrzeilig – je Gruppe eine Zeile", layoutSingle: "Einzeilig – alles in einer Zeile",
     defaultMark: (v) => `${v}  (Standard)`, defaultLayout: "Standard-Layout",
     markerUser: "Kennzeichen für deine Punkte", markerAi: "Kennzeichen für Punkte der KI", previewLabel: "Vorschau:",
@@ -445,7 +459,7 @@ const STRINGS = {
     settingsNote: "Bittest du die KI im Gespräch ausdrücklich um ein anderes Format, geht das vor. Leeres Feld = Standard.",
     settingsMigration: "Noch nicht verfügbar: Die Datenbank braucht Migration 0006 (npm run db:migrate). Bis dahin gelten die Standards.",
     settingsAiToken: "Nur mit deinem eigenen Token änderbar, nicht mit dem KI-Token.",
-    defaultsRestored: "Standard wiederhergestellt", defaults: "Standard", settingsSaved: "Einstellungen gespeichert",
+    defaultsRestored: "Standard wiederhergestellt", defaults: "Standard", settingsSaved: "Fußzeile gespeichert",
     codeFor: (name) => "Kürzel für " + name,
     codeHelp: "Zwei Buchstaben, dann optional Buchstaben oder Ziffern. Einmal festgelegt, lässt es sich nicht mehr ändern.",
     code: "Kürzel", codePh: "2–4 Zeichen, z. B. CT", setCode: "Festlegen", codeSet: "Kürzel festgelegt",
@@ -486,14 +500,15 @@ const STRINGS = {
     history: (c, by, u, uby) => `Created ${c} by ${by} · changed ${u} by ${uby}`,
     accept: "Accept →", asKind: (code, name) => `as ${code} (${name})`,
     menuNewProject: "＋ New project", menuSetCode: "Set the code for this project",
-    menuStatusMd: "Copy “Offene Punkte” for STATUS.md", statusMdCopied: "STATUS.md section copied",
-    menuCopyFooter: "Copy footer", menuSettings: "⚙ Settings", menuApi: "API documentation ↗",
+    menuStatusMd: "Copy STATUS.md section", statusMdCopied: "STATUS.md section copied",
+    secDevice: "This device", secProjects: "Projects", secFooter: "Chat footer", secAccess: (who) => "Access · signed in as " + who,
+    footerCopy: "Copy", footerCustomize: "Customize …", menuApi: "API docs ↗",
     apiDocs: "https://github.com/IlianP/cotrack#api",
-    signOut: "Sign out", signedInAs: (who) => "Signed in as: " + who,
+    signOut: "Sign out",
     appearance: "Appearance", themeLight: "Light", themeDark: "Dark", themeAuto: "Like the system",
     language: "Language", langAuto: "Automatic – the browser's language",
-    settings: "Settings", footerHeading: "Chat footer",
-    settingsIntro: "Applies to the footer your AI fetches from cotrack (MCP and API) and to “Copy footer”. The bar at the bottom always shows it on one line. When the footer appears in the chat is up to your prompt.",
+    footerDialog: "Customize chat footer",
+    settingsIntro: "Applies on every device: to every AI that fetches the footer from cotrack (MCP and API) and to ☰ → Chat footer → Copy. The bar at the bottom always shows it on one line. When the footer appears in the chat is up to your prompt.",
     layoutMulti: "Multi-line – one line per group", layoutSingle: "Single line – everything on one line",
     defaultMark: (v) => `${v}  (default)`, defaultLayout: "Default layout",
     markerUser: "Marker for your items", markerAi: "Marker for the AI's items", previewLabel: "Preview:",
@@ -501,7 +516,7 @@ const STRINGS = {
     settingsNote: "If you explicitly ask the AI for a different format in the conversation, that wins. Empty field = default.",
     settingsMigration: "Not available yet: the database needs migration 0006 (npm run db:migrate). Until then the defaults apply.",
     settingsAiToken: "Can only be changed with your own token, not with the AI token.",
-    defaultsRestored: "Defaults restored", defaults: "Default", settingsSaved: "Settings saved",
+    defaultsRestored: "Defaults restored", defaults: "Default", settingsSaved: "Footer saved",
     codeFor: (name) => "Code for " + name,
     codeHelp: "Two letters, then optionally letters or digits. Once set, it cannot be changed.",
     code: "Code", codePh: "2–4 characters, e.g. CT", setCode: "Set", codeSet: "Code set",
@@ -1152,23 +1167,30 @@ function openEdit(it) {
 const fmt = (iso) => iso ? new Date(iso).toLocaleString(LOCALE, { dateStyle: "short", timeStyle: "short" }) : "–";
 const actorLabel = (a) => STRINGS[LANG].actors[a] || a || "–";
 
+// The menu is grouped by scope: this device (appearance, language), projects, the chat footer (applies to every AI),
+// access. There is no "Settings" entry: everything here is a setting or an action, each named for what it does.
 function openMenu() {
   const go = (fn) => () => { closeDialog(); fn(); };
   const inProject = state.project && state.project !== ALL;
+  const sec = (text) => h("h4", { class: "sec" }, text);
   openDialog(
-    h("h3", null, tr("menu")),
+    h("h3", null, tr("menu"), h("button", { class: "close-x", "aria-label": tr("close"), title: tr("close") }, "×")),
+    sec(tr("secDevice")),
     themeRow(),
     langRow(),
+    sec(tr("secProjects")),
     h("div", { class: "menu-list" },
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("menuCopyFooter")) : null,
-      h("button", { type: "button", class: "btn", onclick: go(openSettings) }, tr("menuSettings")),
-      h("a", { class: "btn", style: "display:flex;align-items:center;text-decoration:none", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null),
+    sec(tr("secFooter")),
+    h("div", { class: "menu-row" },
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
+      h("button", { type: "button", class: "btn", onclick: go(openFooterSettings) }, tr("footerCustomize"))),
+    sec(tr("secAccess", ownerLabel(state.actor))),
+    h("div", { class: "menu-row" },
+      h("a", { class: "btn", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
       h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, tr("signOut"))),
-    h("p", { class: "small" }, tr("signedInAs", ownerLabel(state.actor))),
-    h("div", { class: "actions" }, h("button", { class: "btn" }, tr("close"))),
   );
 }
 
@@ -1199,7 +1221,7 @@ function langRow() {
 const currentProject = () => state.projects.find((p) => p.slug === state.project);
 
 // Instance settings: shape the footer the server returns to every AI (MCP and API). When it appears is up to the prompt.
-async function openSettings() {
+async function openFooterSettings() {
   let data;
   try { data = await api("/settings"); } catch (err) { return toast(tr("error", err.message)); }
   const { settings: s, defaults: d, available } = data;
@@ -1227,8 +1249,7 @@ async function openSettings() {
     } catch (err) { toast(tr("error", err.message)); }
   };
   const dlg = openDialog(
-    h("h3", null, tr("settings")),
-    h("h4", null, tr("footerHeading")),
+    h("h3", null, tr("footerDialog")),
     h("p", { class: "small" }, tr("settingsIntro")),
     field(tr("defaultLayout"), layout),
     h("div", { class: "row2" }, field(tr("markerUser"), user), field(tr("markerAi"), ai)),

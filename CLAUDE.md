@@ -20,6 +20,6 @@
 - Setup guide for people new to Cloudflare in both languages: `docs/SETUP.md` ↔ `docs/SETUP.de.md` – keep in sync. User-facing
   setup docs use the placeholder `<your-address>` / `<deine-adresse>`, never the author's instance.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
-- Instance settings (table `settings`, migration 0006; web app ☰ → Einstellungen; `GET/PATCH /api/settings`) set the footer's
+- Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen; `GET/PATCH /api/settings`) set the footer's
   default layout and group markers for API and MCP. Only the user token may change them; a `layout` in a request wins.
   Who controls what (prompt vs. server vs. settings) is explained in `docs/PROMPT.md` → "Wozu der Prompt?".
