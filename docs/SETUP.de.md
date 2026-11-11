@@ -152,7 +152,7 @@ Ohne Terminal geht das auch im Browser: <https://dash.cloudflare.com> → **Work
    „KI“ protokolliert.
 3. Den passenden Prompt einspielen: [PROMPT.md](PROMPT.md) (Teil 1 + Teil 2) –
    [wozu es ihn braucht](PROMPT.md#wozu-der-prompt--wer-regelt-was), obwohl cotrack einen Server hat.
-4. Optional: in der Web-App ☰ → **Einstellungen** – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und
+4. Optional: in der Web-App ☰ → **Chat-Fußzeile → Anpassen** – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und
    die Kennzeichen für deine Punkte und die der KI (Standard 👤 / 🤖).
 
 ## Nur im Browser: GitHub + Cloudflare-Dashboard
@@ -202,4 +202,4 @@ Optional kann Cloudflare bei jedem Push automatisch veröffentlichen: Repository
 | Web-App sagt „unauthorized“ | Token falsch kopiert oder Schritt 7 (Token hinterlegen) fehlt. |
 | Fehler „no such table“ | `npm run db:migrate` wurde nicht ausgeführt. |
 | npm warnt `EBADENGINE`, oder wrangler startet nicht | Node.js ist zu alt – aktuelle LTS-Version installieren (22 oder neuer). |
-| Einstellungen melden „Noch nicht verfügbar … Migration“ | Nach dem Update fehlt `npm run db:migrate`. |
+| „Chat-Fußzeile anpassen“ meldet „Noch nicht verfügbar … Migration“ | Nach dem Update fehlt `npm run db:migrate`. |

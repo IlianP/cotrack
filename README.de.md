@@ -51,7 +51,7 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   Tokens zu sparen.
 - **Live** – die Web-App übernimmt Änderungen von dir oder einer KI innerhalb weniger Sekunden.
 - **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
-  Web-App ein (☰ → Einstellungen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
+  Web-App ein (☰ → Chat-Fußzeile → Anpassen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **PrioFlow** – ein Skill, mit dem die KI die offenen Punkte bewertet und dich durch die nächsten führt
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
@@ -94,7 +94,7 @@ npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex
 
 Öffne deine Worker-Adresse, gib deinen Token ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`
 (OAuth; du bestätigst einmal mit deinem Token). Optional `TOKEN_AI`: ein fester Token für KI-Werkzeuge ohne Browser, siehe
-[docs/MCP.md](docs/MCP.md). Layout und Kennzeichen der Fußzeile: ☰ → *Einstellungen* in der Web-App.
+[docs/MCP.md](docs/MCP.md). Layout und Kennzeichen der Fußzeile: ☰ → *Chat-Fußzeile → Anpassen* in der Web-App.
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.
 

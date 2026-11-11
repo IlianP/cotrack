@@ -19,11 +19,11 @@
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
   sprachunabhängig, kürzer. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“. Seit v2.7 lassen sich die Kennzeichen in
-  der Web-App ändern (☰ → Einstellungen, z. B. zurück auf „Du“/„KI“); 👤/🤖 bleibt der Standard.
+  der Web-App ändern (☰ → Chat-Fußzeile → Anpassen, z. B. zurück auf „Du“/„KI“); 👤/🤖 bleibt der Standard.
 - **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤:`, `🤖:`, `💡`, `⚠️`),
   danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist vorerst der Standard, um die Übersicht auszuprobieren;
   einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Seit v2.7 wählst du den Standard
-  selbst in der Web-App (☰ → Einstellungen, gespeichert in cotrack); ein `layout` im einzelnen Aufruf geht vor.
+  selbst in der Web-App (☰ → Chat-Fußzeile → Anpassen, gespeichert in cotrack); ein `layout` im einzelnen Aufruf geht vor.
   Eine neue Installation startet mehrzeilig.
 - **Wer regelt was (v2.7):** Der **Prompt** regelt das Verhalten der KI (ob und wann sie cotrack nutzt, wann die Fußzeile
   erscheint, Rückfall ohne cotrack). Der **Server** regelt, was er selbst durchsetzen kann (Kennungen, Protokoll, Aussehen

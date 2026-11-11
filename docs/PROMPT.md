@@ -21,7 +21,7 @@ im Prompt. Deshalb braucht es beides.
 |---|---|---|
 | Ob die KI eine Liste führt; wann sie cotrack aufruft (Start, neue Punkte, Erledigtes); Übergabe | **Prompt** | Der Server kann die KI zu nichts bringen, er antwortet nur. |
 | Wann die Fußzeile erscheint (bei „Stand?“, am Ende größerer Arbeiten, etwa alle vier Antworten; sonst die Kurzzeile) | **Prompt** | Nur die KI weiß, wann eine Antwort endet. |
-| Wie die Fußzeile aussieht (Gruppen, Reihenfolge, höchstens acht Einträge, ▶/⏸, ein- oder mehrzeilig, 👤/🤖) | **Server**, Standard in der **Web-App** (☰ → Einstellungen) | Eine Quelle für alle Chats und Programme. |
+| Wie die Fußzeile aussieht (Gruppen, Reihenfolge, höchstens acht Einträge, ▶/⏸, ein- oder mehrzeilig, 👤/🤖) | **Server**, Standard in der **Web-App** (☰ → Chat-Fußzeile → Anpassen) | Eine Quelle für alle Chats und Programme. |
 | Kennungen (nie neu vergeben), Abhängigkeiten, wer was geändert hat | **Server** | Die Datenbank erzwingt es. |
 | Welches Projekt zur Unterhaltung gehört | **KI**, nach `COTRACK.md` bzw. `cotrack_projects` | Der Server sieht das Repository nicht. |
 | Arbeiten ohne cotrack (Rückfall) | **Prompt**, Teil 1 | – |
@@ -41,7 +41,7 @@ Diese Teile in den persönlichen Einstellungen beider Programme ersetzen (Teil 1
 T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤:“/„🤖:“; Entscheidungen (D) sind eine eigene Kategorie;
 Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
 v2.3: Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben.
-v2.7: Layout (ein-/mehrzeilig) und Kennzeichen der Fußzeile stellst du in der Web-App ein (☰ → Einstellungen).
+v2.7: Layout (ein-/mehrzeilig) und Kennzeichen der Fußzeile stellst du in der Web-App ein (☰ → Chat-Fußzeile → Anpassen).
 **Der Prompt-Text ist seit v2.6 fast unverändert** – einzige Änderung: im Fußzeilen-Beispiel von Teil 1 steht „⚠️“ statt „⚠“
 (nur ohne cotrack relevant; mit cotrack kommt die Fußzeile vom Server). Wer v2.6 eingespielt hat, muss sonst nichts tun.
 v2.6: Die Gruppen der Fußzeile heißen „👤:“ (deine Punkte) und „🤖:“ (die der KI) statt „Du:“ und „🤖KI:“.

@@ -30,7 +30,7 @@ const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { cr
 // "single" = everything in one line. Built-in default only: since v2.7 the human picks the default in the
 // web app (setting `footer_layout`), and a `layout` parameter in a request wins over both.
 const FOOTER_LAYOUT_DEFAULT = "multi";
-// Instance settings (table `settings`, migration 0006; web app ☰ → Einstellungen). A missing row – or a database
+// Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen). A missing row – or a database
 // without the table – means these built-in defaults.
 const SETTINGS_DEFAULTS = Object.freeze({
   footer_layout: FOOTER_LAYOUT_DEFAULT,
