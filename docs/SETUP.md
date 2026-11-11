@@ -150,7 +150,7 @@ Without a terminal you can do this in the browser: <https://dash.cloudflare.com>
    The assistant gets its own short-lived credentials. It never sees your token, and its changes are logged as "AI".
 3. Install the matching prompt: [PROMPT.en.md](PROMPT.en.md) (part 1 + part 2) –
    [why it is needed](PROMPT.en.md#why-a-prompt--who-controls-what) although cotrack has a server.
-4. Optional: in the web app ☰ → **Einstellungen** – footer layout (one line per group or a single line) and the markers
+4. Optional: in the web app ☰ → **Settings** – footer layout (one line per group or a single line) and the markers
    for your items and the AI's (default 👤 / 🤖).
 
 ## Browser only: GitHub + Cloudflare dashboard
@@ -199,4 +199,4 @@ Optionally Cloudflare can publish automatically on every push: fork the reposito
 | The web app says "unauthorized" | Token copied wrongly, or the token from step 7 is missing. |
 | Error "no such table" | `npm run db:migrate` was not run. |
 | npm warns `EBADENGINE`, or wrangler does not start | Node.js is too old – install the current LTS (22 or newer). |
-| Settings say „Noch nicht verfügbar … Migration“ | `npm run db:migrate` was not run after the update. |
+| Settings say "Not available yet … migration" (German: „Noch nicht verfügbar … Migration“) | `npm run db:migrate` was not run after the update. |

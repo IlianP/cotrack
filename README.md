@@ -47,17 +47,18 @@ warnings – a one-glance status that survives across conversations.
 - **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
-  (☰ → Einstellungen), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
+  (☰ → Settings), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
   per project when several are in play.
 - **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
   ([details below](#prioflow-what-is-next)).
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
-- Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
+- Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), German and English (follows the
+  browser language, or choose in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
 > **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
-> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app is
-> in German for now, the chat footer is available in German and English (`lang`); code and API are English; this README is available in English and [German](README.de.md).
+> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app and the
+> chat footer are available in German and English (footer: `lang`); code and API are English; this README is available in English and [German](README.de.md).
 
 ## Architecture
 
@@ -87,7 +88,7 @@ npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 
 
 Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
 once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.md](docs/MCP.md).
-Footer layout and markers: ☰ → *Einstellungen* in the web app.
+Footer layout and markers: ☰ → *Settings* in the web app.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
 ## Connect your AI (MCP)

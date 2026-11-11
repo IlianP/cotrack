@@ -16,18 +16,21 @@ try { const t = localStorage.getItem("cotrack.theme"); if (t === "light" || t ==
   --line: #e2e2dc; --accent: #0f766e; --accent-ink: #ffffff; --danger: #b91c1c;
   --radius: 12px; --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 2px 8px rgb(0 0 0 / .04);
   --ref-white: 0%; color-scheme: light;
+  --lift: 0 2px 6px rgb(0 0 0 / .10), 0 6px 18px rgb(0 0 0 / .10); --lift-lg: 0 10px 32px rgb(0 0 0 / .18);
 }
 /* Dark: chosen explicitly, or by the system unless light was chosen. Keep both blocks identical. */
 :root[data-theme="dark"] {
   --bg: #131312; --surface: #1c1c1a; --surface-2: #252522; --text: #ededE8; --muted: #9b9b94;
   --line: #30302c; --accent: #2dd4bf; --accent-ink: #062b27; --danger: #f87171;
   --shadow: none; --ref-white: 40%; color-scheme: dark;
+  --lift: 0 2px 10px rgb(0 0 0 / .55); --lift-lg: 0 10px 32px rgb(0 0 0 / .6);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #131312; --surface: #1c1c1a; --surface-2: #252522; --text: #ededE8; --muted: #9b9b94;
     --line: #30302c; --accent: #2dd4bf; --accent-ink: #062b27; --danger: #f87171;
     --shadow: none; --ref-white: 40%; color-scheme: dark;
+    --lift: 0 2px 10px rgb(0 0 0 / .55); --lift-lg: 0 10px 32px rgb(0 0 0 / .6);
   }
 }
 * { box-sizing: border-box; }
@@ -35,7 +38,7 @@ html, body { margin: 0; }
 body {
   background: var(--bg); color: var(--text);
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  padding-bottom: calc(150px + env(safe-area-inset-bottom)); /* room for the footer line and the floating "+" */
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -93,34 +96,107 @@ button { cursor: pointer; }
 
 main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 
-/* quick add */
+/* quick add: a sheet above the floating "+" at the bottom right (thumb reach). --dock = height of the footer line,
+   or of the on-screen keyboard while it covers the page (updateMetrics). */
 .add {
   display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
 }
-.add[aria-disabled="true"] { opacity: .55; pointer-events: none; }
+.add[hidden] { display: none; }
+.sheet {
+  position: fixed; z-index: 7; margin: 0; right: calc(14px + env(safe-area-inset-right));
+  bottom: calc(max(var(--dock, 0px), env(safe-area-inset-bottom)) + 76px); width: min(540px, calc(100vw - 28px));
+  box-shadow: var(--lift-lg); animation: rise .16s ease-out;
+}
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+.fab {
+  position: fixed; z-index: 7; right: calc(14px + env(safe-area-inset-right));
+  bottom: calc(max(var(--dock, 0px), env(safe-area-inset-bottom)) + 12px);
+  width: 52px; height: 52px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--line); background: var(--surface); color: var(--accent); box-shadow: var(--lift);
+}
+.fab[hidden] { display: none; }
+/* while the keyboard is open for something else (e.g. search), the "+" would float above it and cover results */
+.kb .fab[aria-expanded="false"] { display: none; }
+.fab svg { width: 26px; height: 26px; transition: transform .15s; }
+.fab[aria-expanded="true"] svg { transform: rotate(45deg); }
 .seg { display: flex; gap: 4px; flex: none; }
 .seg button {
   border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px;
   min-width: 38px; height: 38px; font-weight: 700;
 }
 .seg button[aria-pressed="true"] { background: var(--kc, var(--accent)); color: #fff; border-color: transparent; }
-.add input { flex: 1 1 220px; min-width: 0; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+.add input { flex: 1 1 180px; min-width: 0; height: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
 .primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; height: 38px; padding: 0 16px; font-weight: 600; }
 .hint { width: 100%; margin: 0; color: var(--muted); font-size: 12.5px; }
+.sheet .hint { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
-/* filters */
-.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 14px 0 10px; }
-.chips { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 10px; }
+/* filter bar: view + search, then the category and Du/KI toggles. It sticks below the top bar (--top-h); from 1180px
+   it moves into the top bar (placeBar), on phones only the toggles stick and the view row scrolls away. */
+.bar {
+  position: sticky; top: var(--top-h, 59px); z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  margin: -14px -16px 12px; padding: 10px 16px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+}
+.bar.stuck, .bar-filter.stuck { box-shadow: 0 1px 0 var(--line); }
+.bar-view, .bar-filter, .tgs { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bar-view { flex: 0 1 auto; }
+.bar-filter { gap: 14px; }
+.tgs { gap: 4px; }
+.top .bar { position: static; flex: 0 1 auto; flex-wrap: nowrap; margin: 0; padding: 0; background: none; backdrop-filter: none; }
+.top.with-bar .psel { min-width: 170px; }
+.chips { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 10px; flex: none; }
 .chips button { border: 0; background: transparent; padding: 5px 12px; border-radius: 8px; color: var(--muted); }
 .chips button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
-.filters input[type=search] {
-  flex: 1 1 160px; max-width: 280px; height: 34px; padding: 0 10px; border-radius: 8px;
-  border: 1px solid var(--line); background: var(--surface);
+/* toggle: tap = only this, tap again = all */
+.tg {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 34px; padding: 0 9px; flex: none;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted);
+  font-size: 13.5px; font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+.tg .kbadge { min-width: 20px; height: 20px; font-size: 12px; border-radius: 6px; }
+.tg[aria-pressed="true"] {
+  color: var(--text); font-weight: 650; border-color: var(--kc, var(--accent));
+  background: color-mix(in srgb, var(--kc, var(--accent)) 14%, var(--surface));
+}
+.tg.dim { opacity: .45; }
+/* search: a magnifier that opens a narrow field with the cursor already in it */
+.search { display: flex; align-items: center; height: 34px; flex: none; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.search:focus-within { border-color: var(--accent); }
+.search .ic { width: 32px; height: 32px; padding: 0; border: 0; background: none; color: var(--muted); display: grid; place-items: center; flex: none; }
+.search .ic svg { width: 18px; height: 18px; }
+.search input {
+  display: none; flex: 1 1 auto; min-width: 0; height: 32px; padding: 0 2px; border: 0; background: none; outline: none;
+  -webkit-appearance: none; appearance: none;
+}
+.search input::-webkit-search-cancel-button { display: none; }
+.search .x { display: none; }
+.search.open { flex: 0 1 240px; min-width: 130px; }
+.search.open input { display: block; }
+.search.open .x { display: grid; }
+@media (max-width: 699px) {
+  .bar { display: contents; }
+  .bar-view { margin: 0 0 8px; }
+  .bar-view .search.open { flex: 1 1 auto; }
+  .bar-filter {
+    position: sticky; top: var(--top-h, 59px); z-index: 4; margin: 0 -16px 10px; padding: 6px 16px;
+    overflow-x: auto; scrollbar-width: none; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
+  }
+  .bar-filter::-webkit-scrollbar { display: none; }
+  #kindChips { flex: 1 0 auto; }
+  #kindChips .tg { flex: 1 0 auto; }
+}
+@media (max-width: 420px) {
+  #ownerChips .lbl { display: none; }
+  .bar-filter { gap: 10px; }
+  .tg { padding: 0 7px; gap: 4px; }
+}
+@media (max-width: 350px) { #kindChips .n { display: none; } }
 
 /* board */
 .board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; }
+/* a single category (filter): one readable column instead of a narrow first cell */
+.board.solo { grid-template-columns: minmax(0, 760px); }
 .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .col-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .col-head h2 { margin: 0; font-size: 14.5px; font-weight: 650; flex: 1; }
@@ -195,6 +271,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .menu-list button { text-align: left; }
 .theme-row { display: flex; align-items: center; gap: 8px; }
 .theme-row .seg button { min-width: 44px; font-size: 18px; }
+.theme-row .seg.txt button { min-width: 48px; font-size: 13px; }
 .dlg h4 { margin: 4px 0 0; font-size: 14px; }
 .preview {
   margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line);
@@ -202,7 +279,8 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 }
 
 #toast {
-  position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+  position: fixed; left: 50%; bottom: calc(max(var(--dock, 0px), env(safe-area-inset-bottom)) + var(--toast-up, 78px));
+  transform: translateX(-50%) translateY(20px);
   background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 14px;
   opacity: 0; pointer-events: none; transition: .2s; z-index: 20; max-width: calc(100vw - 32px);
   display: flex; align-items: center; gap: 10px;
@@ -216,6 +294,10 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   .row2 { grid-template-columns: 1fr; }
   .board { grid-template-columns: 1fr; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+  .fab svg { transition: none; }
+}
 </style>
 </head>
 <body>
@@ -228,40 +310,64 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
     <div id="projectPop" class="psel-pop" hidden>
       <input id="projectSearch" type="search" role="combobox" aria-label="Projekt suchen" aria-autocomplete="list"
         aria-expanded="true" aria-controls="projectList" placeholder="Name, Kürzel oder Repo …" autocomplete="off"
-        autocapitalize="off" spellcheck="false" enterkeyhint="go">
-      <ul id="projectList" class="psel-list" role="listbox" aria-label="Projekte"></ul>
+        autocapitalize="off" spellcheck="false" enterkeyhint="go" data-t-attr="aria-label:projectSearch;placeholder:projectSearchPh">
+      <ul id="projectList" class="psel-list" role="listbox" aria-label="Projekte" data-t-attr="aria-label:projects"></ul>
     </div>
   </div>
-  <span id="live" class="live" title="Live-Verbindung"></span>
+  <span id="live" class="live" title="Live-Verbindung" data-t-attr="title:liveTitle"></span>
   <span class="spacer"></span>
-  <button id="menuBtn" class="icon-btn" aria-label="Menü">☰</button>
+  <button id="menuBtn" class="icon-btn" aria-label="Menü" data-t-attr="aria-label:menu">☰</button>
 </header>
 
 <main>
-  <form id="add" class="add" autocomplete="off">
-    <div id="kindSeg" class="seg" role="group" aria-label="Kategorie"></div>
-    <div id="ownerSeg" class="seg" role="group" aria-label="Verantwortlich"></div>
-    <label class="sr" for="addTitle">Neuer Punkt</label>
-    <input id="addTitle" placeholder="Neuer Punkt … z. B. „Lizenz wählen“" enterkeyhint="done">
-    <button class="primary" type="submit">Hinzufügen</button>
-    <p class="hint" id="addHint"></p>
-  </form>
-
-  <div class="filters">
-    <div class="chips" id="viewChips" role="group" aria-label="Ansicht">
-      <button data-view="open" aria-pressed="true">Offen</button>
-      <button data-view="closed" aria-pressed="false">Erledigt</button>
-      <button data-view="all" aria-pressed="false">Alle</button>
+  <!-- Texts in the markup are the German defaults; applyStaticTexts() sets the UI language (data-t, data-t-attr). -->
+  <div class="bar" id="bar">
+    <div class="bar-view">
+      <div class="chips" id="viewChips" role="group" aria-label="Ansicht" data-t-attr="aria-label:view">
+        <button data-view="open" aria-pressed="true" data-t="viewOpen">Offen</button>
+        <button data-view="closed" aria-pressed="false" data-t="viewClosed">Erledigt</button>
+        <button data-view="all" aria-pressed="false" data-t="viewAll">Alle</button>
+      </div>
+      <div class="search" id="searchBox">
+        <button type="button" id="searchBtn" class="ic" aria-expanded="false" aria-controls="search" aria-label="Suchen"
+          title="Suchen (Taste /)" data-t-attr="aria-label:search;title:searchTitle"><svg viewBox="0 0 24 24" aria-hidden="true"
+          fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
+        <input type="search" id="search" placeholder="Suchen …" aria-label="Suchen" autocomplete="off" enterkeyhint="search"
+          data-t-attr="placeholder:searchPh;aria-label:search">
+        <button type="button" id="searchClose" class="ic x" aria-label="Suche schließen" title="Suche schließen"
+          data-t-attr="aria-label:searchClose;title:searchClose"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
+          stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
+      </div>
     </div>
-    <input type="search" id="search" placeholder="Suchen …" aria-label="Suchen">
+    <div class="bar-filter" id="filterBar">
+      <div class="tgs" id="kindChips" role="group" aria-label="Nach Kategorie filtern" data-t-attr="aria-label:kindsGroup"></div>
+      <div class="tgs" id="ownerChips" role="group" aria-label="Nach Zuständigkeit filtern" data-t-attr="aria-label:ownersGroup">
+        <button type="button" class="tg" data-owner="user" aria-pressed="false" title="Nur deine Punkte" aria-label="Nur deine Punkte"
+          data-t-attr="title:onlyUser;aria-label:onlyUser">👤<span class="lbl" data-t="owners.user">Du</span></button>
+        <button type="button" class="tg" data-owner="ai" aria-pressed="false" title="Nur Punkte der KI" aria-label="Nur Punkte der KI"
+          data-t-attr="title:onlyAi;aria-label:onlyAi">🤖<span class="lbl" data-t="owners.ai">KI</span></button>
+      </div>
+    </div>
   </div>
 
   <div id="board" class="board"></div>
 </main>
 
+<form id="add" class="add sheet" autocomplete="off" hidden>
+  <div id="kindSeg" class="seg" role="group" aria-label="Kategorie" data-t-attr="aria-label:category"></div>
+  <div id="ownerSeg" class="seg" role="group" aria-label="Verantwortlich" data-t-attr="aria-label:responsible"></div>
+  <label class="sr" for="addTitle" data-t="addOpen">Neuer Punkt</label>
+  <input id="addTitle" placeholder="Neuer Punkt … z. B. „Lizenz wählen“" enterkeyhint="done" data-t-attr="placeholder:addPh">
+  <button class="primary" type="submit" data-t="add">Hinzufügen</button>
+  <p class="hint" id="addHint"></p>
+</form>
+<button type="button" id="fab" class="fab" aria-expanded="false" aria-controls="add" aria-label="Neuer Punkt" title="Neuer Punkt"
+  data-t-attr="aria-label:addOpen;title:addOpen" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
+  stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+
 <footer class="footline">
-  <code id="footerText" title="Fußzeile für den Chat"></code>
-  <button id="copyFooter" class="btn">Kopieren</button>
+  <code id="footerText" title="Fußzeile für den Chat" data-t-attr="title:footerTitle"></code>
+  <button id="copyFooter" class="btn" data-t="copy">Kopieren</button>
 </footer>
 
 <dialog id="dlg"></dialog>
@@ -275,14 +381,177 @@ const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
 };
-const OWNER_LABELS = { user: "Du", ai: "KI" };
-const STATUS_LABELS = { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" };
+/* ---------------------------------------------------------- language */
+// UI language per device (☰ → Sprache, localStorage "cotrack.lang"): a stored choice wins; otherwise the first German
+// or English entry in the browser's language list decides (de, de-DE, de-AT, de-CH … and gsw count as German), and
+// anything else gets English. Every UI text lives in STRINGS: add new ones in both languages. Code and API stay English.
+const LANGS = ["de", "en"];
+const primaryTag = (tag) => String(tag || "").toLowerCase().split(/[-_]/)[0];
+function detectLang() {
+  for (const tag of navigator.languages?.length ? navigator.languages : [navigator.language]) {
+    const p = primaryTag(tag);
+    if (p === "de" || p === "gsw") return "de";
+    if (p === "en") return "en";
+  }
+  return "en";
+}
+const LANG = LANGS.includes(store.get("cotrack.lang")) ? store.get("cotrack.lang") : detectLang();
+// Dates follow the reader's own variant of that language (de-AT, en-US …).
+const LOCALE = [...(navigator.languages || []), navigator.language].find((l) => primaryTag(l) === LANG) || (LANG === "de" ? "de-DE" : "en-GB");
+
+const STRINGS = {
+  de: {
+    owners: { user: "Du", ai: "KI" },
+    actors: { user: "dir", ai: "der KI" }, // "angelegt … von dir"
+    statuses: { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" },
+    projectSearch: "Projekt suchen", projectSearchPh: "Name, Kürzel oder Repo …", projects: "Projekte",
+    liveTitle: "Live-Verbindung", liveOn: "Live: verbunden", liveOff: "Keine Verbindung", menu: "Menü",
+    view: "Ansicht", viewOpen: "Offen", viewClosed: "Erledigt", viewAll: "Alle",
+    search: "Suchen", searchTitle: "Suchen (Taste /)", searchPh: "Suchen …", searchClose: "Suche schließen",
+    kindsGroup: "Nach Kategorie filtern", ownersGroup: "Nach Zuständigkeit filtern",
+    onlyKind: (name) => `${name} – nur diese Kategorie (nochmal tippen: alle)`,
+    onlyUser: "Nur deine Punkte (nochmal tippen: alle)", onlyAi: "Nur Punkte der KI (nochmal tippen: alle)",
+    addOpen: "Neuer Punkt", addClose: "Eingabe schließen", category: "Kategorie", responsible: "Verantwortlich",
+    addPh: "Neuer Punkt … z. B. „Lizenz wählen“", add: "Hinzufügen", addTip: "Tipp: „I: …“ wählt die Kategorie per Kürzel.",
+    footerTitle: "Fußzeile für den Chat", copy: "Kopieren", copied: "Kopiert", copyPrompt: "Zum Kopieren:", footerCopied: "Fußzeile kopiert",
+    error: (msg) => "Fehler: " + msg, tokenInvalid: "Token ungültig oder abgelaufen.",
+    newProject: (label) => "Neues Projekt: " + label, open: "Öffnen", newProjects: (n, names) => `${n} neue Projekte: ${names}`,
+    allProjects: "Alle Projekte", noProject: "Kein Projekt", projectAria: (label) => "Projekt: " + label,
+    noProjectYet: "Noch kein Projekt. Lege über ☰ ein neues an.", nothingOpen: "Nichts offen 🎉", noItems: "Keine Einträge",
+    footerEmpty: "Nichts offen.", waitingFor: "wartet auf", followedBy: "danach folgt", source: "Quelle",
+    reopen: "Wieder öffnen", markDone: "Erledigt", reopenAria: (ref) => `${ref} wieder öffnen`, doneAria: (ref) => `${ref} erledigt`,
+    copyRef: "Kennung + Titel kopieren", created: (ref) => `${ref} angelegt`, saved: (ref) => `${ref} gespeichert`,
+    deleted: (ref) => `${ref} gelöscht`, openItems: "offene Punkte", noProjectFound: "Kein Projekt gefunden",
+    askSave: "Änderungen speichern?", askSaveText: "Du hast in diesem Fenster etwas geändert.", discard: "Verwerfen",
+    keepEditing: "Weiter bearbeiten", save: "Speichern", cancel: "Abbrechen", close: "Schließen", del: "Löschen",
+    shortPh: "1–3 Wörter für die Fußzeile", nobody: "– niemand –", waitingPh: "z. B. D2, A1", sourcePh: "Link oder Datei",
+    confirmDelete: (ref) => `${ref} endgültig löschen? Die Kennung wird nicht neu vergeben.`,
+    fTitle: "Titel", fBody: "Beschreibung", fShort: "Kurzlabel", fStatus: "Status", fWaiting: "Wartet auf", fSource: "Quelle", fDue: "Fällig",
+    history: (c, by, u, uby) => `Angelegt ${c} von ${by} · geändert ${u} von ${uby}`,
+    accept: "Zusagen →", asKind: (code, name) => `als ${code} (${name})`,
+    menuNewProject: "＋ Neues Projekt", menuSetCode: "Kürzel für dieses Projekt festlegen",
+    menuStatusMd: "„Offene Punkte“ für STATUS.md kopieren", statusMdCopied: "STATUS.md-Abschnitt kopiert",
+    menuCopyFooter: "Fußzeile kopieren", menuSettings: "⚙ Einstellungen", menuApi: "API-Dokumentation ↗",
+    apiDocs: "https://github.com/IlianP/cotrack/blob/main/README.de.md#api",
+    signOut: "Abmelden", signedInAs: (who) => "Angemeldet als: " + who,
+    appearance: "Darstellung", themeLight: "Hell", themeDark: "Dunkel", themeAuto: "Wie das System",
+    language: "Sprache", langAuto: "Automatisch – nach der Sprache des Browsers",
+    settings: "Einstellungen", footerHeading: "Fußzeile für den Chat",
+    settingsIntro: "Gilt für die Fußzeile, die deine KI über cotrack holt (MCP und API), und für „Fußzeile kopieren“. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt.",
+    layoutMulti: "Mehrzeilig – je Gruppe eine Zeile", layoutSingle: "Einzeilig – alles in einer Zeile",
+    defaultMark: (v) => `${v}  (Standard)`, defaultLayout: "Standard-Layout",
+    markerUser: "Kennzeichen für deine Punkte", markerAi: "Kennzeichen für Punkte der KI", previewLabel: "Vorschau:",
+    preview: ["D1 Lizenz wählen · A2 Prompt einspielen", "A3 README überarbeiten", "I4 Teilpunkte", "W1 Auth"],
+    settingsNote: "Bittest du die KI im Gespräch ausdrücklich um ein anderes Format, geht das vor. Leeres Feld = Standard.",
+    settingsMigration: "Noch nicht verfügbar: Die Datenbank braucht Migration 0006 (npm run db:migrate). Bis dahin gelten die Standards.",
+    settingsAiToken: "Nur mit deinem eigenen Token änderbar, nicht mit dem KI-Token.",
+    defaultsRestored: "Standard wiederhergestellt", defaults: "Standard", settingsSaved: "Einstellungen gespeichert",
+    codeFor: (name) => "Kürzel für " + name,
+    codeHelp: "Zwei Buchstaben, dann optional Buchstaben oder Ziffern. Einmal festgelegt, lässt es sich nicht mehr ändern.",
+    code: "Kürzel", codePh: "2–4 Zeichen, z. B. CT", setCode: "Festlegen", codeSet: "Kürzel festgelegt",
+    newProjectTitle: "Neues Projekt", slugPh: "z. B. festival-workshop-planner", namePh: "Anzeigename",
+    repoPh: "GitHub: owner/repo (optional)", codePhNew: "2–4 Zeichen, leer = Vorschlag", codeSuggested: (c) => `${c} (Vorschlag)`,
+    codeChars: "2–4 Zeichen", fRepo: "GitHub-Repository", fSlug: "Slug (URL)", fName: "Name",
+    codeNote: "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern.",
+    create: "Anlegen", projectCreated: "Projekt angelegt",
+    signInTitle: " – Anmelden", tokenHelp: "Gib deinen Zugangstoken ein. Er wird nur in diesem Browser gespeichert.", token: "Token", signIn: "Anmelden",
+  },
+  en: {
+    owners: { user: "You", ai: "AI" },
+    actors: { user: "you", ai: "the AI" }, // "created … by you"
+    statuses: { open: "open", doing: "in progress", blocked: "blocked", done: "done", dropped: "dropped" },
+    projectSearch: "Search projects", projectSearchPh: "Name, code or repo …", projects: "Projects",
+    liveTitle: "Live connection", liveOn: "Live: connected", liveOff: "No connection", menu: "Menu",
+    view: "View", viewOpen: "Open", viewClosed: "Done", viewAll: "All",
+    search: "Search", searchTitle: "Search (key /)", searchPh: "Search …", searchClose: "Close search",
+    kindsGroup: "Filter by category", ownersGroup: "Filter by owner",
+    onlyKind: (name) => `${name} – only this category (tap again: all)`,
+    onlyUser: "Only your items (tap again: all)", onlyAi: "Only the AI's items (tap again: all)",
+    addOpen: "New item", addClose: "Close input", category: "Category", responsible: "Responsible",
+    addPh: "New item … e.g. “Choose a license”", add: "Add", addTip: "Tip: “I: …” picks the category by its letter.",
+    footerTitle: "Footer for the chat", copy: "Copy", copied: "Copied", copyPrompt: "Copy:", footerCopied: "Footer copied",
+    error: (msg) => "Error: " + msg, tokenInvalid: "Invalid or expired token.",
+    newProject: (label) => "New project: " + label, open: "Open", newProjects: (n, names) => `${n} new projects: ${names}`,
+    allProjects: "All projects", noProject: "No project", projectAria: (label) => "Project: " + label,
+    noProjectYet: "No project yet. Create one via ☰.", nothingOpen: "Nothing open 🎉", noItems: "No items",
+    footerEmpty: "Nothing open.", waitingFor: "waiting for", followedBy: "followed by", source: "Source",
+    reopen: "Reopen", markDone: "Mark as done", reopenAria: (ref) => `Reopen ${ref}`, doneAria: (ref) => `Mark ${ref} as done`,
+    copyRef: "Copy reference + title", created: (ref) => `${ref} created`, saved: (ref) => `${ref} saved`,
+    deleted: (ref) => `${ref} deleted`, openItems: "open items", noProjectFound: "No project found",
+    askSave: "Save changes?", askSaveText: "You changed something in this window.", discard: "Discard",
+    keepEditing: "Keep editing", save: "Save", cancel: "Cancel", close: "Close", del: "Delete",
+    shortPh: "1–3 words for the footer", nobody: "– nobody –", waitingPh: "e.g. D2, A1", sourcePh: "Link or file",
+    confirmDelete: (ref) => `Delete ${ref} permanently? The reference will not be reused.`,
+    fTitle: "Title", fBody: "Description", fShort: "Short label", fStatus: "Status", fWaiting: "Waiting for", fSource: "Source", fDue: "Due",
+    history: (c, by, u, uby) => `Created ${c} by ${by} · changed ${u} by ${uby}`,
+    accept: "Accept →", asKind: (code, name) => `as ${code} (${name})`,
+    menuNewProject: "＋ New project", menuSetCode: "Set the code for this project",
+    menuStatusMd: "Copy “Offene Punkte” for STATUS.md", statusMdCopied: "STATUS.md section copied",
+    menuCopyFooter: "Copy footer", menuSettings: "⚙ Settings", menuApi: "API documentation ↗",
+    apiDocs: "https://github.com/IlianP/cotrack#api",
+    signOut: "Sign out", signedInAs: (who) => "Signed in as: " + who,
+    appearance: "Appearance", themeLight: "Light", themeDark: "Dark", themeAuto: "Like the system",
+    language: "Language", langAuto: "Automatic – the browser's language",
+    settings: "Settings", footerHeading: "Chat footer",
+    settingsIntro: "Applies to the footer your AI fetches from cotrack (MCP and API) and to “Copy footer”. The bar at the bottom always shows it on one line. When the footer appears in the chat is up to your prompt.",
+    layoutMulti: "Multi-line – one line per group", layoutSingle: "Single line – everything on one line",
+    defaultMark: (v) => `${v}  (default)`, defaultLayout: "Default layout",
+    markerUser: "Marker for your items", markerAi: "Marker for the AI's items", previewLabel: "Preview:",
+    preview: ["D1 Choose a license · A2 Install the prompt", "A3 Revise the README", "I4 Sub-items", "W1 Auth"],
+    settingsNote: "If you explicitly ask the AI for a different format in the conversation, that wins. Empty field = default.",
+    settingsMigration: "Not available yet: the database needs migration 0006 (npm run db:migrate). Until then the defaults apply.",
+    settingsAiToken: "Can only be changed with your own token, not with the AI token.",
+    defaultsRestored: "Defaults restored", defaults: "Default", settingsSaved: "Settings saved",
+    codeFor: (name) => "Code for " + name,
+    codeHelp: "Two letters, then optionally letters or digits. Once set, it cannot be changed.",
+    code: "Code", codePh: "2–4 characters, e.g. CT", setCode: "Set", codeSet: "Code set",
+    newProjectTitle: "New project", slugPh: "e.g. festival-workshop-planner", namePh: "Display name",
+    repoPh: "GitHub: owner/repo (optional)", codePhNew: "2–4 characters, empty = suggestion", codeSuggested: (c) => `${c} (suggested)`,
+    codeChars: "2–4 characters", fRepo: "GitHub repository", fSlug: "Slug (URL)", fName: "Name",
+    codeNote: "The code (e.g. CT) precedes references when several projects are in a conversation: CT:A14. It cannot be changed later.",
+    create: "Create", projectCreated: "Project created",
+    signInTitle: " – Sign in", tokenHelp: "Enter your access token. It is stored only in this browser.", token: "Token", signIn: "Sign in",
+  },
+};
+const lookup = (dict, key) => key.split(".").reduce((o, k) => (o == null ? o : o[k]), dict);
+// tr("saved", "A4") → "A4 gespeichert" / "A4 saved"; a missing English text falls back to German.
+function tr(key, ...args) {
+  const v = lookup(STRINGS[LANG], key) ?? lookup(STRINGS.de, key);
+  return typeof v === "function" ? v(...args) : v ?? key;
+}
+// Fixed texts in the markup: data-t sets the text, data-t-attr="attr:key;attr:key" attributes.
+function applyStaticTexts() {
+  document.documentElement.lang = LANG;
+  for (const el of document.querySelectorAll("[data-t]")) el.textContent = tr(el.dataset.t);
+  for (const el of document.querySelectorAll("[data-t-attr]")) {
+    for (const pair of el.dataset.tAttr.split(";")) {
+      const [attr, key] = pair.split(":");
+      el.setAttribute(attr, tr(key));
+    }
+  }
+}
+applyStaticTexts();
+
+// Built-in categories come from the database in German. In English they are translated – unless renamed there.
+const KIND_DE_NAMES = { D: "Entscheidung", A: "Aufgabe", I: "Idee", W: "Warnung", T: "To-do (alt)" };
+const KIND_EN = {
+  D: ["Decision", "Yours to decide; the AI prepares options. Record the outcome when closing it."],
+  A: ["Action", "Something that has to be done – by you or the AI. If responsibility changes, the reference stays."],
+  I: ["Idea", "A suggestion, not yet agreed. If accepted, it becomes A or D."],
+  W: ["Warning", "A risk or caveat to watch or accept explicitly. Problems that have occurred become A or D right away."],
+  T: ["To-do (old)", "Category of the first version, no longer offered."],
+};
+const localizeKind = (k) => (LANG === "en" && KIND_EN[k.code] && k.name === KIND_DE_NAMES[k.code]
+  ? { ...k, name: KIND_EN[k.code][0], description: KIND_EN[k.code][1] } : k);
+
+const OWNER_LABELS = tr("owners");
+const STATUS_LABELS = tr("statuses");
 const ALL = "*";
 
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
-  view: "open", q: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
+  view: "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
 
@@ -306,7 +575,7 @@ async function api(path, { method = "GET", body } = {}) {
     headers: { authorization: "Bearer " + state.token, ...(body ? { "content-type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 401) { showLogin("Token ungültig oder abgelaufen."); throw new Error("unauthorized"); }
+  if (res.status === 401) { showLogin(tr("tokenInvalid")); throw new Error("unauthorized"); }
   const isJson = (res.headers.get("content-type") || "").includes("json");
   const data = isJson ? await res.json() : await res.text();
   if (!res.ok) throw new Error((data && data.error ? data.error + (data.detail ? ": " + data.detail : "") : res.status));
@@ -323,9 +592,9 @@ function toast(msg, action) {
   t.classList.add("show");
   clearTimeout(toast.t); toast.t = setTimeout(hide, action ? 6000 : 1800);
 }
-async function copy(text, label = "Kopiert") {
+async function copy(text, label = tr("copied")) {
   try { await navigator.clipboard.writeText(text); toast(label); }
-  catch { prompt("Zum Kopieren:", text); }
+  catch { prompt(tr("copyPrompt"), text); }
 }
 const kindBy = (code) => state.allKinds.find((k) => k.code === code);
 const needsOwner = (k) => k && k.actionable && !k.default_owner;
@@ -338,7 +607,7 @@ async function boot() {
     // Global version is read before the project list, so a project created in between is picked up by the next poll.
     const [me, kinds, ver] = await Promise.all([api("/me"), api("/kinds?all=1"), api("/version")]);
     state.globalVersion = ver.version;
-    state.actor = me.actor; state.allKinds = kinds.kinds; state.kinds = kinds.kinds.filter((k) => k.active);
+    state.actor = me.actor; state.allKinds = kinds.kinds.map(localizeKind); state.kinds = state.allKinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
     renderKindSeg();
@@ -349,7 +618,7 @@ async function boot() {
       document.addEventListener("visibilitychange", poll);
     }
     poll();
-  } catch (e) { if (e.message !== "unauthorized") toast("Fehler: " + e.message); }
+  } catch (e) { if (e.message !== "unauthorized") toast(tr("error", e.message)); }
 }
 
 // notify: point out projects that appeared since the last load (e.g. created by an AI via MCP).
@@ -364,9 +633,9 @@ async function loadProjects(notify) {
   renderProjects();
   if (added.length === 1) {
     const p = added[0];
-    toast(`Neues Projekt: ${p.code ? p.code + " · " : ""}${p.name}`, p.slug === state.project ? null : { label: "Öffnen", onclick: () => selectProject(p.slug) });
+    toast(tr("newProject", `${p.code ? p.code + " · " : ""}${p.name}`), p.slug === state.project ? null : { label: tr("open"), onclick: () => selectProject(p.slug) });
   } else if (added.length > 1) {
-    toast(`${added.length} neue Projekte: ${added.map((p) => p.name).join(", ")}`);
+    toast(tr("newProjects", added.length, added.map((p) => p.name).join(", ")));
   }
 }
 
@@ -409,19 +678,21 @@ async function poll() {
     setLive(true);
   } catch { setLive(false); }
 }
-function setLive(ok) { const l = $("#live"); l.className = "live " + (ok ? "on" : "off"); l.title = ok ? "Live: verbunden" : "Keine Verbindung"; }
+function setLive(ok) { const l = $("#live"); l.className = "live " + (ok ? "on" : "off"); l.title = ok ? tr("liveOn") : tr("liveOff"); }
 
 /* ---------------------------------------------------------- render */
 const projectLabel = (p) => `${p.code ? p.code + " · " : ""}${p.name}${p.open_count ? ` (${p.open_count})` : ""}`;
 function renderProjects() {
   const cur = currentProject();
-  const label = state.project === ALL ? "Alle Projekte" : cur ? projectLabel(cur) : "Kein Projekt";
+  const label = state.project === ALL ? tr("allProjects") : cur ? projectLabel(cur) : tr("noProject");
   $("#projectLabel").textContent = label;
   $("#projectBtn").title = cur?.repo ? `${label} – ${cur.repo}` : label;
-  $("#projectBtn").setAttribute("aria-label", "Projekt: " + label);
+  $("#projectBtn").setAttribute("aria-label", tr("projectAria", label));
   if (picker.open) renderPicker();
-  const disabled = state.project === ALL || !state.project;
-  $("#add").setAttribute("aria-disabled", disabled);
+  // New items need one concrete project: no "+" for "Alle Projekte" or before the first project exists.
+  const noAdd = state.project === ALL || !state.project;
+  $("#fab").hidden = noAdd;
+  if (noAdd) setAddOpen(false);
   $("#footerText").parentElement.hidden = state.project === ALL;
 }
 
@@ -434,10 +705,10 @@ function renderKindSeg() {
   }, k.code)));
   const k = kindBy(state.addKind);
   $("#ownerSeg").replaceChildren(...(needsOwner(k) ? ["user", "ai"].map((o) => h("button", {
-    type: "button", "aria-pressed": String(o === state.addOwner), title: "Verantwortlich",
+    type: "button", "aria-pressed": String(o === state.addOwner), title: tr("responsible"),
     onclick: () => { state.addOwner = o; renderKindSeg(); $("#addTitle").focus(); },
   }, OWNER_LABELS[o])) : []));
-  $("#addHint").textContent = k ? `${k.name}: ${k.description || ""} · Tipp: „I: …“ wählt die Kategorie per Kürzel.` : "";
+  $("#addHint").textContent = k ? `${k.name}: ${k.description || ""} · ${tr("addTip")}` : "";
 }
 
 // ref -> open items waiting for it (reverse of waiting_on, computed from what is on screen)
@@ -453,7 +724,8 @@ function render(before) {
   }
   const board = $("#board");
   if (!state.project) {
-    board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, "Noch kein Projekt. Lege über ☰ ein neues an.")));
+    board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, tr("noProjectYet"))));
+    $("#kindChips").replaceChildren();
     return;
   }
   // Inactive kinds (e.g. legacy "T") only get a column while they still have items in view.
@@ -461,15 +733,58 @@ function render(before) {
   const known = new Set(state.allKinds.map((k) => k.code));
   const extra = [...new Set(state.items.map((i) => i.kind).filter((c) => !known.has(c)))]
     .map((c) => ({ code: c, name: c, color: "#6b7280" }));
-  board.replaceChildren(...[...state.kinds, ...legacy, ...extra].map((k) => {
-    const list = state.items.filter((i) => i.kind === k.code);
-    return h("section", { class: "col", style: `--kc:${k.color || "#6b7280"}` },
+  const kinds = [...state.kinds, ...legacy, ...extra];
+  if (state.kind && !kinds.some((k) => k.code === state.kind)) state.kind = "";
+  // Filters in the bar, each: tap = only this, tap again = all. Du/KI applies to kinds someone is responsible for (an
+  // item without owner counts as its kind's default, D = Du); I and W have no owner, so they are hidden meanwhile.
+  const cols = kinds.map((k) => {
+    const items = state.items.filter((i) => i.kind === k.code);
+    const list = state.owner ? items.filter((i) => k.actionable && (i.owner || k.default_owner) === state.owner) : items;
+    return {
+      k, list,
+      count: (k.actionable ? list : items).length, // what tapping its button shows (tapping I or W lifts Du/KI)
+      shown: (!state.kind || state.kind === k.code) && (!state.owner || !!k.actionable),
+    };
+  });
+  renderFilterBar(cols);
+  const visible = cols.filter((c) => c.shown);
+  board.classList.toggle("solo", visible.length === 1);
+  board.replaceChildren(...visible.map(({ k, list }) =>
+    h("section", { class: "col", "data-kind": k.code, style: `--kc:${k.color || "#6b7280"}` },
       h("header", { class: "col-head" },
         h("span", { class: "kbadge" }, k.code), h("h2", null, k.name), h("span", { class: "count" }, list.length)),
       list.length
         ? h("ul", { class: "items" }, list.map((it) => renderItem(it, k, before)))
-        : h("p", { class: "empty" }, state.view === "open" ? "Nichts offen 🎉" : "Keine Einträge"));
-  }));
+        : h("p", { class: "empty" }, state.view === "open" ? tr("nothingOpen") : tr("noItems")))));
+}
+
+/* filter bar: one toggle per category (letter + count) and Du/KI */
+function renderFilterBar(cols) {
+  $("#kindChips").replaceChildren(...cols.map(({ k, count }) => h("button", {
+    type: "button", class: "tg" + (state.owner && !k.actionable ? " dim" : ""), style: `--kc:${k.color || "#6b7280"}`,
+    "aria-pressed": String(state.kind === k.code), title: tr("onlyKind", k.name), "aria-label": `${k.name}: ${count}`,
+    onclick: () => toggleKind(k),
+  }, h("span", { class: "kbadge" }, k.code), h("span", { class: "n" }, String(count)))));
+  for (const b of $("#ownerChips").children) b.setAttribute("aria-pressed", String(b.dataset.owner === state.owner));
+}
+// The two filters only exclude each other for kinds without owner (I, W): the last tap wins.
+function toggleKind(k) {
+  state.kind = state.kind === k.code ? "" : k.code;
+  if (state.kind && !k.actionable) state.owner = "";
+  render(); toBoardTop();
+}
+function toggleOwner(o) {
+  state.owner = state.owner === o ? "" : o;
+  if (state.owner && state.kind && !kindBy(state.kind)?.actionable) state.kind = "";
+  render(); toBoardTop();
+}
+// After a filter change the board starts right below the sticky bars again (scrolls up only, never down).
+function toBoardTop() {
+  markStuck();
+  let bottom = $(".top").getBoundingClientRect().bottom;
+  for (const el of [$("#bar"), $("#filterBar")]) if (el.classList.contains("stuck")) bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
+  const gap = $("#board").getBoundingClientRect().top - bottom - 10;
+  if (gap < 0) window.scrollBy(0, gap);
 }
 
 function renderItem(it, k, before) {
@@ -479,24 +794,24 @@ function renderItem(it, k, before) {
     const pr = state.projects.find((p) => p.slug === it.project_slug);
     meta.push(h("span", { class: "pill", title: it.project_slug }, pr?.code || it.project_slug));
   }
-  for (const r of (it.waiting_on || "").split(",").filter(Boolean)) meta.push(h("span", { class: "pill wait", title: "wartet auf" }, "⏸ " + r));
+  for (const r of (it.waiting_on || "").split(",").filter(Boolean)) meta.push(h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + r));
   const next = successors.get(it.project_slug + ":" + it.ref);
-  if (next) meta.push(h("span", { class: "pill next", title: "danach folgt" }, "▶ " + next.join(", ")));
+  if (next) meta.push(h("span", { class: "pill next", title: tr("followedBy") }, "▶ " + next.join(", ")));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
   if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
   if (it.due) meta.push(h("span", { class: "pill" }, "📅 " + it.due));
   if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
-    ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 Quelle")
+    ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + tr("source"))
     : "📄 " + it.source));
   const key = it.project_slug + ":" + it.ref + ":" + it.updated_at;
   const changed = before && !before.has(key);
   return h("li", { class: `item${closed ? " is-done" : ""}${changed ? " flash" : ""}` },
-    h("button", { class: "check", title: closed ? "Wieder öffnen" : "Erledigt", "aria-label": `${it.ref} ${closed ? "wieder öffnen" : "erledigt"}`,
+    h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
       onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : ""),
     h("div", { class: "main", onclick: () => openEdit(it) },
       h("div", { class: "l1" },
-        h("button", { class: "ref", title: "Kennung + Titel kopieren", onclick: (e) => { e.stopPropagation(); copy(`${it.ref} ${it.title}`); } }, it.ref),
+        h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${it.ref} ${it.title}`); } }, it.ref),
         h("span", { class: "title" }, it.title)),
       it.body ? h("p", { class: "desc" }, it.body.length > 160 ? it.body.slice(0, 160) + " …" : it.body) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
@@ -505,8 +820,8 @@ function renderItem(it, k, before) {
 async function renderFooter() {
   if (!state.project || state.project === ALL) return;
   try {
-    const { footer } = await api(P(state.project) + "/footer?layout=single");
-    $("#footerText").textContent = footer || "Nichts offen.";
+    const { footer } = await api(P(state.project) + "/footer?layout=single&lang=" + LANG);
+    $("#footerText").textContent = footer || tr("footerEmpty");
   } catch {}
 }
 
@@ -516,8 +831,23 @@ async function setStatus(it, status) {
     await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body: { status } });
     toast(`${it.ref} ${STATUS_LABELS[status]}`);
     await refresh(false);
-  } catch (e) { toast("Fehler: " + e.message); }
+  } catch (e) { toast(tr("error", e.message)); }
 }
+
+// Quick add (rarely used) sits behind the floating "+" at the bottom right; its sheet opens above it.
+function setAddOpen(open) {
+  const fab = $("#fab");
+  $("#add").hidden = !open;
+  fab.setAttribute("aria-expanded", String(open));
+  fab.setAttribute("aria-label", tr(open ? "addClose" : "addOpen"));
+  fab.title = tr(open ? "addClose" : "addOpen");
+  updateMetrics();
+  if (open) $("#addTitle").focus();
+}
+$("#fab").addEventListener("click", () => setAddOpen($("#add").hidden));
+$("#add").addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !e.isComposing) { e.preventDefault(); setAddOpen(false); $("#fab").focus(); }
+});
 
 $("#add").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -532,9 +862,9 @@ $("#add").addEventListener("submit", async (e) => {
   try {
     const { item } = await api(P(state.project) + "/items", { method: "POST", body: { kind, title, ...(needsOwner(kindBy(kind)) ? { owner: state.addOwner } : {}) } });
     $("#addTitle").value = "";
-    toast(`${item.ref} angelegt`);
+    toast(tr("created", item.ref));
     await refresh(false);
-  } catch (err) { toast("Fehler: " + err.message); }
+  } catch (err) { toast(tr("error", err.message)); }
 });
 
 $("#viewChips").addEventListener("click", (e) => {
@@ -543,11 +873,40 @@ $("#viewChips").addEventListener("click", (e) => {
   for (const x of $("#viewChips").children) x.setAttribute("aria-pressed", String(x === b));
   refresh(true);
 });
+$("#ownerChips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) toggleOwner(b.dataset.owner); });
+
+/* search: the magnifier opens a narrow field with the cursor in it; Escape or × clears and closes it */
 let searchT;
+function setSearchOpen(open) {
+  const input = $("#search");
+  $("#searchBox").classList.toggle("open", open);
+  $("#searchBtn").setAttribute("aria-expanded", String(open));
+  if (open) { input.focus(); return; }
+  clearTimeout(searchT);
+  input.value = "";
+  if (state.q) { state.q = ""; refresh(true); }
+}
+$("#searchBtn").addEventListener("click", () => setSearchOpen(true));
+$("#searchClose").addEventListener("click", () => { setSearchOpen(false); $("#searchBtn").focus(); });
 $("#search").addEventListener("input", (e) => { clearTimeout(searchT); searchT = setTimeout(() => { state.q = e.target.value.trim(); refresh(true); }, 250); });
+$("#search").addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !e.isComposing) { e.preventDefault(); setSearchOpen(false); $("#searchBtn").focus(); }
+});
+// An empty field closes again once the focus leaves the search.
+$("#searchBox").addEventListener("focusout", (e) => {
+  if (!$("#searchBox").contains(e.relatedTarget) && !$("#search").value.trim()) setSearchOpen(false);
+});
+// "/" opens the search from anywhere (not while typing or in a dialog).
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+  const el = document.activeElement;
+  if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+  if (document.querySelector("dialog[open]")) return;
+  e.preventDefault(); setSearchOpen(true);
+});
 // The bar shows the compact single line; the copy button gives the chat format (default layout).
-const copyFooter = async () => copy((await api(P(state.project) + "/footer")).footer, "Fußzeile kopiert");
-$("#copyFooter").addEventListener("click", () => copyFooter().catch((err) => toast("Fehler: " + err.message)));
+const copyFooter = async () => copy((await api(P(state.project) + "/footer?lang=" + LANG)).footer, tr("footerCopied"));
+$("#copyFooter").addEventListener("click", () => copyFooter().catch((err) => toast(tr("error", err.message))));
 $("#menuBtn").addEventListener("click", openMenu);
 window.addEventListener("hashchange", () => { const s = decodeURIComponent(location.hash.slice(1)); if (s && s !== state.project) selectProject(s); });
 
@@ -563,7 +922,7 @@ function selectProject(slug) {
 // Case and accents are ignored; exact code and word-start hits come first, otherwise the list order stays.
 const picker = { open: false, active: 0, options: [] };
 const fold = (s) => String(s ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-const ALL_OPTION = { slug: ALL, all: true, name: "Alle Projekte" };
+const ALL_OPTION = { slug: ALL, all: true, name: tr("allProjects") };
 
 function pickerMatches(query) {
   const terms = fold(query).split(/\s+/).filter(Boolean);
@@ -579,7 +938,7 @@ function pickerMatches(query) {
   });
   hits.sort((a, b) => a.rank - b.rank || a.i - b.i);
   const out = hits.map((x) => x.p);
-  if (terms.every((t) => "alle projekte".includes(t))) out.push(ALL_OPTION);
+  if (terms.every((term) => fold(ALL_OPTION.name).includes(term))) out.push(ALL_OPTION);
   return out;
 }
 
@@ -593,12 +952,12 @@ function renderPicker() {
           onmousemove: () => setPickerActive(i), onclick: () => choosePicker(i) },
         h("span", { class: "psel-code" }, p.all ? "" : p.code || ""),
         h("span", { class: "psel-name" }, p.name),
-        h("span", { class: "psel-count", title: "offene Punkte" }, p.open_count ? String(p.open_count) : ""),
+        h("span", { class: "psel-count", title: tr("openItems") }, p.open_count ? String(p.open_count) : ""),
         p.repo ? h("span", { class: "psel-repo" }, p.repo) : null,
       ),
     ),
   );
-  if (!picker.options.length) list.append(h("li", { class: "psel-empty", role: "presentation" }, "Kein Projekt gefunden"));
+  if (!picker.options.length) list.append(h("li", { class: "psel-empty", role: "presentation" }, tr("noProjectFound")));
   setPickerActive(picker.active);
 }
 
@@ -696,13 +1055,13 @@ function dismissDialog() {
   const ask = $("#ask");
   const keep = () => ask.close();
   ask.replaceChildren(h("form", { class: "dlg", method: "dialog" },
-    h("h3", null, "Änderungen speichern?"),
-    h("p", { class: "small" }, "Du hast in diesem Fenster etwas geändert."),
+    h("h3", null, tr("askSave")),
+    h("p", { class: "small" }, tr("askSaveText")),
     h("div", { class: "actions" },
-      h("button", { type: "button", class: "btn danger", onclick: closeDialog }, "Verwerfen"),
+      h("button", { type: "button", class: "btn danger", onclick: closeDialog }, tr("discard")),
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: keep }, "Weiter bearbeiten"),
-      canSave ? h("button", { type: "button", class: "primary", onclick: () => { keep(); form.requestSubmit(form.querySelector("button.primary")); } }, "Speichern") : null)));
+      h("button", { type: "button", class: "btn", onclick: keep }, tr("keepEditing")),
+      canSave ? h("button", { type: "button", class: "primary", onclick: () => { keep(); form.requestSubmit(form.querySelector("button.primary")); } }, tr("save")) : null)));
   ask.showModal();
   ask.querySelector(canSave ? "button.primary" : ".btn:not(.danger)").focus();
 }
@@ -739,14 +1098,14 @@ function openEdit(it) {
   const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
   const f = {
     title: h("input", { value: it.title, required: true, maxlength: 500 }),
-    short: h("input", { value: it.short || "", maxlength: 40, placeholder: "1–3 Wörter für die Fußzeile" }),
+    short: h("input", { value: it.short || "", maxlength: 40, placeholder: tr("shortPh") }),
     body: h("textarea", { maxlength: 20000 }, it.body || ""),
     owner: h("select", null, ["user", "ai"].map((o) => h("option", { value: o, selected: it.owner === o }, OWNER_LABELS[o])),
       it.owner && !OWNER_LABELS[it.owner] ? h("option", { value: it.owner, selected: true }, it.owner) : null,
-      h("option", { value: "" , selected: !it.owner }, "– niemand –")),
+      h("option", { value: "" , selected: !it.owner }, tr("nobody"))),
     status: h("select", null, Object.entries(STATUS_LABELS).map(([v, l]) => h("option", { value: v, selected: it.status === v }, l))),
-    waiting_on: h("input", { value: (it.waiting_on || "").replace(/,/g, ", "), placeholder: "z. B. T2, A1" }),
-    source: h("input", { value: it.source || "", placeholder: "Link oder Datei" }),
+    waiting_on: h("input", { value: (it.waiting_on || "").replace(/,/g, ", "), placeholder: tr("waitingPh") }),
+    source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
   const save = async (e) => {
@@ -755,75 +1114,86 @@ function openEdit(it) {
     for (const [key, el] of Object.entries(f)) body[key] = el.value;
     try {
       await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
-      closeDialog(); toast(`${it.ref} gespeichert`); refresh(false);
-    } catch (err) { toast("Fehler: " + err.message); }
+      closeDialog(); toast(tr("saved", it.ref)); refresh(false);
+    } catch (err) { toast(tr("error", err.message)); }
   };
   const del = async () => {
-    if (!confirm(`${it.ref} endgültig löschen? Die Kennung wird nicht neu vergeben.`)) return;
-    try { await api(P(it.project_slug) + "/items/" + it.ref, { method: "DELETE" }); closeDialog(); toast(`${it.ref} gelöscht`); refresh(false); }
-    catch (err) { toast("Fehler: " + err.message); }
+    if (!confirm(tr("confirmDelete", it.ref))) return;
+    try { await api(P(it.project_slug) + "/items/" + it.ref, { method: "DELETE" }); closeDialog(); toast(tr("deleted", it.ref)); refresh(false); }
+    catch (err) { toast(tr("error", err.message)); }
   };
   const convertTargets = state.kinds.filter((x) => x.actionable && !k.actionable);
   const convert = async (code) => {
     try {
       const r = await api(P(it.project_slug) + "/items/" + it.ref + "/convert", { method: "POST", body: { kind: code } });
       closeDialog(); toast(`${it.ref} → ${r.to.ref}`); refresh(false);
-    } catch (err) { toast("Fehler: " + err.message); }
+    } catch (err) { toast(tr("error", err.message)); }
   };
   const d = openDialog(
     h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, it.ref), k.name),
-    field("Titel", f.title),
-    field("Beschreibung", f.body),
-    h("div", { class: "row2" }, field("Kurzlabel", f.short), field("Verantwortlich", f.owner)),
-    h("div", { class: "row2" }, field("Status", f.status), field("Wartet auf", f.waiting_on)),
-    h("div", { class: "row2" }, field("Quelle", f.source), field("Fällig", f.due)),
-    h("p", { class: "small" }, `Angelegt ${fmt(it.created_at)} von ${ownerLabel(it.created_by)} · geändert ${fmt(it.updated_at)} von ${ownerLabel(it.updated_by)}`),
+    field(tr("fTitle"), f.title),
+    field(tr("fBody"), f.body),
+    h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
+    h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
+    h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
+    h("p", { class: "small" }, tr("history", fmt(it.created_at), actorLabel(it.created_by), fmt(it.updated_at), actorLabel(it.updated_by))),
     !it.converted_to && convertTargets.length ? h("div", { class: "actions", style: "justify-content:flex-start" },
-      h("span", { class: "small", style: "align-self:center" }, "Zusagen →"),
-      convertTargets.map((t) => h("button", { type: "button", class: "btn", onclick: () => convert(t.code) }, `als ${t.code} (${t.name})`))) : null,
+      h("span", { class: "small", style: "align-self:center" }, tr("accept")),
+      convertTargets.map((x) => h("button", { type: "button", class: "btn", onclick: () => convert(x.code) }, tr("asKind", x.code, x.name)))) : null,
     h("div", { class: "actions" },
-      h("button", { type: "button", class: "btn danger", onclick: del }, "Löschen"),
-      h("button", { type: "button", class: "btn", onclick: () => copy(`${it.ref} ${it.title}`) }, "Kopieren"),
+      h("button", { type: "button", class: "btn danger", onclick: del }, tr("del")),
+      h("button", { type: "button", class: "btn", onclick: () => copy(`${it.ref} ${it.title}`) }, tr("copy")),
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"),
-      h("button", { type: "submit", class: "primary" }, "Speichern")),
+      h("button", { type: "button", class: "btn", onclick: dismissDialog }, tr("cancel")),
+      h("button", { type: "submit", class: "primary" }, tr("save"))),
   );
   d.querySelector("form").addEventListener("submit", save);
 }
-const fmt = (iso) => iso ? new Date(iso).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "–";
+const fmt = (iso) => iso ? new Date(iso).toLocaleString(LOCALE, { dateStyle: "short", timeStyle: "short" }) : "–";
+const actorLabel = (a) => STRINGS[LANG].actors[a] || a || "–";
 
 function openMenu() {
   const go = (fn) => () => { closeDialog(); fn(); };
   const inProject = state.project && state.project !== ALL;
   openDialog(
-    h("h3", null, "Menü"),
+    h("h3", null, tr("menu")),
     themeRow(),
+    langRow(),
     h("div", { class: "menu-list" },
-      h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, "＋ Neues Projekt"),
-      inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, "Kürzel für dieses Projekt festlegen") : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), "STATUS.md-Abschnitt kopiert")) }, "„Offene Punkte“ für STATUS.md kopieren") : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, "Fußzeile kopieren") : null,
-      h("button", { type: "button", class: "btn", onclick: go(openSettings) }, "⚙ Einstellungen"),
-      h("a", { class: "btn", style: "display:flex;align-items:center;text-decoration:none", href: "https://github.com/IlianP/cotrack#api", target: "_blank", rel: "noopener" }, "API-Dokumentation ↗"),
-      h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, "Abmelden")),
-    h("p", { class: "small" }, `Angemeldet als: ${ownerLabel(state.actor)}`),
-    h("div", { class: "actions" }, h("button", { class: "btn" }, "Schließen")),
+      h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
+      inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("menuCopyFooter")) : null,
+      h("button", { type: "button", class: "btn", onclick: go(openSettings) }, tr("menuSettings")),
+      h("a", { class: "btn", style: "display:flex;align-items:center;text-decoration:none", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
+      h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, tr("signOut"))),
+    h("p", { class: "small" }, tr("signedInAs", ownerLabel(state.actor))),
+    h("div", { class: "actions" }, h("button", { class: "btn" }, tr("close"))),
   );
 }
 
 // Appearance per device (localStorage): applies at once, the menu stays open.
-const THEMES = [["light", "☀️", "Hell"], ["dark", "🌙", "Dunkel"], ["auto", "🖥️", "Wie das System"]];
-function setTheme(t) {
+const THEMES = [["light", "☀️", "themeLight"], ["dark", "🌙", "themeDark"], ["auto", "🖥️", "themeAuto"]];
+function setTheme(theme) {
   const root = document.documentElement;
-  if (t === "auto") delete root.dataset.theme; else root.dataset.theme = t;
-  store.set("cotrack.theme", t === "auto" ? null : t);
+  if (theme === "auto") delete root.dataset.theme; else root.dataset.theme = theme;
+  store.set("cotrack.theme", theme === "auto" ? null : theme);
 }
 function themeRow() {
   const cur = document.documentElement.dataset.theme || "auto";
-  const seg = h("div", { class: "seg", role: "group", "aria-label": "Darstellung" }, THEMES.map(([t, icon, label]) =>
-    h("button", { type: "button", title: label, "aria-label": label, "aria-pressed": String(t === cur),
-      onclick: (e) => { setTheme(t); for (const b of seg.children) b.setAttribute("aria-pressed", String(b === e.currentTarget)); } }, icon)));
-  return h("div", { class: "theme-row" }, h("span", { class: "small" }, "Darstellung"), h("span", { class: "spacer" }), seg);
+  const seg = h("div", { class: "seg", role: "group", "aria-label": tr("appearance") }, THEMES.map(([theme, icon, key]) =>
+    h("button", { type: "button", title: tr(key), "aria-label": tr(key), "aria-pressed": String(theme === cur),
+      onclick: (e) => { setTheme(theme); for (const b of seg.children) b.setAttribute("aria-pressed", String(b === e.currentTarget)); } }, icon)));
+  return h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("appearance")), h("span", { class: "spacer" }), seg);
+}
+// Language per device (localStorage); "Auto" follows the browser. The page reloads so that every text switches.
+function langRow() {
+  const cur = LANGS.includes(store.get("cotrack.lang")) ? store.get("cotrack.lang") : "auto";
+  const opts = [["auto", "Auto", tr("langAuto")], ["de", "DE", "Deutsch"], ["en", "EN", "English"]];
+  return h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("language")), h("span", { class: "spacer" }),
+    h("div", { class: "seg txt", role: "group", "aria-label": tr("language") }, opts.map(([value, label, title]) =>
+      h("button", { type: "button", title, "aria-label": title, "aria-pressed": String(value === cur),
+        onclick: () => { if (value === cur) return; store.set("cotrack.lang", value === "auto" ? null : value); location.reload(); } }, label))));
 }
 
 const currentProject = () => state.projects.find((p) => p.slug === state.project);
@@ -831,25 +1201,21 @@ const currentProject = () => state.projects.find((p) => p.slug === state.project
 // Instance settings: shape the footer the server returns to every AI (MCP and API). When it appears is up to the prompt.
 async function openSettings() {
   let data;
-  try { data = await api("/settings"); } catch (err) { return toast("Fehler: " + err.message); }
+  try { data = await api("/settings"); } catch (err) { return toast(tr("error", err.message)); }
   const { settings: s, defaults: d, available } = data;
   const canEdit = available && state.actor === "user";
   const layout = h("select", { disabled: !canEdit },
-    h("option", { value: "multi", selected: s.footer_layout === "multi" }, "Mehrzeilig – je Gruppe eine Zeile"),
-    h("option", { value: "single", selected: s.footer_layout === "single" }, "Einzeilig – alles in einer Zeile"));
+    h("option", { value: "multi", selected: s.footer_layout === "multi" }, tr("layoutMulti")),
+    h("option", { value: "single", selected: s.footer_layout === "single" }, tr("layoutSingle")));
   // An empty field means the built-in default (shown as placeholder).
-  const labelInput = (value, def) => h("input", { value: value === def ? "" : value, placeholder: `${def}  (Standard)`, maxlength: "16", disabled: !canEdit });
+  const labelInput = (value, def) => h("input", { value: value === def ? "" : value, placeholder: tr("defaultMark", def), maxlength: "16", disabled: !canEdit });
   const user = labelInput(s.footer_label_user, d.footer_label_user);
   const ai = labelInput(s.footer_label_ai, d.footer_label_ai);
   const preview = h("pre", { class: "preview", "aria-live": "polite" });
   const marker = (input, def) => input.value.trim().replace(/:+$/, "") || def;
   const showPreview = () => {
-    const groups = [
-      `${marker(user, d.footer_label_user)}: D1 Lizenz wählen · A2 Prompt einspielen`,
-      `${marker(ai, d.footer_label_ai)}: A3 README überarbeiten`,
-      "💡 I4 Teilpunkte",
-      "⚠️ W1 Auth",
-    ];
+    const [mine, theirs, idea, warning] = tr("preview");
+    const groups = [`${marker(user, d.footer_label_user)}: ${mine}`, `${marker(ai, d.footer_label_ai)}: ${theirs}`, "💡 " + idea, "⚠️ " + warning];
     preview.textContent = groups.join(layout.value === "single" ? " · " : "\n");
   };
   for (const el of [layout, user, ai]) el.addEventListener("input", showPreview);
@@ -858,62 +1224,62 @@ async function openSettings() {
     try {
       await api("/settings", { method: "PATCH", body });
       closeDialog(); toast(msg); renderFooter();
-    } catch (err) { toast("Fehler: " + err.message); }
+    } catch (err) { toast(tr("error", err.message)); }
   };
   const dlg = openDialog(
-    h("h3", null, "Einstellungen"),
-    h("h4", null, "Fußzeile für den Chat"),
-    h("p", { class: "small" }, "Gilt für die Fußzeile, die deine KI über cotrack holt (MCP und API), und für „Fußzeile kopieren“. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt."),
-    field("Standard-Layout", layout),
-    h("div", { class: "row2" }, field("Kennzeichen für deine Punkte", user), field("Kennzeichen für Punkte der KI", ai)),
-    h("p", { class: "small" }, "Vorschau:"),
+    h("h3", null, tr("settings")),
+    h("h4", null, tr("footerHeading")),
+    h("p", { class: "small" }, tr("settingsIntro")),
+    field(tr("defaultLayout"), layout),
+    h("div", { class: "row2" }, field(tr("markerUser"), user), field(tr("markerAi"), ai)),
+    h("p", { class: "small" }, tr("previewLabel")),
     preview,
-    h("p", { class: "small" }, "Bittest du die KI im Gespräch ausdrücklich um ein anderes Format, geht das vor. Leeres Feld = Standard."),
-    !available ? h("p", { class: "small", style: "color:var(--danger)" }, "Noch nicht verfügbar: Die Datenbank braucht Migration 0006 (npm run db:migrate). Bis dahin gelten die Standards.") : null,
-    available && state.actor !== "user" ? h("p", { class: "small", style: "color:var(--danger)" }, "Nur mit deinem eigenen Token änderbar, nicht mit dem KI-Token.") : null,
+    h("p", { class: "small" }, tr("settingsNote")),
+    !available ? h("p", { class: "small", style: "color:var(--danger)" }, tr("settingsMigration")) : null,
+    available && state.actor !== "user" ? h("p", { class: "small", style: "color:var(--danger)" }, tr("settingsAiToken")) : null,
     h("div", { class: "actions" },
-      canEdit ? h("button", { type: "button", class: "btn", onclick: () => save({ footer_layout: null, footer_label_user: null, footer_label_ai: null }, "Standard wiederhergestellt") }, "Standard") : null,
+      canEdit ? h("button", { type: "button", class: "btn", onclick: () => save({ footer_layout: null, footer_label_user: null, footer_label_ai: null }, tr("defaultsRestored")) }, tr("defaults")) : null,
       h("span", { class: "spacer" }),
-      h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Schließen"),
-      canEdit ? h("button", { class: "primary" }, "Speichern") : null),
+      h("button", { type: "button", class: "btn", onclick: dismissDialog }, tr("close")),
+      canEdit ? h("button", { class: "primary" }, tr("save")) : null),
   );
   dlg.querySelector("form").addEventListener("submit", (e) => {
     e.preventDefault();
     if (!canEdit) return closeDialog();
-    save({ footer_layout: layout.value, footer_label_user: user.value.trim() || null, footer_label_ai: ai.value.trim() || null }, "Einstellungen gespeichert");
+    save({ footer_layout: layout.value, footer_label_user: user.value.trim() || null, footer_label_ai: ai.value.trim() || null }, tr("settingsSaved"));
   });
 }
 
 function openSetCode() {
   const p = currentProject();
-  const code = h("input", { required: true, pattern: "[A-Za-z]{2}[A-Za-z0-9]{0,2}", maxlength: "4", placeholder: "2–4 Zeichen, z. B. CT", style: "text-transform:uppercase" });
+  const code = h("input", { required: true, pattern: "[A-Za-z]{2}[A-Za-z0-9]{0,2}", maxlength: "4", placeholder: tr("codePh"), style: "text-transform:uppercase" });
   const d = openDialog(
-    h("h3", null, `Kürzel für ${p.name}`),
-    h("p", { class: "small" }, "Zwei Buchstaben, dann optional Buchstaben oder Ziffern. Einmal festgelegt, lässt es sich nicht mehr ändern."),
-    field("Kürzel", code),
-    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"), h("button", { class: "primary" }, "Festlegen")),
+    h("h3", null, tr("codeFor", p.name)),
+    h("p", { class: "small" }, tr("codeHelp")),
+    field(tr("code"), code),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, tr("cancel")), h("button", { class: "primary" }, tr("setCode"))),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
       await api(P(p.slug), { method: "PATCH", body: { code: code.value.trim() } });
-      closeDialog(); await loadProjects(); toast("Kürzel festgelegt");
-    } catch (err) { toast("Fehler: " + err.message); }
+      closeDialog(); await loadProjects(); toast(tr("codeSet"));
+    } catch (err) { toast(tr("error", err.message)); }
   });
 }
 
 function openNewProject() {
-  const slug = h("input", { required: true, pattern: "[a-z0-9][a-z0-9\\-]{0,62}", placeholder: "z. B. festival-workshop-planner" });
-  const name = h("input", { placeholder: "Anzeigename" });
-  const repo = h("input", { placeholder: "GitHub: owner/repo (optional)" });
-  const code = h("input", { pattern: "[A-Za-z]{2}[A-Za-z0-9]{0,2}", maxlength: "4", placeholder: "2–4 Zeichen, leer = Vorschlag", style: "text-transform:uppercase" });
+  const slug = h("input", { required: true, pattern: "[a-z0-9][a-z0-9\\-]{0,62}", placeholder: tr("slugPh") });
+  const name = h("input", { placeholder: tr("namePh") });
+  const repo = h("input", { placeholder: tr("repoPh") });
+  const code = h("input", { pattern: "[A-Za-z]{2}[A-Za-z0-9]{0,2}", maxlength: "4", placeholder: tr("codePhNew"), style: "text-transform:uppercase" });
   let timer;
   const suggest = () => {
     clearTimeout(timer);
     timer = setTimeout(async () => {
       const s = slug.value.trim();
       if (!/^[a-z0-9][a-z0-9-]*$/.test(s)) return;
-      try { const r = await api("/code-suggestion?slug=" + encodeURIComponent(s)); code.placeholder = r.code ? `${r.code} (Vorschlag)` : "2–4 Zeichen"; } catch { /* suggestion is optional */ }
+      try { const r = await api("/code-suggestion?slug=" + encodeURIComponent(s)); code.placeholder = r.code ? tr("codeSuggested", r.code) : tr("codeChars"); } catch { /* suggestion is optional */ }
     }, 250);
   };
   repo.addEventListener("input", () => {
@@ -922,34 +1288,77 @@ function openNewProject() {
   });
   slug.addEventListener("input", () => { slug.dataset.touched = "1"; suggest(); });
   const d = openDialog(
-    h("h3", null, "Neues Projekt"),
-    field("GitHub-Repository", repo), field("Slug (URL)", slug), h("div", { class: "row2" }, field("Name", name), field("Kürzel", code)),
-    h("p", { class: "small" }, "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern."),
-    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, "Abbrechen"), h("button", { class: "primary" }, "Anlegen")),
+    h("h3", null, tr("newProjectTitle")),
+    field(tr("fRepo"), repo), field(tr("fSlug"), slug), h("div", { class: "row2" }, field(tr("fName"), name), field(tr("code"), code)),
+    h("p", { class: "small" }, tr("codeNote")),
+    h("div", { class: "actions" }, h("button", { type: "button", class: "btn", onclick: dismissDialog }, tr("cancel")), h("button", { class: "primary" }, tr("create"))),
   );
   d.querySelector("form").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
       const { project } = await api("/projects", { method: "POST", body: { slug: slug.value.trim(), name: name.value.trim() || undefined, repo: repo.value.trim() || undefined, code: code.value.trim() || undefined } });
-      closeDialog(); await loadProjects(); selectProject(project.slug); toast("Projekt angelegt");
-    } catch (err) { toast("Fehler: " + err.message); }
+      closeDialog(); await loadProjects(); selectProject(project.slug); toast(tr("projectCreated"));
+    } catch (err) { toast(tr("error", err.message)); }
   });
 }
 
 function showLogin(msg) {
-  const input = h("input", { type: "password", required: true, autocomplete: "current-password", placeholder: "Token" });
+  const input = h("input", { type: "password", required: true, autocomplete: "current-password", placeholder: tr("token") });
   const d = openDialog(
-    h("h3", null, "co", h("b", { style: "color:var(--accent)" }, "track"), " – Anmelden"),
+    h("h3", null, "co", h("b", { style: "color:var(--accent)" }, "track"), tr("signInTitle")),
     msg ? h("p", { class: "small", style: "color:var(--danger)" }, msg) : null,
-    h("p", { class: "small" }, "Gib deinen Zugangstoken ein. Er wird nur in diesem Browser gespeichert."),
-    field("Token", input),
-    h("div", { class: "actions" }, h("button", { class: "primary" }, "Anmelden")),
+    h("p", { class: "small" }, tr("tokenHelp")),
+    field(tr("token"), input),
+    h("div", { class: "actions" }, h("button", { class: "primary" }, tr("signIn"))),
   );
   d.dataset.locked = "1";
   d.querySelector("form").addEventListener("submit", (e) => {
     e.preventDefault(); state.token = input.value.trim(); store.set("cotrack.token", state.token); closeDialog(); boot();
   });
 }
+
+/* ---------------------------------------------------------- layout */
+// --top-h: height of the sticky top bar (the filter bar sticks below it). --dock: how high the floating "+" and its
+// sheet sit – above the footer line, or above the on-screen keyboard while it covers the page (iOS Safari and Chrome
+// on Android shrink only the visual viewport). --toast-up: toasts appear above the "+" and an open sheet.
+function updateMetrics() {
+  const css = document.documentElement.style;
+  css.setProperty("--top-h", $(".top").offsetHeight + "px");
+  const vv = window.visualViewport;
+  const kb = vv && Math.abs(vv.scale - 1) < 0.01 ? Math.round(window.innerHeight - vv.height - vv.offsetTop) : 0;
+  const foot = $(".footline");
+  css.setProperty("--dock", (kb > 60 ? kb : foot.hidden ? 0 : foot.offsetHeight) + "px");
+  document.documentElement.classList.toggle("kb", kb > 60);
+  css.setProperty("--toast-up", ($("#add").hidden ? 78 : 86 + $("#add").offsetHeight) + "px");
+  markStuck();
+}
+// A thin line under the filter bar while it sticks.
+function markStuck() {
+  const topH = $(".top").offsetHeight;
+  for (const el of [$("#bar"), $("#filterBar")]) {
+    const sticks = el.getClientRects().length > 0 && getComputedStyle(el).position === "sticky";
+    el.classList.toggle("stuck", sticks && window.scrollY > 0 && el.getBoundingClientRect().top <= topH + 1);
+  }
+}
+// From 1180px everything fits into the top bar: the filter bar moves there and the board starts one row higher.
+const WIDE = matchMedia("(min-width: 1180px)");
+function placeBar() {
+  const bar = $("#bar"), top = $(".top"), focused = document.activeElement;
+  if (WIDE.matches && bar.parentElement !== top) top.insertBefore(bar, top.querySelector(".spacer"));
+  else if (!WIDE.matches && bar.parentElement === top) $("main").prepend(bar);
+  top.classList.toggle("with-bar", WIDE.matches);
+  if (bar.contains(focused)) focused.focus();
+  updateMetrics();
+}
+WIDE.addEventListener("change", placeBar);
+let frame = 0;
+window.addEventListener("scroll", () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; markStuck(); }); }, { passive: true });
+window.addEventListener("resize", updateMetrics);
+window.visualViewport?.addEventListener("resize", updateMetrics);
+window.visualViewport?.addEventListener("scroll", updateMetrics);
+const sizes = new ResizeObserver(() => updateMetrics());
+for (const el of [$(".top"), $(".footline"), $("#add")]) sizes.observe(el);
+placeBar();
 
 boot();
 </script>

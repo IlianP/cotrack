@@ -23,11 +23,11 @@
   when items change just the short line "neu: … · erledigt: …"; otherwise nothing at all.
 - **Group markers (v2.6):** The footer shows `👤:` for your items and `🤖:` for the AI's (instead of "Du:" and "🤖KI:") –
   language-independent and shorter. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
-  markers can be changed in the web app (☰ → Einstellungen, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
+  markers can be changed in the web app (☰ → Settings, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
 - **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤:`, `🤖:`, `💡`, `⚠️`),
   followed if needed by the line "neu: … · erledigt: …". This is the default for now, to try out the overview;
   single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
-  default yourself in the web app (☰ → Einstellungen, stored in cotrack); a `layout` in a single request wins.
+  default yourself in the web app (☰ → Settings, stored in cotrack); a `layout` in a single request wins.
   A new installation starts multi-line.
 - **Who controls what (v2.7):** The **prompt** controls the AI's behaviour (whether and when it uses cotrack, when the footer
   appears, fallback without cotrack). The **server** controls what it can enforce itself (references, audit trail, the look of

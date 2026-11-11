@@ -20,7 +20,7 @@ prompt. That is why you need both.
 |---|---|---|
 | Whether the AI keeps a list; when it calls cotrack (start, new items, completed ones); handover | **Prompt** | The server cannot make the AI do anything, it only answers. |
 | When the footer appears (on "Status?", at the end of larger pieces of work, roughly every four answers; otherwise the short line) | **Prompt** | Only the AI knows when an answer ends. |
-| What the footer looks like (groups, order, at most eight entries, ▶/⏸, single- or multi-line, 👤/🤖) | **Server**, default set in the **web app** (☰ → Einstellungen) | One source for all chats and programs. |
+| What the footer looks like (groups, order, at most eight entries, ▶/⏸, single- or multi-line, 👤/🤖) | **Server**, default set in the **web app** (☰ → Settings) | One source for all chats and programs. |
 | References (never reused), dependencies, who changed what | **Server** | The database enforces it. |
 | Which project the conversation belongs to | **The AI**, from `COTRACK.md` or `cotrack_projects` | The server cannot see the repository. |
 | Working without cotrack (fallback) | **Prompt**, part 1 | – |
@@ -40,7 +40,7 @@ Replace the personal settings of both programs with these parts (part 1 followed
 T is dropped; actions (A) belong to you or the AI, visible from "👤:"/"🤖:"; decisions (D) are a category of their own;
 ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
 v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
-v2.7: You set the footer layout (single-/multi-line) and markers in the web app (☰ → Einstellungen).
+v2.7: You set the footer layout (single-/multi-line) and markers in the web app (☰ → Settings).
 **The prompt text is almost unchanged since v2.6** – the only change: the footer example in part 1 shows "⚠️" instead of "⚠"
 (relevant only without cotrack; with cotrack the footer comes from the server). If you installed v2.6, there is nothing else to do.
 v2.6: The footer groups are called "👤:" (your items) and "🤖:" (the AI's) instead of "Du:" and "🤖KI:".
