@@ -57,6 +57,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
+- **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
+  einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
+  *Zum Home-Bildschirm*.
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), Deutsch und Englisch (folgt der
   Sprache des Browsers oder per ☰), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
 

@@ -5,6 +5,7 @@
  * Cloudflare Worker + D1, no build step. See README.md for the API.
  */
 import UI_HTML from "./ui.html";
+import { pwaResponse } from "./pwa.js";
 import { handleMcp } from "./mcp.js";
 import { handleOAuth } from "./oauth.js";
 
@@ -59,6 +60,11 @@ export default {
     try {
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
         return page(UI_HTML);
+      }
+      // Web app manifest and icons (installable app), public like the page itself.
+      if (request.method === "GET") {
+        const pwa = pwaResponse(url.pathname);
+        if (pwa) return pwa;
       }
       // "/mcp/" with a trailing slash is the same endpoint: ChatGPT calls it that way (A39).
       if (url.pathname === "/mcp" || url.pathname === "/mcp/") return await handleMcp(request, env, url);
