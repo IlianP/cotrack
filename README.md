@@ -53,6 +53,8 @@ warnings – a one-glance status that survives across conversations.
   ([details below](#prioflow-what-is-next)).
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail** – every change is logged with who made it (you or the AI).
+- **Installable as an app** – Chrome/Edge on Android and the desktop: ☰ → *Install as app*; cotrack then runs in its own
+  window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
 - Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), German and English (follows the
   browser language, or choose in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
 
