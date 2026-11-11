@@ -257,6 +257,7 @@ dialog {
   padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
 }
 dialog::backdrop { background: rgb(0 0 0 / .4); }
+dialog:focus { outline: none; }
 dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dlg { padding: 18px; display: grid; gap: 12px; }
 .dlg h3 { margin: 0; font-size: 17px; display: flex; gap: 8px; align-items: center; }
@@ -386,7 +387,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   <button id="copyFooter" class="btn" data-t="copy">Kopieren</button>
 </footer>
 
-<dialog id="dlg"></dialog>
+<dialog id="dlg" tabindex="-1"></dialog>
 <dialog id="ask" class="ask"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1052,7 +1053,11 @@ $("#projectPop").addEventListener("mousedown", (e) => { if (e.target !== $("#pro
 $("#psel").addEventListener("focusout", (e) => { if (!$("#psel").contains(e.relatedTarget)) closePicker(); });
 
 /* ---------------------------------------------------------- dialogs */
-function openDialog(...content) {
+function openDialog(...content) { return showDialog(false, content); }
+// Viewing an item must not pull up the on-screen keyboard: the dialog itself takes the focus instead of the first
+// field; a tap into a field starts editing. New items, the project search and the other dialogs keep the cursor.
+function openDialogQuiet(...content) { return showDialog(true, content); }
+function showDialog(quiet, content) {
   const d = $("#dlg");
   const form = h("form", { class: "dlg", method: "dialog" }, ...content);
   d.replaceChildren(form);
@@ -1060,6 +1065,7 @@ function openDialog(...content) {
   delete d.dataset.closing;
   if ($("#ask").open) $("#ask").close();
   if (!d.open) d.showModal();
+  if (quiet) d.focus();
   dialogInitial = formValues(form);
   return d;
 }
@@ -1158,7 +1164,7 @@ function openEdit(it) {
       closeDialog(); toast(`${it.ref} → ${r.to.ref}`); refresh(false);
     } catch (err) { toast(tr("error", err.message)); }
   };
-  const d = openDialog(
+  const d = openDialogQuiet(
     h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, it.ref), k.name),
     field(tr("fTitle"), f.title),
     field(tr("fBody"), f.body),
