@@ -337,7 +337,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 }
 .dg-graph {
   position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: max-content; gap: 0 56px;
-  padding: 34px 20px 20px; width: max-content; min-width: 100%;
+  padding: 34px 20px 36px; width: max-content; min-width: 100%;
 }
 .dg-col { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; }
 .dg-edges { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
@@ -347,7 +347,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dg-edges path.head.done { opacity: .6; }
 .dg-edges path.cycle { stroke: var(--danger); }
 .dg-edges path.head.cycle { fill: var(--danger); }
-.dg-graph.vert { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); gap: 34px 0; padding: 14px 34px 14px 12px; width: auto; }
+.dg-graph.vert { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); gap: 34px 0; padding: 14px 34px 14px 32px; width: auto; }
 .vert .dg-col { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .dg-node {
   position: relative; display: flex; gap: 10px; align-items: flex-start; width: 232px; padding: 10px 12px; text-align: left;
@@ -1586,16 +1586,36 @@ function renderDeps(cols, before) {
 function depsChain(c, filtered, match, compact, before) {
   const all = deps.expanded.has(c.key);
   const shows = (v) => !v.item || all || !filtered || match.has(v.key) || (compact && isClosed(v.item));
-  const rep = new Map();
-  for (const v of c.nodes) if (shows(v)) rep.set(v, { key: v.key, v, pre: new Set(), post: new Set() });
-  for (const v of c.nodes) {
-    if (rep.has(v)) continue;
-    const g = { key: "hid:" + v.key, hidden: [], pre: new Set(), post: new Set() }, todo = [v];
-    rep.set(v, g);
+  // Hidden items that wait for each other join one "⋯ n" – but only while the order survives: a group must never hold
+  // something before and something after another card (A1 → A2 → A3 with only A2 shown would look like a cycle).
+  // Test: no way leads out of the group and back into it.
+  const hiddenNodes = c.nodes.filter((v) => !shows(v));
+  const groupOf = new Map(hiddenNodes.map((v) => [v, [v]]));
+  const closedOff = (set) => {
+    const todo = [], seen = new Set();
+    for (const v of set) for (const w of v.post) if (!set.has(w)) todo.push(w);
     while (todo.length) {
-      const x = todo.pop(); g.hidden.push(x);
-      for (const y of [...x.pre, ...x.post]) if (!rep.has(y) && !shows(y)) { rep.set(y, g); todo.push(y); }
+      const w = todo.pop();
+      if (set.has(w)) return false;
+      if (!seen.has(w)) { seen.add(w); todo.push(...w.post); }
     }
+    return true;
+  };
+  for (const v of hiddenNodes) for (const w of v.post) {
+    const a = groupOf.get(v), b = groupOf.get(w);
+    if (!b || a === b) continue;
+    const merged = [...a, ...b];
+    if (closedOff(new Set(merged))) for (const x of merged) groupOf.set(x, merged);
+  }
+  const rep = new Map(), groups = new Map();
+  for (const v of c.nodes) {
+    if (shows(v)) { rep.set(v, { key: v.key, v, pre: new Set(), post: new Set() }); continue; }
+    const g = groupOf.get(v);
+    if (!groups.has(g)) {
+      const hidden = g.slice().sort((x, y) => natural(x.key, y.key));
+      groups.set(g, { key: "hid:" + hidden[0].key, hidden, pre: new Set(), post: new Set() });
+    }
+    rep.set(v, groups.get(g));
   }
   const edges = new Map();
   for (const v of c.nodes) for (const w of v.post) {
@@ -1651,7 +1671,9 @@ function depsChain(c, filtered, match, compact, before) {
   const svg = document.createElementNS(SVGNS, "svg");
   svg.setAttribute("class", "dg-edges"); svg.setAttribute("aria-hidden", "true");
   graph.prepend(svg);
-  deps.chains.push({ graph, svg, els, edges: [...edges.values()].map((e) => ({ ...e, back: back.has(e.a.key + ">" + e.b.key) })) });
+  deps.chains.push({ graph, svg, els, edges: [...edges.values()].map((e) => ({
+    ...e, back: back.has(e.a.key + ">" + e.b.key), skip: level.get(e.b) - level.get(e.a) > 1,
+  })) });
   return h("section", { class: "dg-chain" }, graph);
 }
 
@@ -1776,8 +1798,9 @@ function depsJump(key) {
   el.classList.remove("ping", "flash"); void el.offsetWidth; el.classList.add("ping");
 }
 
-// Arrows from the cards' positions: prerequisite → what waits (left to right, on phones top to bottom). An edge that
-// closes a cycle runs back above the cards (phones: along the right side).
+// Arrows from the cards' positions: prerequisite → what waits (left to right, on phones top to bottom). An arrow that
+// skips a column runs below the cards (phones: along the left side), one that closes a cycle back above them (phones:
+// along the right side), so neither hides behind a card.
 function drawDeps() {
   const svgEl = (d, cls) => { const p = document.createElementNS(SVGNS, "path"); p.setAttribute("d", d); if (cls) p.setAttribute("class", cls); return p; };
   for (const ch of deps.chains) {
@@ -1798,6 +1821,12 @@ function drawDeps() {
       if (e.a === e.b) {
         const x = a.r - 16;
         d = `M${x - 26} ${a.t} C${x - 26} ${a.t - 24} ${x} ${a.t - 24} ${x} ${a.t - 7}`; tip = [x, a.t]; dir = [0, 1];
+      } else if (e.skip && !vert) {
+        const y = Math.max(a.b, b.b) + 22;
+        d = `M${a.cx} ${a.b} C${a.cx} ${y} ${b.cx} ${y} ${b.cx} ${b.b + 7}`; tip = [b.cx, b.b]; dir = [0, -1];
+      } else if (e.skip) {
+        const x = Math.min(a.l, b.l) - 22;
+        d = `M${a.l} ${a.cy} C${x} ${a.cy} ${x} ${b.cy} ${b.l - 7} ${b.cy}`; tip = [b.l, b.cy]; dir = [1, 0];
       } else if (!e.back && !vert) {
         const c = Math.max(18, (b.l - a.r) / 2);
         d = `M${a.r} ${a.cy} C${a.r + c} ${a.cy} ${b.l - c} ${b.cy} ${b.l - 7} ${b.cy}`; tip = [b.l, b.cy]; dir = [1, 0];
