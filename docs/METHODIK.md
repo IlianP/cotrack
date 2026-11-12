@@ -2,7 +2,7 @@
 
 [English](METHODOLOGY.md) · **Deutsch**
 
-## Gültig: Methodik v2.7 (Stand 8. November 2026)
+## Gültig: Methodik v2.8 (Stand 12. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -15,6 +15,20 @@
 - **Abhängigkeiten:** gespeichert wird nur „A4 wartet auf D2“. Angezeigt wird die Reihenfolge: **„D2 ▶A4“** (D2 zuerst, dann A4),
   bei mehreren „D2 ▶A4,A5“. In der Fußzeile steht ▶ bei Paaren nur am vorausgehenden Punkt; **„A4 ⏸D2“** nur, wenn D2 nicht
   in der Zeile steht. Erledigte Vorgänger verschwinden aus der Anzeige. Der Nachfolger wird berechnet, nicht gepflegt.
+- **Teilpunkte (v2.8, Entscheidung D16):** Eine Aufgabe (A) darf eine kurze Checkliste haben – Zeilen `- [ ] Schritt` /
+  `- [x] Schritt` in der Beschreibung. Teilpunkte bekommen **keine eigene Kennung**, keinen eigenen Status, keine Zuständigkeit
+  und keine Abhängigkeit; angezeigt wird nur der Stand („A17 Post 2/4“ in der Fußzeile, ohne Klammern – „(+7)“ bleibt den
+  ausgeblendeten Punkten vorbehalten). Leitplanken gegen Überzerlegung:
+  - Sinnvoll nur bei **2–5 nicht offensichtlichen Schritten** derselben Zuständigkeit, wenn die Aufgabe über mehrere Sessions
+    läuft und der Zwischenstand interessant ist. Nie für Selbstverständliches („Code, Test, PR“), nie bei I, D oder W.
+  - **Höchstens fünf**; der Server lehnt mehr als acht ab.
+  - Die KI legt Teilpunkte **nicht von sich aus** an: nur, wenn du die Schritte nennst oder ihrem Vorschlag zustimmst. Abhaken
+    darf sie selbst (`cotrack_update` mit `check`), sobald ein Schritt erledigt ist.
+  - **Eigener Punkt statt Teilpunkt**, wenn ein Schritt eine andere Zuständigkeit hat, eine eigene Entscheidung ist, einen
+    anderen Punkt blockiert oder auf einen wartet oder einzeln zitiert werden muss: dann A/D mit „wartet auf“; in der
+    Checkliste bleibt höchstens ein Verweis („→A60“).
+  - Das letzte Häkchen schließt die Aufgabe nicht automatisch, und eine Aufgabe darf mit offenen Häkchen abgeschlossen werden.
+    Ein Häkchen gilt nicht als „erledigt“ in der Kurzzeile. Bei `/convert` (I → A) wandert die Liste mit.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –

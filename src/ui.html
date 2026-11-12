@@ -319,6 +319,20 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   width: 100%; min-height: 64px; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
   background: var(--bg); color: var(--text); resize: vertical;
 }
+/* Sub-items (checklist "- [ ]" in the body of a task) */
+.checks { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.checks-head { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--muted); }
+.checks-head b { flex: 1; color: var(--text); font-weight: 600; }
+.checks-head .cnt { font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 600; }
+.checks-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-bottom: 2px; }
+.checks-bar > i { display: block; height: 100%; background: var(--accent); }
+.dlg label.chk, .nx-card label.chk { display: flex; align-items: center; gap: 10px; min-height: 38px; color: var(--text); font-size: 15px; cursor: pointer; }
+.dlg .chk input, .nx-card .chk input { width: 20px; height: 20px; flex: none; margin: 0; padding: 0; accent-color: var(--accent); }
+.chk span { flex: 1; overflow-wrap: anywhere; }
+.chk.on span { color: var(--muted); text-decoration: line-through; }
+.chk .x { border: 0; background: none; color: var(--muted); width: 32px; height: 32px; border-radius: 8px; flex: none; font-size: 18px; }
+.dlg input.check-add { border-style: dashed; }
+.pill.checks-pill { color: var(--accent); font-variant-numeric: tabular-nums; }
 .nx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .nx-actions .primary, .nx-actions .btn { height: 42px; }
 .nx-actions .primary { padding: 0 20px; }
@@ -592,11 +606,15 @@ const STRINGS = {
     histNew: (n) => (n === 1 ? "1 neue Änderung seit deinem letzten Blick" : `${n} neue Änderungen seit deinem letzten Blick`),
     histNewAria: (n) => `Verlauf: ${n} neu`, histEmpty: "Noch keine Änderungen.", histMore: "Ältere laden",
     histGone: (ref) => `${ref} gibt es nicht mehr.`, today: "Heute", yesterday: "Gestern",
+    // Teilpunkte (D16): Checkliste „- [ ]“ in der Beschreibung einer Aufgabe
+    checks: "Teilpunkte", checksOf: (d, n) => `${d} von ${n}`, checkAdd: "+ Teilpunkt hinzufügen", checkRemove: "Teilpunkt entfernen",
+    checksTitle: "Teilpunkte erledigt", checksFull: (n) => `Höchstens ${n} Teilpunkte – größere Schritte als eigene Punkte anlegen.`,
     ev: {
       created: "angelegt", done: "erledigt", dropped: "verworfen", reopened: "wieder geöffnet", updated: "geändert",
       deleted: "gelöscht", converted: (to) => `umgewandelt in ${to}`, projectCreated: "Projekt angelegt",
       projectUpdated: "Projekt geändert", archived: "Projekt archiviert", restored: "Projekt zurückgeholt",
       titleChanged: "Titel geändert", bodyChanged: "Beschreibung geändert", sourceChanged: "Quelle geändert",
+      checked: "abgehakt", unchecked: "Häkchen entfernt",
     },
   },
   en: {
@@ -673,11 +691,15 @@ const STRINGS = {
     histNew: (n) => (n === 1 ? "1 new change since you last looked" : `${n} new changes since you last looked`),
     histNewAria: (n) => `History: ${n} new`, histEmpty: "No changes yet.", histMore: "Load older",
     histGone: (ref) => `${ref} no longer exists.`, today: "Today", yesterday: "Yesterday",
+    // Sub-items (D16): checklist "- [ ]" in the description of a task
+    checks: "Sub-items", checksOf: (d, n) => `${d} of ${n}`, checkAdd: "+ Add sub-item", checkRemove: "Remove sub-item",
+    checksTitle: "Sub-items done", checksFull: (n) => `At most ${n} sub-items – create bigger steps as items of their own.`,
     ev: {
       created: "created", done: "done", dropped: "dropped", reopened: "reopened", updated: "changed",
       deleted: "deleted", converted: (to) => `converted to ${to}`, projectCreated: "Project created",
       projectUpdated: "Project changed", archived: "Project archived", restored: "Project restored",
       titleChanged: "Title changed", bodyChanged: "Description changed", sourceChanged: "Source changed",
+      checked: "checked", unchecked: "unchecked",
     },
   },
 };
@@ -972,6 +994,28 @@ function toBoardTop() {
   if (gap < 0) window.scrollBy(0, gap);
 }
 
+/* Sub-items: a checklist "- [ ] step" / "- [x] step" in the body of a task (A). Same rules as the server (src/worker.js). */
+const CHECK_KIND = "A", MAX_CHECKS = 8;
+const CHECK_LINE_RE = /^\s*[-*]\s+\[([ xX])\]\s+(.*\S)\s*$/;
+function parseChecks(body) {
+  return (body || "").split("\n").map((l) => l.match(CHECK_LINE_RE)).filter(Boolean).map((m) => ({ done: m[1] !== " ", text: m[2].trim() }));
+}
+// Body without its checklist lines (shown as text) and the checklist itself.
+function splitBody(body) {
+  const rest = (body || "").split("\n").filter((l) => !CHECK_LINE_RE.test(l)).join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  return { rest, checks: parseChecks(body) };
+}
+const joinBody = (rest, checks) =>
+  [rest.trim(), checks.map((c) => `- [${c.done ? "x" : " "}] ${c.text}`).join("\n")].filter(Boolean).join("\n\n");
+const itemChecks = (it) => (it.kind === CHECK_KIND ? parseChecks(it.body) : []);
+const checksHead = (checks) => {
+  const done = checks.filter((c) => c.done).length;
+  return [
+    h("div", { class: "checks-head" }, h("b", null, tr("checks")), checks.length ? h("span", { class: "cnt" }, tr("checksOf", done, checks.length)) : null),
+    checks.length ? h("div", { class: "checks-bar", "aria-hidden": "true" }, h("i", { style: `width:${Math.round((done / checks.length) * 100)}%` })) : null,
+  ];
+};
+
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
   const meta = [];
@@ -985,10 +1029,13 @@ function renderItem(it, k, before) {
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
   if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
+  const checks = itemChecks(it);
+  if (checks.length) meta.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
   if (it.due) meta.push(h("span", { class: "pill" }, "📅 " + it.due));
   if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
     ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + tr("source"))
     : "📄 " + it.source));
+  const preview = checks.length ? splitBody(it.body).rest : it.body; // the checklist itself shows as the ☑ counter
   const key = it.project_slug + ":" + it.ref + ":" + it.updated_at;
   const changed = before && !before.has(key);
   return h("li", { class: `item${closed ? " is-done" : ""}${changed ? " flash" : ""}` },
@@ -998,7 +1045,7 @@ function renderItem(it, k, before) {
       h("div", { class: "l1" },
         h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${it.ref} ${it.title}`); } }, it.ref),
         h("span", { class: "title" }, it.title)),
-      it.body ? h("p", { class: "desc" }, it.body.length > 160 ? it.body.slice(0, 160) + " …" : it.body) : null,
+      preview ? h("p", { class: "desc" }, preview.length > 160 ? preview.slice(0, 160) + " …" : preview) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
 }
 
@@ -1101,6 +1148,7 @@ function nextCard(it, whyText) {
   const result = decision ? h("textarea", { rows: 2, placeholder: tr("nextResultPh"), oninput: (e) => { state.nextDraft[key] = e.target.value; } }) : null;
   if (result) result.value = state.nextDraft[key] || ""; // survives live re-renders
   const pr = state.project === ALL ? state.projects.find((p) => p.slug === it.project_slug) : null;
+  const nxChecks = itemChecks(it), nxRest = nxChecks.length ? splitBody(it.body).rest : "";
   return h("article", { class: "nx-card", style: `--kc:${k.color || "#6b7280"}`, "aria-labelledby": "nxTitle" },
     h("div", { class: "nx-top" },
       h("span", { class: "kbadge" }, it.kind),
@@ -1112,7 +1160,11 @@ function nextCard(it, whyText) {
         ? h("a", { class: "pill", href: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + tr("source")) : null),
     h("h2", { class: "nx-title", id: "nxTitle" }, it.title),
     h("p", { class: "nx-why" }, whyText),
-    it.body ? h("p", { class: "nx-body" }, it.body) : null,
+    nxChecks.length ? (nxRest ? h("p", { class: "nx-body" }, nxRest) : null) : it.body ? h("p", { class: "nx-body" }, it.body) : null,
+    nxChecks.length ? h("div", { class: "checks" }, checksHead(nxChecks),
+      nxChecks.map((c, i) => h("label", { class: "chk" + (c.done ? " on" : "") },
+        h("input", { type: "checkbox", checked: c.done, onchange: (e) => tickCheck(it, i + 1, e.target.checked) }),
+        h("span", null, c.text)))) : null,
     result ? h("label", null, tr("nextResult"), result) : null,
     h("div", { class: "nx-actions" },
       h("button", { type: "button", class: "primary", onclick: () => finishNext(it, result) }, tr(decision ? "nextDecide" : "nextDone")),
@@ -1121,6 +1173,13 @@ function nextCard(it, whyText) {
       } }, tr("nextLater")),
       h("span", { class: "spacer" }),
       h("button", { type: "button", class: "btn", onclick: () => openEdit(it) }, tr("nextEdit"))));
+}
+
+// Tick a sub-item right away (server-side check/uncheck, so nothing else in the description is touched).
+async function tickCheck(it, n, on) {
+  try { await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body: on ? { check: n } : { uncheck: n } }); }
+  catch (err) { toast(tr("error", err.message)); }
+  refresh(false);
 }
 
 // Done (or decided, with the outcome appended to the description); the toast offers to undo both.
@@ -1239,7 +1298,7 @@ function histDetails(e) {
   const parts = [];
   if (e.action === "created") parts.push(ev.created);
   else if (e.action === "converted") parts.push(ev.converted(c.to));
-  else if (ev[e.action] && e.action !== "updated") parts.push(ev[e.action]);
+  else if (ev[e.action] && e.action !== "updated" && e.action !== "checked") parts.push(ev[e.action]);
   if (e.action === "created" || e.action === "deleted" || e.action === "converted") {
     if (e.action === "created" && c.owner) parts.push(`${tr("responsible")}: ${ownerLabel(c.owner)}`);
     return parts;
@@ -1251,6 +1310,8 @@ function histDetails(e) {
   if ("short" in c) parts.push(`${tr("fShort")}: ${c.short || "–"}`);
   if ("title" in c) parts.push(ev.titleChanged);
   if ("body" in c) parts.push(ev.bodyChanged);
+  for (const t of c.checked || []) parts.push(`☑ ${t}`);
+  for (const t of c.unchecked || []) parts.push(`☐ ${t}`);
   if ("source" in c) parts.push(ev.sourceChanged);
   return parts.length ? parts : [ev.updated];
 }
@@ -1576,10 +1637,13 @@ $("#dlg").addEventListener("close", () => {
 
 function openEdit(it) {
   const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
+  // Tasks get their checklist as checkboxes; the text field then holds the rest of the description.
+  const isTask = it.kind === CHECK_KIND;
+  const parts = isTask ? splitBody(it.body) : null;
   const f = {
     title: h("input", { value: it.title, required: true, maxlength: 500 }),
     short: h("input", { value: it.short || "", maxlength: 40, placeholder: tr("shortPh") }),
-    body: h("textarea", { maxlength: 20000 }, it.body || ""),
+    body: h("textarea", { maxlength: 20000 }, (isTask ? parts.rest : it.body) || ""),
     owner: h("select", null, ["user", "ai"].map((o) => h("option", { value: o, selected: it.owner === o }, OWNER_LABELS[o])),
       it.owner && !OWNER_LABELS[it.owner] ? h("option", { value: it.owner, selected: true }, it.owner) : null,
       h("option", { value: "" , selected: !it.owner }, tr("nobody"))),
@@ -1588,10 +1652,39 @@ function openEdit(it) {
     source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
+  const checks = isTask ? parts.checks.map((c) => ({ ...c })) : [];
+  const checkBox = isTask ? h("div", { class: "checks" }) : null;
+  const addInput = h("input", { class: "check-add", maxlength: 300, placeholder: tr("checkAdd"), "aria-label": tr("checkAdd"),
+    onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); addCheck(); } } });
+  const addCheck = () => {
+    const t = addInput.value.trim().replace(/\s+/g, " ");
+    if (!t || checks.length >= MAX_CHECKS) return;
+    checks.push({ done: false, text: t });
+    addInput.value = "";
+    renderChecks();
+    (checks.length < MAX_CHECKS ? addInput : checkBox.querySelector("input"))?.focus();
+  };
+  const renderChecks = (focusAt) => {
+    checkBox.replaceChildren(...[checksHead(checks),
+      checks.map((c, i) => h("label", { class: "chk" + (c.done ? " on" : "") },
+        h("input", { type: "checkbox", checked: c.done, onchange: (e) => { c.done = e.target.checked; renderChecks(i); } }),
+        h("span", null, c.text),
+        h("button", { type: "button", class: "x", title: tr("checkRemove"), "aria-label": `${tr("checkRemove")}: ${c.text}`,
+          onclick: (e) => { e.preventDefault(); checks.splice(i, 1); renderChecks(); addInput.focus(); } }, "×"))),
+      checks.length < MAX_CHECKS ? addInput : h("p", { class: "small" }, tr("checksFull", MAX_CHECKS))].flat().filter(Boolean));
+    if (focusAt != null) checkBox.querySelectorAll("input[type=checkbox]")[focusAt]?.focus();
+  };
+  if (isTask) renderChecks();
   const save = async (e) => {
     e.preventDefault();
     const body = {};
     for (const [key, el] of Object.entries(f)) body[key] = el.value;
+    if (isTask) {
+      if (addInput.value.trim()) addCheck(); // typed but not yet added: keep it
+      const same = (a) => JSON.stringify(a.map((c) => [c.done, c.text]));
+      // Untouched: send the description exactly as it was (no reformatting).
+      body.body = f.body.value === parts.rest && same(checks) === same(parts.checks) ? it.body || "" : joinBody(f.body.value, checks);
+    }
     try {
       await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
       closeDialog(); toast(tr("saved", it.ref)); refresh(false);
@@ -1613,6 +1706,7 @@ function openEdit(it) {
     h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, it.ref), k.name),
     field(tr("fTitle"), f.title),
     field(tr("fBody"), f.body),
+    checkBox,
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
     h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
