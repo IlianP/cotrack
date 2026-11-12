@@ -53,6 +53,10 @@ warnings – a one-glance status that survives across conversations.
   ([details below](#prioflow-what-is-next)).
 - **Next** – a view that shows one of your items at a time: first what you have started, then what holds up other
   items, decisions before actions, oldest first. *Done* (decisions with an optional outcome), *Later*, undo in the toast.
+- **Chains** – the third view (switch at the top: Board · Next · Chains) shows what waits for what: arrows from the
+  prerequisite to the waiting item, done prerequisites dashed, freed-up items highlighted, cycles and unknown references in
+  red; plus "Worth a look" (freed up, holds up the most, your turn). Filters and search only fold items away ("⋯ 2"), the
+  chain stays whole.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail and history** – every change is logged with who made it (you or the AI); the clock in the top bar shows
   it, marks what the AI changed since you last looked and counts it on the button.

@@ -58,6 +58,10 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann was andere
   Punkte aufhält, Entscheidungen vor Aufgaben, älteste zuerst. *Erledigt* (Entscheidungen mit optionalem Ergebnis), *Später*,
   Rückgängig im Toast.
+- **Ketten** – die dritte Ansicht (oben umschaltbar: Board · Next · Ketten) zeigt, was worauf wartet: Pfeile von der
+  Voraussetzung zum wartenden Punkt, erledigte Voraussetzungen gestrichelt, frei gewordene Punkte hervorgehoben, Kreise und
+  unbekannte Kennungen rot; dazu „Auffällig“ (frei geworden, hält am meisten auf, du bist dran). Filter und Suche falten
+  Punkte nur ein („⋯ 2“), die Kette bleibt ganz.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll und Verlauf** – jede Änderung wird mit Urheber (du oder die KI) festgehalten; die Uhr oben zeigt
   sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf.

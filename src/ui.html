@@ -296,7 +296,111 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 }
 
 /* views without the board: the filter bar's toggles and the search apply to the board only */
-#board[hidden], .next[hidden], #filterBar[hidden], #searchBox[hidden] { display: none; }
+#board[hidden], .next[hidden], .deps[hidden], #bar[hidden], #filterBar[hidden], #searchBox[hidden] { display: none; }
+
+/* top bar: the three views as icons (A55); on phones the logo mark stands in for the word "cotrack" */
+.brand { display: flex; align-items: center; }
+.brand-mark { display: none; width: 28px; height: 28px; flex: none; }
+.brand-mark rect { fill: var(--accent); }
+.brand-mark path { fill: none; stroke: var(--accent-ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.modes { display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-2); flex: none; }
+.modes button {
+  width: 36px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted);
+  display: grid; place-items: center;
+}
+.modes button:hover { color: var(--text); }
+.modes button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+.modes svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 560px) {
+  .top { gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .top > .spacer { display: none; }
+  .top .icon-btn { min-width: 36px; padding: 0 8px; }
+  .psel-btn { padding: 7px 8px; gap: 4px; }
+  .brand-mark { display: block; }
+  .modes button { width: 31px; }
+}
+/* very narrow phones (iPhone SE): the project name needs the room more than the caret and the live dot */
+@media (max-width: 374px) { .psel-caret, .top .live { display: none; } }
+
+/* Ketten: what waits for what (A55). Columns left to right = order; on phones the chain runs top to bottom (.vert). */
+.deps { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+.deps.no-side { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 999px) { .deps { grid-template-columns: minmax(0, 1fr); } .dg-side { order: -1; } }
+@media (min-width: 1180px) { .dg-side { position: sticky; top: calc(var(--top-h, 59px) + 14px); } }
+.dg-main { display: grid; gap: 14px; min-width: 0; }
+.dg-head, .dg-legend { margin: 0; color: var(--muted); font-size: 14px; }
+.dg-legend { font-size: 12.5px; }
+.dg-proj { margin: 8px 0 -4px; font-size: 14px; font-weight: 650; }
+.dg-chain {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  overflow-x: auto; overscroll-behavior-x: contain;
+}
+.dg-graph {
+  position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: max-content; gap: 0 56px;
+  padding: 34px 20px 20px; width: max-content; min-width: 100%;
+}
+.dg-col { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; }
+.dg-edges { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.dg-edges path { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; }
+.dg-edges path.head { fill: var(--muted); stroke: none; }
+.dg-edges path.done { stroke-dasharray: 5 5; opacity: .6; }
+.dg-edges path.head.done { opacity: .6; }
+.dg-edges path.cycle { stroke: var(--danger); }
+.dg-edges path.head.cycle { fill: var(--danger); }
+.dg-graph.vert { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); gap: 34px 0; padding: 14px 34px 14px 12px; width: auto; }
+.vert .dg-col { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.dg-node {
+  position: relative; display: flex; gap: 10px; align-items: flex-start; width: 232px; padding: 10px 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); color: var(--text);
+}
+.vert .dg-node { width: auto; flex: 1 1 150px; max-width: 100%; }
+.vert .dg-node .kbadge { display: none; } /* narrow cards: the coloured reference says the category */
+.dg-node:hover { border-color: color-mix(in srgb, var(--kc) 55%, var(--line)); }
+.dg-node .kbadge { flex: none; min-width: 26px; height: 26px; }
+.dg-node .tx { min-width: 0; display: grid; gap: 2px; }
+.dg-t { font-size: 14px; line-height: 1.35; overflow-wrap: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.dg-t b { color: color-mix(in srgb, var(--kc), white var(--ref-white)); font-variant-numeric: tabular-nums; }
+.dg-sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.dg-node.is-done { background: var(--surface-2); border-style: dashed; box-shadow: none; color: var(--muted); }
+.dg-node.is-done .kbadge { background: color-mix(in srgb, var(--muted) 30%, var(--surface-2)); color: var(--text); }
+.dg-node.is-done .dg-t span { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.dg-node.is-free { border: 2px solid var(--accent); padding: 9px 11px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent); }
+.dg-node.is-free .dg-sub { color: var(--accent); font-weight: 600; }
+.dg-node.is-cycle { border: 2px solid var(--danger); padding: 9px 11px; }
+.dg-node.is-cycle .dg-sub { color: var(--danger); font-weight: 600; }
+.dg-node.is-missing { background: transparent; box-shadow: none; border: 1.5px dashed color-mix(in srgb, var(--danger) 55%, var(--line)); }
+.dg-pill {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 99px; font-size: 13px; white-space: nowrap;
+  border: 1px dashed color-mix(in srgb, var(--muted) 50%, var(--line)); background: var(--surface-2); color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.dg-pill:hover { color: var(--text); }
+.dg-pill.hid { border-style: solid; font-weight: 600; letter-spacing: .02em; }
+.dg-node.flash, .dg-pill.flash { animation: flash 1.2s ease-out; }
+.dg-node.ping, .dg-pill.ping { animation: ping 1.8s ease-out; }
+@keyframes ping { 0%, 35% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); } }
+.dg-empty { padding: 26px 20px; text-align: center; }
+.dg-empty h2 { margin: 0 0 6px; font-size: 18px; }
+.dg-empty p { margin: 0; color: var(--muted); font-size: 14px; }
+/* "Auffällig": what stands out – a panel on the right, above the chains (and closable) on smaller screens */
+.dg-side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
+.dg-side summary { display: flex; align-items: center; gap: 8px; padding: 12px 16px; font-weight: 650; cursor: pointer; list-style: none; }
+.dg-side summary::-webkit-details-marker { display: none; }
+.dg-side summary::after { content: "▾"; margin-left: auto; color: var(--muted); font-size: 12px; transition: transform .15s; }
+.dg-side:not([open]) summary::after { transform: rotate(-90deg); }
+.dg-side summary .count { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.dg-side[open] summary { padding-bottom: 2px; }
+.dg-note { padding: 0 12px 10px; }
+.dg-note h3 { margin: 8px 4px 2px; font-size: 13.5px; }
+.dg-note h3.bad { color: var(--danger); }
+.dg-note ul { list-style: none; margin: 0; padding: 0; }
+.dg-note button {
+  width: 100%; display: flex; gap: 8px; align-items: baseline; padding: 6px 4px; border: 0; border-radius: 8px;
+  background: none; text-align: left; color: var(--text);
+}
+.dg-note button:hover { background: var(--surface-2); }
+.dg-note .t { min-width: 0; overflow-wrap: anywhere; }
+.dg-note .why { display: block; font-size: 12.5px; color: var(--muted); }
 
 /* Next: one item at a time, the rest in order beside it (A53) */
 .next { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; max-width: 1080px; }
@@ -393,14 +497,15 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
   .board { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sheet, .hist { animation: none; }
+  .sheet, .hist, .dg-node, .dg-pill { animation: none; }
   .fab svg { transition: none; }
 }
 </style>
 </head>
 <body>
 <header class="top">
-  <div class="brand">co<b>track</b></div>
+  <div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path
+    d="M9 16.5l4.5 4.5L23 11.5"/></svg><span>co<b>track</b></span></div>
   <div class="psel" id="psel">
     <button type="button" id="projectBtn" class="psel-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="projectPop">
       <span id="projectLabel"></span><span class="psel-caret" aria-hidden="true">▼</span>
@@ -414,6 +519,18 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
   </div>
   <span id="live" class="live" title="Live-Verbindung" data-t-attr="title:liveTitle"></span>
   <span class="spacer"></span>
+  <!-- the three views as icons (A55): Board · Next (A53) · Ketten (dependencies) -->
+  <div class="modes" id="modeSwitch" role="group" aria-label="Ansicht" data-t-attr="aria-label:view">
+    <button type="button" data-mode="board" aria-pressed="true" aria-label="Board" title="Board" data-t-attr="aria-label:modeBoard;title:modeBoard"><svg
+      viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="4" height="16" rx="1.2"/><rect x="10" y="4" width="4" height="10" rx="1.2"/><rect
+      x="17" y="4" width="4" height="13" rx="1.2"/></svg></button>
+    <button type="button" data-mode="next" aria-pressed="false" aria-label="Next" title="Next: ein Punkt nach dem anderen"
+      data-t-attr="aria-label:viewNext;title:viewNextTitle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5l9 6.5-9 6.5z"/><path
+      d="M18.5 5.5v13"/></svg></button>
+    <button type="button" data-mode="deps" aria-pressed="false" aria-label="Ketten" title="Ketten: was wartet worauf"
+      data-t-attr="aria-label:modeDeps;title:modeDepsTitle"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"
+      rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M6.5 10v5a2.5 2.5 0 0 0 2.5 2.5h3"/><path d="M10 15l2.5 2.5L10 20"/></svg></button>
+  </div>
   <button id="histBtn" class="icon-btn hist-btn" aria-expanded="false" aria-controls="hist" aria-label="Verlauf" title="Verlauf"
     data-t-attr="aria-label:hist;title:hist"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3.5 4v4h4"/><path d="M12 7.5V12l3 2"/></svg><span
@@ -429,7 +546,6 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
         <button data-view="open" aria-pressed="true" data-t="viewOpen">Offen</button>
         <button data-view="closed" aria-pressed="false" data-t="viewClosed">Erledigt</button>
         <button data-view="all" aria-pressed="false" data-t="viewAll">Alle</button>
-        <button data-view="next" aria-pressed="false" data-t="viewNext" title="Ein Punkt nach dem anderen" data-t-attr="title:viewNextTitle">Next</button>
       </div>
       <div class="search" id="searchBox">
         <button type="button" id="searchBtn" class="ic" aria-expanded="false" aria-controls="search" aria-label="Suchen"
@@ -455,6 +571,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 
   <div id="board" class="board"></div>
   <div id="next" class="next" hidden></div>
+  <div id="deps" class="deps" hidden></div>
 </main>
 
 <aside id="hist" class="hist" hidden aria-labelledby="histHead">
@@ -587,6 +704,24 @@ const STRINGS = {
     nextAi: (n) => `Bei der KI: ${n} offen.`, nextHint: "„Später“ schiebt den Punkt ans Ende, ohne ihn zu ändern.",
     nextOrder: "Reihenfolge: in Arbeit · hält andere auf · Entscheidungen vor Aufgaben · älteste zuerst.",
     doneToast: (ref) => `${ref} erledigt`, decidedToast: (ref) => `${ref} entschieden`, undo: "Rückgängig",
+    // Ketten (A55)
+    modeBoard: "Board", modeDeps: "Ketten", modeDepsTitle: "Ketten: was wartet worauf",
+    depsHead: (n, scope) => `${n === 1 ? "1 Kette" : n + " Ketten"} · ${scope}`,
+    depsNone: "Keine Abhängigkeiten", depsNoneHint: "Trag bei einem Punkt „Wartet auf“ ein (z. B. D2) – dann erscheint hier die Kette.",
+    depsNoneClosed: "Noch keine abgeschlossenen Ketten", depsNoneClosedHint: "Hier stehen Ketten, deren Punkte alle erledigt sind.",
+    depsNoMatch: "Keine Kette passt", depsNoMatchHint: "Filter oder Suche ändern.",
+    depsFreeD: "frei – kann entschieden werden", depsFreeA: "frei – kann starten", depsFree: "frei",
+    depsPartly: (d, n) => `${d} von ${n} erledigt`, depsWaitsFor: (refs) => `wartet auf ${refs}`,
+    depsBlocks: (n) => (n === 1 ? "1 wartet darauf" : `${n} warten darauf`),
+    depsDoneOn: (d) => `erledigt am ${d}`, depsDroppedOn: (d) => `verworfen am ${d}`, depsInCycle: "im Kreis",
+    depsMissingCard: "gibt es in diesem Projekt nicht",
+    depsHidden: (refs) => `Ausgeblendet: ${refs} – antippen zum Zeigen`,
+    depsLegend: "Pfeil = Reihenfolge (in der Fußzeile „D9 ▶A4“). Gestrichelt = Voraussetzung erledigt. Rot = Kreis oder unbekannte Kennung. Punkte ohne „Wartet auf“ bleiben im Board.",
+    depsNotable: "Auffällig", depsCycles: "Kreise", depsCycleWhy: "Warten aufeinander – eine Abhängigkeit entfernen.",
+    depsMissing: "Unbekannte Kennungen", depsMissingWhy: (refs) => `${refs} wartet darauf – Tippfehler oder anderes Projekt?`,
+    depsFreed: "Frei geworden", depsFreedWhy: (refs) => `${refs} erledigt`,
+    depsHolds: "Hält am meisten auf", depsHoldsWhy: (n, direct) => `${n} warten dahinter${direct < n ? ` (${direct} direkt)` : ""}`,
+    depsYours: "Du bist dran",
     // Verlauf (A54)
     hist: "Verlauf", histClose: "Verlauf schließen", histWho: "Wer", histAll: "Alle", histAi: "🤖 KI", histUser: "👤 Du",
     histNew: (n) => (n === 1 ? "1 neue Änderung seit deinem letzten Blick" : `${n} neue Änderungen seit deinem letzten Blick`),
@@ -668,6 +803,24 @@ const STRINGS = {
     nextAi: (n) => `With the AI: ${n} open.`, nextHint: "“Later” moves the item to the end without changing it.",
     nextOrder: "Order: in progress · holds up others · decisions before actions · oldest first.",
     doneToast: (ref) => `${ref} done`, decidedToast: (ref) => `${ref} decided`, undo: "Undo",
+    // Chains (A55)
+    modeBoard: "Board", modeDeps: "Chains", modeDepsTitle: "Chains: what waits for what",
+    depsHead: (n, scope) => `${n === 1 ? "1 chain" : n + " chains"} · ${scope}`,
+    depsNone: "No dependencies", depsNoneHint: "Set “Waiting for” on an item (e.g. D2) – the chain then shows up here.",
+    depsNoneClosed: "No finished chains yet", depsNoneClosedHint: "Chains whose items are all done show up here.",
+    depsNoMatch: "No chain matches", depsNoMatchHint: "Change the filter or the search.",
+    depsFreeD: "free – ready to decide", depsFreeA: "free – ready to start", depsFree: "free",
+    depsPartly: (d, n) => `${d} of ${n} done`, depsWaitsFor: (refs) => `waits for ${refs}`,
+    depsBlocks: (n) => (n === 1 ? "1 waits for it" : `${n} wait for it`),
+    depsDoneOn: (d) => `done on ${d}`, depsDroppedOn: (d) => `dropped on ${d}`, depsInCycle: "in a cycle",
+    depsMissingCard: "does not exist in this project",
+    depsHidden: (refs) => `Hidden: ${refs} – tap to show`,
+    depsLegend: "Arrow = order (“D9 ▶A4” in the footer). Dashed = prerequisite done. Red = cycle or unknown reference. Items without “Waiting for” stay on the board.",
+    depsNotable: "Worth a look", depsCycles: "Cycles", depsCycleWhy: "They wait for each other – remove one dependency.",
+    depsMissing: "Unknown references", depsMissingWhy: (refs) => `${refs} waits for it – typo or another project?`,
+    depsFreed: "Freed up", depsFreedWhy: (refs) => `${refs} done`,
+    depsHolds: "Holds up the most", depsHoldsWhy: (n, direct) => `${n} waiting behind it${direct < n ? ` (${direct} directly)` : ""}`,
+    depsYours: "Your turn",
     // History (A54)
     hist: "History", histClose: "Close history", histWho: "Who", histAll: "All", histAi: "🤖 AI", histUser: "👤 You",
     histNew: (n) => (n === 1 ? "1 new change since you last looked" : `${n} new changes since you last looked`),
@@ -715,12 +868,14 @@ const OWNER_LABELS = tr("owners");
 const STATUS_LABELS = tr("statuses");
 const ALL = "*";
 
-const VIEWS = ["open", "closed", "all", "next"];
+const VIEWS = ["open", "closed", "all"];
+const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · Next (A53) · Ketten (A55)
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
   // Next: deferred items ("Später", this page only), the item picked from the list, unsent outcomes per item
   nextLater: [], nextPick: null, nextDraft: {},
+  mode: MODES.includes(store.get("cotrack.mode")) ? store.get("cotrack.mode") : "board",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
@@ -814,9 +969,9 @@ async function refresh(force) {
   // Responses for an older selection (project, view, search) are discarded.
   const req = (state.reqId = (state.reqId || 0) + 1);
   const path = state.project === ALL ? "/items" : P(state.project) + "/items";
-  const next = state.view === "next";
-  const params = new URLSearchParams({ status: next ? "open" : state.view });
-  if (state.q && !next) params.set("q", state.q);
+  // Next needs the open items, Ketten all of them (closed prerequisites, search applied here); the board asks the server.
+  const params = new URLSearchParams({ status: state.mode === "next" ? "open" : state.mode === "deps" ? "all" : state.view });
+  if (state.q && state.mode === "board") params.set("q", state.q);
   const { items } = await api(path + "?" + params);
   if (req !== state.reqId) return;
   const before = state.lastRefs;
@@ -894,15 +1049,18 @@ function render(before) {
     }
   }
   const board = $("#board");
-  const nextView = state.view === "next" && !!state.project;
-  board.hidden = nextView; $("#next").hidden = !nextView;
-  $("#filterBar").hidden = nextView; $("#searchBox").hidden = nextView;
+  const mode = state.project ? state.mode : "board";
+  board.hidden = mode !== "board"; $("#next").hidden = mode !== "next"; $("#deps").hidden = mode !== "deps";
+  $("#bar").hidden = mode === "next"; // Next has neither filters nor Offen/Erledigt/Alle
+  if (mode !== "deps") deps.chains = [];
   if (!state.project) {
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, tr("noProjectYet"))));
     $("#kindChips").replaceChildren();
     return;
   }
-  if (nextView) return renderNext();
+  if (mode === "next") return renderNext();
+  // Ketten: the filter bar counts the items of the chains in view; filters and search then only fold items away.
+  const pool = mode === "deps" ? depsPrepare() : state.items;
   // Retired kinds (e.g. "T" from methodology v1) stay out of filter and board – their closed items remain history in
   // the database. Only an open item would bring its kind back, so that nothing open disappears.
   const legacy = state.allKinds.filter((k) => !k.active && state.items.some((i) => i.kind === k.code && i.status !== "done" && i.status !== "dropped"));
@@ -914,7 +1072,7 @@ function render(before) {
   // Filters in the bar, each: tap = only this, tap again = all. Du/KI applies to kinds someone is responsible for (an
   // item without owner counts as its kind's default, D = Du); I and W have no owner, so they are hidden meanwhile.
   const cols = kinds.map((k) => {
-    const items = state.items.filter((i) => i.kind === k.code);
+    const items = pool.filter((i) => i.kind === k.code);
     const list = state.owner ? items.filter((i) => k.actionable && (i.owner || k.default_owner) === state.owner) : items;
     return {
       k, list,
@@ -923,6 +1081,7 @@ function render(before) {
     };
   });
   renderFilterBar(cols);
+  if (mode === "deps") return renderDeps(cols, before);
   const visible = cols.filter((c) => c.shown);
   board.classList.toggle("solo", visible.length === 1);
   board.replaceChildren(...visible.map(({ k, list }) =>
@@ -968,7 +1127,8 @@ function toBoardTop() {
   markStuck();
   let bottom = $(".top").getBoundingClientRect().bottom;
   for (const el of [$("#bar"), $("#filterBar")]) if (el.classList.contains("stuck")) bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
-  const gap = $("#board").getBoundingClientRect().top - bottom - 10;
+  const view = [$("#board"), $("#next"), $("#deps")].find((el) => !el.hidden) || $("#board");
+  const gap = view.getBoundingClientRect().top - bottom - 10;
   if (gap < 0) window.scrollBy(0, gap);
 }
 
@@ -1297,6 +1457,372 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && hist.open && !e.defaultPrevented && !document.querySelector("dialog[open]")) closeHist(true);
 });
 
+/* ---------------------------------------------------------- Ketten (A55) */
+// What waits for what, from "Wartet auf" (waiting_on). A chain is everything connected by it: items that wait, what they
+// wait for (also closed items or unknown references) and what waits behind them. Built here from all items of the view;
+// the server is not involved. Only chains with an open item that waits are shown in "Offen" ("Erledigt": chains that are
+// all closed, "Alle": every chain). Filters and search never cut a chain: items they hide fold into "⋯ n", and in "Offen"
+// closed prerequisites shrink to "✓ A36", so the order stays visible. Columns: prerequisites left, what waits right
+// (phones: top to bottom); arrows are an SVG drawn over the cards from their positions.
+const deps = { model: null, chains: [], expanded: new Set(), sideOpen: null };
+const NARROW = matchMedia("(max-width: 699px)");
+const SVGNS = "http://www.w3.org/2000/svg";
+const isClosed = (i) => i.status === "done" || i.status === "dropped";
+const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+const qref = (slug, ref) => (state.project === ALL ? `${state.projects.find((p) => p.slug === slug)?.code || slug}:${ref}` : ref);
+const shortDate = (iso) => (iso ? new Date(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "numeric" }) : "–");
+const closedText = (it) => tr(it.status === "dropped" ? "depsDroppedOn" : "depsDoneOn", shortDate(it.closed_at || it.updated_at));
+function cmpRank(x, y) {
+  for (let n = 0; n < x.length; n++) {
+    if (x[n] === y[n]) continue;
+    return typeof x[n] === "string" ? natural(x[n], y[n]) : x[n] - y[n];
+  }
+  return 0;
+}
+
+// Graph of all items that take part in a dependency: node per reference, edges prerequisite → waiting item.
+function depsModel(items) {
+  const byKey = new Map(items.map((i) => [itemKey(i), i]));
+  const nodes = new Map();
+  const node = (slug, ref) => {
+    const key = slug + ":" + ref;
+    if (!nodes.has(key)) nodes.set(key, { key, slug, ref, item: byKey.get(key) || null, pre: [], post: [] });
+    return nodes.get(key);
+  };
+  for (const i of items) for (const r of refList(i.waiting_on)) {
+    const a = node(i.project_slug, r), b = node(i.project_slug, i.ref);
+    if (!a.post.includes(b)) { a.post.push(b); b.pre.push(a); }
+  }
+  const sorted = [...nodes.values()].sort((a, b) => natural(a.key, b.key));
+  // Kreise: strongly connected parts (Tarjan) with more than one item, or an item that waits for itself.
+  const cycles = [], idx = new Map(), low = new Map(), stack = [], on = new Set();
+  const visit = (v) => {
+    idx.set(v, idx.size); low.set(v, idx.get(v)); stack.push(v); on.add(v);
+    for (const w of v.post) {
+      if (!idx.has(w)) { visit(w); low.set(v, Math.min(low.get(v), low.get(w))); }
+      else if (on.has(w)) low.set(v, Math.min(low.get(v), idx.get(w)));
+    }
+    if (low.get(v) !== idx.get(v)) return;
+    const part = [];
+    let w;
+    do { w = stack.pop(); on.delete(w); part.push(w); } while (w !== v);
+    if (part.length > 1 || v.post.includes(v)) cycles.push(part);
+  };
+  for (const v of sorted) if (!idx.has(v)) visit(v);
+  for (const part of cycles) { const set = new Set(part); for (const v of part) v.cycle = set; }
+  for (const v of nodes.values()) v.open = !!v.item && !isClosed(v.item);
+  for (const v of nodes.values()) {
+    v.openPost = v.post.filter((w) => w.open);
+    v.resolved = v.pre.filter((p) => p.item && isClosed(p.item));
+    // frei: everything it waited for is closed (unknown references never count as closed)
+    v.free = v.open && v.item.status !== "blocked" && v.pre.length > 0 && v.resolved.length === v.pre.length;
+  }
+  const comps = [], seen = new Set();
+  for (const v of sorted) {
+    if (seen.has(v)) continue;
+    const list = [], todo = [v];
+    seen.add(v);
+    while (todo.length) {
+      const x = todo.pop(); list.push(x);
+      for (const y of [...x.pre, ...x.post]) if (!seen.has(y)) { seen.add(y); todo.push(y); }
+    }
+    list.sort((a, b) => natural(a.key, b.key));
+    comps.push({ key: list[0].key, slug: list[0].slug, nodes: list });
+  }
+  return { nodes, comps, cycles };
+}
+
+// Chains of the current view before filters; returns their items (search applied) for the filter bar.
+function depsPrepare() {
+  const m = depsModel(state.items);
+  const waits = (c) => c.nodes.some((v) => v.open && v.pre.length);
+  const anyOpen = (c) => c.nodes.some((v) => v.open);
+  m.shown = m.comps.filter((c) => (state.view === "open" ? waits(c) : state.view === "closed" ? !anyOpen(c) : true));
+  const q = fold(state.q);
+  const hit = (i) => !q || fold([i.ref, i.title, i.short, i.body].join(" ")).includes(q);
+  deps.model = m;
+  return m.shown.flatMap((c) => c.nodes.filter((v) => v.item && hit(v.item)).map((v) => v.item));
+}
+
+function renderDeps(cols, before) {
+  const m = deps.model, box = $("#deps");
+  const filtered = !!(state.kind || state.owner || state.q);
+  // chains unfolded by hand fold again once project, view, filter or search change
+  const sig = [state.project, state.view, state.kind, state.owner, state.q].join("|");
+  if (deps.sig !== sig) { deps.sig = sig; deps.expanded.clear(); }
+  const match = new Set(cols.filter((c) => c.shown).flatMap((c) => c.list.map(itemKey)));
+  const compact = state.view === "open";
+  const chains = m.shown.filter((c) => !filtered || deps.expanded.has(c.key) || c.nodes.some((v) => match.has(v.key)));
+  const rank = (c) => [c.nodes.some((v) => v.cycle) ? 0 : 1, c.nodes.some((v) => !v.item) ? 0 : 1,
+    c.nodes.some((v) => v.free) ? 0 : 1, -Math.max(0, ...c.nodes.map((v) => v.openPost.length)), c.key];
+  chains.sort((a, b) => cmpRank(rank(a), rank(b)));
+  deps.chains = [];
+  const notes = depsNotes(m);
+  box.classList.toggle("no-side", !notes.length);
+  if (!chains.length) {
+    const [title, hint] = m.shown.length ? ["depsNoMatch", "depsNoMatchHint"]
+      : state.view === "closed" ? ["depsNoneClosed", "depsNoneClosedHint"] : ["depsNone", "depsNoneHint"];
+    box.replaceChildren(...[h("div", { class: "dg-main" }, h("section", { class: "col dg-empty" }, h("h2", null, tr(title)), h("p", null, tr(hint)))),
+      notes.length ? depsSide(notes) : null].filter(Boolean));
+    return;
+  }
+  // "Alle Projekte": one block per project, in the order of the project list
+  const order = new Map(state.projects.map((p, i) => [p.slug, i]));
+  const slugs = [...new Set(chains.map((c) => c.slug))].sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
+  const main = [h("p", { class: "dg-head" }, tr("depsHead", chains.length, state.project === ALL ? tr("allProjects") : currentProject()?.name || ""))];
+  for (const slug of slugs) {
+    if (state.project === ALL) {
+      const p = state.projects.find((x) => x.slug === slug);
+      main.push(h("h2", { class: "dg-proj" }, p ? `${p.code ? p.code + " · " : ""}${p.name}` : slug));
+    }
+    for (const c of chains) if (c.slug === slug) main.push(depsChain(c, filtered, match, compact, before));
+  }
+  main.push(h("p", { class: "dg-legend" }, tr("depsLegend")));
+  box.replaceChildren(...[h("div", { class: "dg-main" }, main), notes.length ? depsSide(notes) : null].filter(Boolean));
+  drawDeps();
+}
+
+// One chain: hidden items fold into "⋯ n" (connected ones together), then columns by the longest way from the start.
+function depsChain(c, filtered, match, compact, before) {
+  const all = deps.expanded.has(c.key);
+  const shows = (v) => !v.item || all || !filtered || match.has(v.key) || (compact && isClosed(v.item));
+  const rep = new Map();
+  for (const v of c.nodes) if (shows(v)) rep.set(v, { key: v.key, v, pre: new Set(), post: new Set() });
+  for (const v of c.nodes) {
+    if (rep.has(v)) continue;
+    const g = { key: "hid:" + v.key, hidden: [], pre: new Set(), post: new Set() }, todo = [v];
+    rep.set(v, g);
+    while (todo.length) {
+      const x = todo.pop(); g.hidden.push(x);
+      for (const y of [...x.pre, ...x.post]) if (!rep.has(y) && !shows(y)) { rep.set(y, g); todo.push(y); }
+    }
+  }
+  const edges = new Map();
+  for (const v of c.nodes) for (const w of v.post) {
+    const a = rep.get(v), b = rep.get(w);
+    if (a === b && v !== w) continue; // inside one "⋯"
+    const key = a.key + ">" + b.key, cycle = !!v.cycle?.has(w), done = !!v.item && isClosed(v.item);
+    const e = edges.get(key);
+    if (e) { e.cycle ||= cycle; e.done &&= done; } else edges.set(key, { a, b, cycle, done });
+    a.post.add(b); b.pre.add(a);
+  }
+  // Columns: a depth-first walk from the starting points marks the edges that close a cycle; without them the
+  // chain has an order, and each card stands one column right of the latest thing it waits for.
+  const vnodes = [...new Set(rep.values())];
+  const walk = new Map(), back = new Set();
+  const dfs = (x) => {
+    walk.set(x, 1);
+    for (const y of [...x.post].sort((p, q) => natural(p.key, q.key))) {
+      if (walk.get(y) === 1) back.add(x.key + ">" + y.key);
+      else if (!walk.has(y)) dfs(y);
+    }
+    walk.set(x, 2);
+  };
+  for (const x of vnodes.slice().sort((p, q) => (p.pre.size ? 1 : 0) - (q.pre.size ? 1 : 0) || natural(p.key, q.key))) if (!walk.has(x)) dfs(x);
+  const level = new Map();
+  const lv = (x) => {
+    if (level.has(x)) return level.get(x);
+    level.set(x, 0);
+    let l = 0;
+    for (const p of x.pre) if (!back.has(p.key + ">" + x.key)) l = Math.max(l, lv(p) + 1);
+    level.set(x, l);
+    return l;
+  };
+  vnodes.forEach(lv);
+  const cols = [];
+  for (const x of vnodes) (cols[level.get(x)] ||= []).push(x);
+  // within a column: near what it waits for (fewer crossing arrows); the first column: what holds up most on top
+  const pos = new Map();
+  cols.forEach((col, i) => {
+    const bary = (x) => {
+      const ps = [...x.pre].filter((p) => pos.has(p));
+      return ps.length ? ps.reduce((s, p) => s + pos.get(p), 0) / ps.length : 1e9;
+    };
+    col.sort((x, y) => (i === 0 ? y.post.size - x.post.size : bary(x) - bary(y)) || natural(x.key, y.key));
+    col.forEach((x, j) => pos.set(x, j));
+  });
+  const els = new Map();
+  const graph = h("div", { class: "dg-graph" + (NARROW.matches ? " vert" : "") },
+    cols.map((col) => h("div", { class: "dg-col" }, col.map((x) => {
+      const el = depsNode(x, c, compact, before);
+      els.set(x, el);
+      return el;
+    }))));
+  const svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("class", "dg-edges"); svg.setAttribute("aria-hidden", "true");
+  graph.prepend(svg);
+  deps.chains.push({ graph, svg, els, edges: [...edges.values()].map((e) => ({ ...e, back: back.has(e.a.key + ">" + e.b.key) })) });
+  return h("section", { class: "dg-chain" }, graph);
+}
+
+function depsNode(x, c, compact, before) {
+  if (x.hidden) {
+    const label = tr("depsHidden", x.hidden.map((v) => v.ref).join(", "));
+    return h("button", { type: "button", class: "dg-pill hid", title: label, "aria-label": label,
+      onclick: () => { deps.expanded.add(c.key); render(); } }, "⋯ " + x.hidden.length);
+  }
+  const v = x.v, it = v.item;
+  if (!it) {
+    return h("div", { class: "dg-node is-missing", "data-key": v.key, style: "--kc:var(--danger)" },
+      h("span", { class: "kbadge" }, "?"),
+      h("span", { class: "tx" }, h("span", { class: "dg-t" }, h("b", null, v.ref)), h("span", { class: "dg-sub" }, tr("depsMissingCard"))));
+  }
+  const k = kindBy(it.kind);
+  const kc = `--kc:${k?.color || "#6b7280"}`;
+  const closed = isClosed(it);
+  const flash = before && !before.has(itemKey(it) + ":" + it.updated_at) ? " flash" : "";
+  if (closed && compact) {
+    return h("button", { type: "button", class: "dg-pill is-done" + flash, style: kc, "data-key": v.key,
+      title: `${it.ref} ${it.title} – ${closedText(it)}`, onclick: () => openEdit(it) }, "✓ " + it.ref);
+  }
+  const cls = "dg-node" + (closed ? " is-done" : "") + (v.free ? " is-free" : "") + (v.cycle ? " is-cycle" : "") + flash;
+  return h("button", { type: "button", class: cls, style: kc, "data-key": v.key, onclick: () => openEdit(it) },
+    h("span", { class: "kbadge" }, closed ? "✓" : it.kind),
+    h("span", { class: "tx" },
+      h("span", { class: "dg-t" }, h("b", null, it.ref), " ", h("span", null, it.title)),
+      h("span", { class: "dg-sub" }, depsSub(v))));
+}
+
+// The line under a card: frei / what it still waits for / who and how many wait for it
+function depsSub(v) {
+  const it = v.item, k = kindBy(it.kind);
+  if (isClosed(it)) return closedText(it);
+  if (v.cycle) return tr("depsInCycle");
+  if (v.free) return tr(it.kind === "D" ? "depsFreeD" : k?.actionable ? "depsFreeA" : "depsFree");
+  const parts = [];
+  const owner = k?.actionable ? it.owner || k.default_owner : null;
+  if (owner) parts.push(ownerLabel(owner));
+  if (it.status === "doing" || it.status === "blocked") parts.push(STATUS_LABELS[it.status]);
+  const waits = v.pre.filter((p) => !v.resolved.includes(p)).map((p) => p.ref);
+  if (v.resolved.length && waits.length) parts.push(tr("depsPartly", v.resolved.length, v.pre.length));
+  if (waits.length) parts.push(tr("depsWaitsFor", waits.join(", ")));
+  if (v.openPost.length) parts.push(tr("depsBlocks", v.openPost.length));
+  return parts.join(" · ");
+}
+
+// "Auffällig": cycles, unknown references, freed items, what holds up most, your turn – over all chains in view
+function depsNotes(m) {
+  const shown = m.shown.flatMap((c) => c.nodes);
+  const inView = new Set(shown);
+  const label = (v) => qref(v.slug, v.ref);
+  const color = (v) => (v.item ? kindBy(v.item.kind)?.color || "#6b7280" : "var(--danger)");
+  const row = (v, why, sub = v.item?.title) => ({ v, text: label(v), kc: color(v), sub, why });
+  const notes = [];
+  const cycles = m.cycles.filter((part) => inView.has(part[0]));
+  if (cycles.length) notes.push({ bad: true, title: tr("depsCycles"), rows: cycles.map((part) => {
+    const path = cyclePath(part);
+    return row(path[0], tr("depsCycleWhy"), path.map(label).join(" → "));
+  }) });
+  const missing = shown.filter((v) => !v.item);
+  if (missing.length) notes.push({ bad: true, title: tr("depsMissing"), rows: missing.map((v) => row(v, tr("depsMissingWhy", v.post.map(label).join(", ")), null)) });
+  const freed = shown.filter((v) => v.free);
+  if (freed.length) notes.push({ title: tr("depsFreed"), rows: freed.map((v) => row(v, tr("depsFreedWhy", v.resolved.map(label).join(", ")))) });
+  // holds up the most: everything still open behind an item, not only what waits for it directly
+  const behind = (v) => {
+    const seen = new Set(), todo = [...v.post];
+    while (todo.length) { const w = todo.pop(); if (w === v || seen.has(w)) continue; seen.add(w); todo.push(...w.post); }
+    return [...seen].filter((w) => w.open).length;
+  };
+  const holds = shown.filter((v) => v.open).map((v) => [v, behind(v)]).filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1] || natural(a[0].key, b[0].key)).slice(0, 3);
+  if (holds.length) notes.push({ title: tr("depsHolds"), rows: holds.map(([v, n]) => row(v, tr("depsHoldsWhy", n, v.openPost.length))) });
+  // your turn: yours, nothing left to wait for, and something waits for it
+  const me = state.actor === "ai" ? "ai" : "user";
+  const yours = shown.filter((v) => {
+    const k = v.item && kindBy(v.item.kind);
+    return v.open && k?.actionable && (v.item.owner || k.default_owner) === me && v.item.status !== "blocked"
+      && v.openPost.length && v.resolved.length === v.pre.length;
+  }).sort((a, b) => b.openPost.length - a.openPost.length || natural(a.key, b.key));
+  if (yours.length) notes.push({ title: tr("depsYours"), rows: yours.map((v) => row(v, tr("depsBlocks", v.openPost.length))) });
+  return notes;
+}
+function cyclePath(part) {
+  const set = new Set(part);
+  const start = part.slice().sort((a, b) => natural(a.key, b.key))[0];
+  const path = [start];
+  let cur = start;
+  for (;;) {
+    const nx = cur.post.find((w) => set.has(w) && !path.includes(w));
+    if (!nx) break;
+    path.push(nx); cur = nx;
+  }
+  if (cur.post.includes(start)) path.push(start);
+  return path;
+}
+
+function depsSide(notes) {
+  if (deps.sideOpen === null) deps.sideOpen = !NARROW.matches; // on phones closed at first: the chains come first
+  const total = notes.reduce((s, n) => s + n.rows.length, 0);
+  return h("details", { class: "dg-side", open: deps.sideOpen, ontoggle: (e) => { deps.sideOpen = e.target.open; } },
+    h("summary", null, h("span", null, tr("depsNotable")), h("span", { class: "count" }, String(total))),
+    notes.map((n) => h("section", { class: "dg-note" },
+      h("h3", { class: n.bad ? "bad" : null }, n.title),
+      h("ul", null, n.rows.map((r) => h("li", null,
+        h("button", { type: "button", onclick: () => depsJump(r.v.key) },
+          h("span", { class: "ref", style: `--kc:${r.kc}` }, r.text),
+          h("span", { class: "t" }, r.sub ? h("span", null, r.sub) : null, h("span", { class: "why" }, r.why)))))))));
+}
+
+// From "Auffällig" to the card: unfold its chain if needed, scroll there and let it light up.
+function depsJump(key) {
+  const find = () => [...$("#deps").querySelectorAll("[data-key]")].find((el) => el.dataset.key === key);
+  let el = find();
+  if (!el) {
+    const c = deps.model?.comps.find((x) => x.nodes.some((v) => v.key === key));
+    if (c) { deps.expanded.add(c.key); render(); el = find(); }
+  }
+  if (!el) return;
+  el.scrollIntoView({ block: "center", inline: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  el.classList.remove("ping", "flash"); void el.offsetWidth; el.classList.add("ping");
+}
+
+// Arrows from the cards' positions: prerequisite → what waits (left to right, on phones top to bottom). An edge that
+// closes a cycle runs back above the cards (phones: along the right side).
+function drawDeps() {
+  const svgEl = (d, cls) => { const p = document.createElementNS(SVGNS, "path"); p.setAttribute("d", d); if (cls) p.setAttribute("class", cls); return p; };
+  for (const ch of deps.chains) {
+    const box = ch.graph.getBoundingClientRect();
+    if (!box.width) continue;
+    const vert = ch.graph.classList.contains("vert");
+    const W = ch.graph.scrollWidth, H = ch.graph.scrollHeight;
+    ch.svg.setAttribute("width", W); ch.svg.setAttribute("height", H); ch.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const at = (x) => {
+      const b = ch.els.get(x).getBoundingClientRect();
+      const l = b.left - box.left, t = b.top - box.top;
+      return { l, t, r: l + b.width, b: t + b.height, cx: l + b.width / 2, cy: t + b.height / 2 };
+    };
+    const out = [];
+    for (const e of ch.edges) {
+      const a = at(e.a), b = at(e.b);
+      let d, tip, dir;
+      if (e.a === e.b) {
+        const x = a.r - 16;
+        d = `M${x - 26} ${a.t} C${x - 26} ${a.t - 24} ${x} ${a.t - 24} ${x} ${a.t - 7}`; tip = [x, a.t]; dir = [0, 1];
+      } else if (!e.back && !vert) {
+        const c = Math.max(18, (b.l - a.r) / 2);
+        d = `M${a.r} ${a.cy} C${a.r + c} ${a.cy} ${b.l - c} ${b.cy} ${b.l - 7} ${b.cy}`; tip = [b.l, b.cy]; dir = [1, 0];
+      } else if (!e.back) {
+        const c = Math.max(12, (b.t - a.b) / 2);
+        d = `M${a.cx} ${a.b} C${a.cx} ${a.b + c} ${b.cx} ${b.t - c} ${b.cx} ${b.t - 7}`; tip = [b.cx, b.t]; dir = [0, 1];
+      } else if (!vert) {
+        const y = Math.min(a.t, b.t) - 26;
+        d = `M${a.cx} ${a.t} C${a.cx} ${y} ${b.cx} ${y} ${b.cx} ${b.t - 7}`; tip = [b.cx, b.t]; dir = [0, 1];
+      } else {
+        const x = Math.max(a.r, b.r) + 24;
+        d = `M${a.r} ${a.cy} C${x} ${a.cy} ${x} ${b.cy} ${b.r + 7} ${b.cy}`; tip = [b.r, b.cy]; dir = [-1, 0];
+      }
+      const cls = e.cycle ? "cycle" : e.done ? "done" : "";
+      const [x, y] = tip, [dx, dy] = dir;
+      out.push(svgEl(d, cls),
+        svgEl(`M${x} ${y} L${x - 8 * dx - 4.5 * dy} ${y - 8 * dy + 4.5 * dx} L${x - 8 * dx + 4.5 * dy} ${y - 8 * dy - 4.5 * dx}Z`, ("head " + cls).trim()));
+    }
+    ch.svg.replaceChildren(...out);
+  }
+}
+let depsFrame = 0;
+new ResizeObserver(() => { if (deps.chains.length && !depsFrame) depsFrame = requestAnimationFrame(() => { depsFrame = 0; drawDeps(); }); }).observe($("#deps"));
+NARROW.addEventListener("change", () => { if (state.mode === "deps" && state.project) render(); });
+
 /* ---------------------------------------------------------- actions */
 async function setStatus(it, status) {
   try {
@@ -1343,9 +1869,20 @@ function syncViewChips() { for (const x of $("#viewChips").children) x.setAttrib
 syncViewChips();
 $("#viewChips").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
-  state.view = b.dataset.view; state.nextPick = null;
+  state.view = b.dataset.view;
   store.set("cotrack.view", state.view);
   syncViewChips();
+  refresh(true);
+});
+// Board · Next · Ketten (icons in the top bar); remembered on this device
+function syncModes() { for (const x of $("#modeSwitch").children) x.setAttribute("aria-pressed", String(x.dataset.mode === state.mode)); }
+syncModes();
+$("#modeSwitch").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || b.dataset.mode === state.mode) return;
+  state.mode = b.dataset.mode; state.nextPick = null;
+  store.set("cotrack.mode", state.mode);
+  syncModes();
+  window.scrollTo(0, 0);
   refresh(true);
 });
 $("#ownerChips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) toggleOwner(b.dataset.owner); });
