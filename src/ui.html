@@ -1199,12 +1199,15 @@ async function loadHist(mode) {
   const req = ++hist.req;
   const q = mode === "older" && hist.events.length ? "&before=" + hist.events[hist.events.length - 1].id
     : mode === "newer" && hist.events.length ? "&after=" + hist.events[0].id : "";
+  // Catching up takes the largest page: if even that is full, the list restarts from the newest events (older ones
+  // stay reachable via "Ältere laden"), so no gap opens between new and already shown entries.
+  const limit = mode === "newer" ? 500 : HIST_PAGE;
   try {
-    const { events } = await api(histPath(scope) + "?limit=" + HIST_PAGE + q);
+    const { events } = await api(histPath(scope) + "?limit=" + limit + q);
     if (req !== hist.req || scope !== histScope()) return;
     if (mode === "older") { hist.events.push(...events); hist.more = events.length === HIST_PAGE; }
-    else if (mode === "newer") hist.events = [...events, ...hist.events];
-    else { hist.events = events; hist.more = events.length === HIST_PAGE; }
+    else if (mode === "newer" && events.length < limit) hist.events = [...events, ...hist.events];
+    else { hist.events = events; hist.more = events.length === limit; }
     renderHist();
     if (hist.events.length) setSeen(scope, hist.events[0].id);
     showBadge(0);
