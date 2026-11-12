@@ -138,6 +138,9 @@ async function route(req, db, url, actor) {
     return json({ version: row.v });
   }
 
+  // Change log across all projects, newest first, e.g. GET /api/events?limit=50&before=1234 (web app: Verlauf)
+  if (seg.length === 1 && seg[0] === "events" && method === "GET") return json({ events: await listEvents(db, eventRange(q)) });
+
   // Suggested project code for a slug, e.g. GET /api/code-suggestion?slug=festival-workshop-planner
   if (seg.length === 1 && seg[0] === "code-suggestion" && method === "GET") {
     const slug = (q.get("slug") || "").toLowerCase();
@@ -213,15 +216,7 @@ async function route(req, db, url, actor) {
           .first();
         return json({ version: row.v, global: row.g });
       }
-      if (sub === "events") {
-        const after = Number(q.get("after") || 0);
-        const limit = Math.min(Number(q.get("limit") || 100), 500);
-        const { results } = await db
-          .prepare("SELECT * FROM events WHERE project_slug = ? AND id > ? ORDER BY id DESC LIMIT ?")
-          .bind(project.slug, after, limit)
-          .all();
-        return json({ events: results.map((e) => ({ ...e, data: e.data ? JSON.parse(e.data) : null })) });
-      }
+      if (sub === "events") return json({ events: await listEvents(db, { project: project.slug, ...eventRange(q) }) });
       if (sub === "footer") {
         const textLine = await footerFor(db, [project.slug], {
           max: clampInt(q.get("max"), 1, 30, 8),
@@ -243,6 +238,39 @@ async function route(req, db, url, actor) {
     }
   }
   throw new HttpError(404, "not_found");
+}
+
+/* --------------------------------------------------------------- events */
+
+// ?after= (newer than, for catching up) and ?before= (older than, for paging back); newest first, at most 500.
+function eventRange(q) {
+  return {
+    after: clampInt(q.get("after"), 0, Number.MAX_SAFE_INTEGER, 0),
+    before: clampInt(q.get("before"), 1, Number.MAX_SAFE_INTEGER, null),
+    limit: clampInt(q.get("limit"), 1, 500, 100),
+  };
+}
+
+// The item's current title comes along (null once it is deleted; a "deleted" event keeps it in its data).
+export async function listEvents(db, { project = null, after = 0, before = null, limit = 100 } = {}) {
+  const where = ["e.id > ?"];
+  const args = [after];
+  if (before != null) {
+    where.push("e.id < ?");
+    args.push(before);
+  }
+  if (project) {
+    where.push("e.project_slug = ?");
+    args.push(project);
+  }
+  const { results } = await db
+    .prepare(
+      `SELECT e.*, (SELECT i.title FROM items i WHERE i.project_slug = e.project_slug AND i.kind || i.seq = e.item_ref) AS title
+       FROM events e WHERE ${where.join(" AND ")} ORDER BY e.id DESC LIMIT ?`,
+    )
+    .bind(...args, limit)
+    .all();
+  return results.map((e) => ({ ...e, data: e.data ? JSON.parse(e.data) : null }));
 }
 
 /* ------------------------------------------------------------- projects */

@@ -55,8 +55,12 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **PrioFlow** – ein Skill, mit dem die KI die offenen Punkte bewertet und dich durch die nächsten führt
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
+- **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann was andere
+  Punkte aufhält, Entscheidungen vor Aufgaben, älteste zuerst. *Erledigt* (Entscheidungen mit optionalem Ergebnis), *Später*,
+  Rückgängig im Toast.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
-- **Änderungsprotokoll** – jede Änderung wird mit Urheber (du oder die KI) festgehalten.
+- **Änderungsprotokoll und Verlauf** – jede Änderung wird mit Urheber (du oder die KI) festgehalten; die Uhr oben zeigt
+  sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf.
 - **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
   einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
   *Zum Home-Bildschirm*.
@@ -188,7 +192,8 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
-| GET | `/api/projects/:slug/events?after=` | Änderungsprotokoll |
+| GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
+| GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
 | GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (Standard `multi`, `👤`, `🤖`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |

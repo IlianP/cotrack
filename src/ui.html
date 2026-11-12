@@ -295,6 +295,87 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere;
 }
 
+/* views without the board: the filter bar's toggles and the search apply to the board only */
+#board[hidden], .next[hidden], #filterBar[hidden], #searchBox[hidden] { display: none; }
+
+/* Next: one item at a time, the rest in order beside it (A53) */
+.next { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; max-width: 1080px; }
+@media (max-width: 860px) { .next { grid-template-columns: minmax(0, 1fr); } }
+.nx-head { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 14px; }
+.nx-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 20px; display: grid; gap: 12px; min-width: 0;
+}
+.nx-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nx-kind { color: var(--muted); font-size: 14px; }
+.nx-title { margin: 0; font-size: 22px; line-height: 1.25; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.nx-why { margin: 0; color: var(--accent); font-size: 14px; font-weight: 600; }
+.nx-body {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14.5px; max-height: 45vh; overflow-y: auto;
+  padding: 10px 12px; background: var(--surface-2); border-radius: 10px;
+}
+.nx-card label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.nx-card textarea {
+  width: 100%; min-height: 64px; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); resize: vertical;
+}
+.nx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.nx-actions .primary, .nx-actions .btn { height: 42px; }
+.nx-actions .primary { padding: 0 20px; }
+.nx-side { display: grid; gap: 10px; min-width: 0; }
+.nx-side .small { padding: 0 4px; }
+.nx-list { list-style: none; margin: 0; padding: 4px; }
+.nx-list button {
+  width: 100%; display: flex; gap: 8px; align-items: baseline; text-align: left; border: 0; background: none;
+  padding: 8px; border-radius: 8px;
+}
+.nx-list button:hover { background: var(--surface-2); }
+.nx-list .t { overflow-wrap: anywhere; }
+.nx-list .why { display: block; font-size: 12.5px; color: var(--muted); }
+.nx-empty { text-align: center; padding: 32px 20px; }
+.nx-empty h2 { margin: 0 0 6px; font-size: 20px; }
+
+/* Verlauf: who changed what, as a panel on the right; full width on phones (A54) */
+.hist-btn { position: relative; display: grid; place-items: center; color: var(--text); }
+.hist-btn svg { width: 19px; height: 19px; }
+.hist-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.badge {
+  position: absolute; top: -6px; right: -6px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px;
+  background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; line-height: 19px; text-align: center;
+}
+.badge[hidden] { display: none; }
+.hist {
+  position: fixed; z-index: 8; top: var(--top-h, 59px); right: 0; bottom: 0; width: min(400px, 100vw);
+  display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--line); box-shadow: var(--lift-lg);
+  animation: slide .16s ease-out;
+}
+@keyframes slide { from { opacity: 0; transform: translateX(16px); } }
+.hist[hidden] { display: none; }
+.hist-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
+.hist-head h2 { margin: 0; font-size: 16px; }
+.hist-head .close-x { margin: -6px -6px -6px 0; }
+.hist-head .chips { grid-column: 1 / -1; justify-self: start; }
+.hist-list { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 10px calc(16px + env(safe-area-inset-bottom)); }
+.hist-new {
+  margin: 10px 4px 2px; padding: 8px 10px; border-radius: 10px; font-size: 13.5px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--text);
+}
+.hist-day { font-size: 12.5px; font-weight: 650; color: var(--muted); padding: 12px 6px 4px; }
+.hev { display: flex; gap: 10px; align-items: flex-start; padding: 8px 6px; border-radius: 8px; }
+button.hev { width: 100%; border: 0; background: none; text-align: left; font: inherit; color: inherit; }
+.hev .what, .hev .det { display: block; }
+.hev.link { cursor: pointer; }
+.hev.link:hover { background: var(--surface-2); }
+.hev.new { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.hev .who { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: 14px; }
+.hev .txt { flex: 1; min-width: 0; }
+.hev .what { overflow-wrap: anywhere; }
+.hev .what .ref { margin-right: 6px; }
+.hev .det { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.hev time { flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.hist-more { display: block; margin: 12px auto 0; }
+@media (max-width: 560px) { .hist { width: 100vw; border-left: 0; } }
+
 #toast {
   position: fixed; left: 50%; bottom: calc(max(var(--dock, 0px), env(safe-area-inset-bottom)) + var(--toast-up, 78px));
   transform: translateX(-50%) translateY(20px);
@@ -312,7 +393,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   .board { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sheet { animation: none; }
+  .sheet, .hist { animation: none; }
   .fab svg { transition: none; }
 }
 </style>
@@ -333,6 +414,10 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   </div>
   <span id="live" class="live" title="Live-Verbindung" data-t-attr="title:liveTitle"></span>
   <span class="spacer"></span>
+  <button id="histBtn" class="icon-btn hist-btn" aria-expanded="false" aria-controls="hist" aria-label="Verlauf" title="Verlauf"
+    data-t-attr="aria-label:hist;title:hist"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3.5 4v4h4"/><path d="M12 7.5V12l3 2"/></svg><span
+    id="histBadge" class="badge" hidden></span></button>
   <button id="menuBtn" class="icon-btn" aria-label="Menü" data-t-attr="aria-label:menu">☰</button>
 </header>
 
@@ -344,6 +429,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
         <button data-view="open" aria-pressed="true" data-t="viewOpen">Offen</button>
         <button data-view="closed" aria-pressed="false" data-t="viewClosed">Erledigt</button>
         <button data-view="all" aria-pressed="false" data-t="viewAll">Alle</button>
+        <button data-view="next" aria-pressed="false" data-t="viewNext" title="Ein Punkt nach dem anderen" data-t-attr="title:viewNextTitle">Next</button>
       </div>
       <div class="search" id="searchBox">
         <button type="button" id="searchBtn" class="ic" aria-expanded="false" aria-controls="search" aria-label="Suchen"
@@ -368,7 +454,22 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   </div>
 
   <div id="board" class="board"></div>
+  <div id="next" class="next" hidden></div>
 </main>
+
+<aside id="hist" class="hist" hidden aria-labelledby="histHead">
+  <div class="hist-head">
+    <h2 id="histHead" data-t="hist">Verlauf</h2>
+    <button type="button" id="histClose" class="close-x" aria-label="Verlauf schließen" title="Verlauf schließen"
+      data-t-attr="aria-label:histClose;title:histClose">×</button>
+    <div class="chips" id="histFilter" role="group" aria-label="Wer" data-t-attr="aria-label:histWho">
+      <button type="button" data-actor="" aria-pressed="true" data-t="histAll">Alle</button>
+      <button type="button" data-actor="ai" aria-pressed="false" data-t="histAi">🤖 KI</button>
+      <button type="button" data-actor="user" aria-pressed="false" data-t="histUser">👤 Du</button>
+    </div>
+  </div>
+  <div id="histList" class="hist-list"></div>
+</aside>
 
 <form id="add" class="add sheet" autocomplete="off" hidden>
   <div id="kindSeg" class="seg" role="group" aria-label="Kategorie" data-t-attr="aria-label:category"></div>
@@ -474,6 +575,29 @@ const STRINGS = {
     codeNote: "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern.",
     create: "Anlegen", projectCreated: "Projekt angelegt",
     signInTitle: " – Anmelden", tokenHelp: "Gib deinen Zugangstoken ein. Er wird nur in diesem Browser gespeichert.", token: "Token", signIn: "Anmelden",
+    // Next (A53)
+    viewNext: "Next", viewNextTitle: "Next: ein Punkt nach dem anderen",
+    nextFor: (n, scope) => `${n === 1 ? "1 Punkt" : n + " Punkte"} für dich · ${scope}`,
+    nextDone: "Erledigt", nextDecide: "Entschieden", nextLater: "Später", nextEdit: "Bearbeiten", nextAfter: "Danach",
+    nextResult: "Ergebnis festhalten (optional, kommt in die Beschreibung)", nextResultPh: "z. B. Mehrzeilig behalten",
+    nextResultLine: (date, text) => `Ergebnis (${date}): ${text}`,
+    nextDoing: "In Arbeit", nextBlocks: (refs) => `Hält ${refs} auf`, nextFreed: (refs) => `Voraussetzung erledigt: ${refs}`,
+    nextAge: (d) => (d <= 0 ? "Seit heute offen" : d === 1 ? "Seit gestern offen" : `Seit ${d} Tagen offen`),
+    nextEmpty: "Nichts für dich offen 🎉", nextWaiting: (n) => `${n === 1 ? "1 weiterer Punkt wartet" : n + " weitere warten"} noch auf andere.`,
+    nextAi: (n) => `Bei der KI: ${n} offen.`, nextHint: "„Später“ schiebt den Punkt ans Ende, ohne ihn zu ändern.",
+    nextOrder: "Reihenfolge: in Arbeit · hält andere auf · Entscheidungen vor Aufgaben · älteste zuerst.",
+    doneToast: (ref) => `${ref} erledigt`, decidedToast: (ref) => `${ref} entschieden`, undo: "Rückgängig",
+    // Verlauf (A54)
+    hist: "Verlauf", histClose: "Verlauf schließen", histWho: "Wer", histAll: "Alle", histAi: "🤖 KI", histUser: "👤 Du",
+    histNew: (n) => (n === 1 ? "1 neue Änderung seit deinem letzten Blick" : `${n} neue Änderungen seit deinem letzten Blick`),
+    histNewAria: (n) => `Verlauf: ${n} neu`, histEmpty: "Noch keine Änderungen.", histMore: "Ältere laden",
+    histGone: (ref) => `${ref} gibt es nicht mehr.`, today: "Heute", yesterday: "Gestern",
+    ev: {
+      created: "angelegt", done: "erledigt", dropped: "verworfen", reopened: "wieder geöffnet", updated: "geändert",
+      deleted: "gelöscht", converted: (to) => `umgewandelt in ${to}`, projectCreated: "Projekt angelegt",
+      projectUpdated: "Projekt geändert", archived: "Projekt archiviert", restored: "Projekt zurückgeholt",
+      titleChanged: "Titel geändert", bodyChanged: "Beschreibung geändert", sourceChanged: "Quelle geändert",
+    },
   },
   en: {
     owners: { user: "You", ai: "AI" },
@@ -532,6 +656,29 @@ const STRINGS = {
     codeNote: "The code (e.g. CT) precedes references when several projects are in a conversation: CT:A14. It cannot be changed later.",
     create: "Create", projectCreated: "Project created",
     signInTitle: " – Sign in", tokenHelp: "Enter your access token. It is stored only in this browser.", token: "Token", signIn: "Sign in",
+    // Next (A53)
+    viewNext: "Next", viewNextTitle: "Next: one item at a time",
+    nextFor: (n, scope) => `${n === 1 ? "1 item" : n + " items"} for you · ${scope}`,
+    nextDone: "Done", nextDecide: "Decided", nextLater: "Later", nextEdit: "Edit", nextAfter: "Up next",
+    nextResult: "Record the outcome (optional, goes into the description)", nextResultPh: "e.g. keep multi-line",
+    nextResultLine: (date, text) => `Outcome (${date}): ${text}`,
+    nextDoing: "In progress", nextBlocks: (refs) => `Holds up ${refs}`, nextFreed: (refs) => `Prerequisite done: ${refs}`,
+    nextAge: (d) => (d <= 0 ? "Open since today" : d === 1 ? "Open since yesterday" : `Open for ${d} days`),
+    nextEmpty: "Nothing open for you 🎉", nextWaiting: (n) => `${n === 1 ? "1 more item is" : n + " more are"} still waiting for others.`,
+    nextAi: (n) => `With the AI: ${n} open.`, nextHint: "“Later” moves the item to the end without changing it.",
+    nextOrder: "Order: in progress · holds up others · decisions before actions · oldest first.",
+    doneToast: (ref) => `${ref} done`, decidedToast: (ref) => `${ref} decided`, undo: "Undo",
+    // History (A54)
+    hist: "History", histClose: "Close history", histWho: "Who", histAll: "All", histAi: "🤖 AI", histUser: "👤 You",
+    histNew: (n) => (n === 1 ? "1 new change since you last looked" : `${n} new changes since you last looked`),
+    histNewAria: (n) => `History: ${n} new`, histEmpty: "No changes yet.", histMore: "Load older",
+    histGone: (ref) => `${ref} no longer exists.`, today: "Today", yesterday: "Yesterday",
+    ev: {
+      created: "created", done: "done", dropped: "dropped", reopened: "reopened", updated: "changed",
+      deleted: "deleted", converted: (to) => `converted to ${to}`, projectCreated: "Project created",
+      projectUpdated: "Project changed", archived: "Project archived", restored: "Project restored",
+      titleChanged: "Title changed", bodyChanged: "Description changed", sourceChanged: "Source changed",
+    },
   },
 };
 const lookup = (dict, key) => key.split(".").reduce((o, k) => (o == null ? o : o[k]), dict);
@@ -568,10 +715,13 @@ const OWNER_LABELS = tr("owners");
 const STATUS_LABELS = tr("statuses");
 const ALL = "*";
 
+const VIEWS = ["open", "closed", "all", "next"];
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
-  view: "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
+  // Next: deferred items ("Später", this page only), the item picked from the list, unsent outcomes per item
+  nextLater: [], nextPick: null, nextDraft: {},
+  view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
 
@@ -664,8 +814,9 @@ async function refresh(force) {
   // Responses for an older selection (project, view, search) are discarded.
   const req = (state.reqId = (state.reqId || 0) + 1);
   const path = state.project === ALL ? "/items" : P(state.project) + "/items";
-  const params = new URLSearchParams({ status: state.view });
-  if (state.q) params.set("q", state.q);
+  const next = state.view === "next";
+  const params = new URLSearchParams({ status: next ? "open" : state.view });
+  if (state.q && !next) params.set("q", state.q);
   const { items } = await api(path + "?" + params);
   if (req !== state.reqId) return;
   const before = state.lastRefs;
@@ -693,7 +844,7 @@ async function poll() {
     // Only acknowledge a version once the refresh for it succeeded, so a failed refresh is retried.
     if (v.version !== state.version) {
       if (state.version !== -1) await refresh(state.version === null);
-      if (project === state.project) state.version = v.version;
+      if (project === state.project) { state.version = v.version; histChanged(); }
     }
     setLive(true);
   } catch { setLive(false); }
@@ -743,11 +894,15 @@ function render(before) {
     }
   }
   const board = $("#board");
+  const nextView = state.view === "next" && !!state.project;
+  board.hidden = nextView; $("#next").hidden = !nextView;
+  $("#filterBar").hidden = nextView; $("#searchBox").hidden = nextView;
   if (!state.project) {
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, tr("noProjectYet"))));
     $("#kindChips").replaceChildren();
     return;
   }
+  if (nextView) return renderNext();
   // Retired kinds (e.g. "T" from methodology v1) stay out of filter and board – their closed items remain history in
   // the database. Only an open item would bring its kind back, so that nothing open disappears.
   const legacy = state.allKinds.filter((k) => !k.active && state.items.some((i) => i.kind === k.code && i.status !== "done" && i.status !== "dropped"));
@@ -855,6 +1010,293 @@ async function renderFooter() {
   } catch {}
 }
 
+/* ---------------------------------------------------------- Next (A53) */
+// One item at a time: your open A and D (with the AI token: the AI's), ready to act on – nothing it waits for is still
+// open. Order: in progress · holds up others (most first) · kind order (D before A) · oldest first. "Später" moves
+// an item to the end for this page only; nothing is written.
+const refList = (s) => String(s || "").split(",").map((r) => r.trim()).filter(Boolean);
+const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const daysAgo = (iso) => Math.round((dayStart(new Date()) - dayStart(new Date(iso))) / 864e5);
+const itemKey = (i) => i.project_slug + ":" + i.ref;
+function refLabel(i) {
+  if (state.project !== ALL) return i.ref;
+  return `${state.projects.find((p) => p.slug === i.project_slug)?.code || i.project_slug}:${i.ref}`;
+}
+
+function nextQueue() {
+  const me = state.actor === "ai" ? "ai" : "user";
+  const open = state.items.filter((i) => i.status !== "done" && i.status !== "dropped");
+  const openKeys = new Set(open.map(itemKey));
+  const waiters = new Map(); // key -> refs of open items waiting for it
+  for (const i of open) for (const r of refList(i.waiting_on)) {
+    const k = i.project_slug + ":" + r;
+    waiters.set(k, [...(waiters.get(k) || []), i.ref]);
+  }
+  const mine = [], waiting = [];
+  let others = 0;
+  for (const i of open) {
+    const k = kindBy(i.kind);
+    if (!k?.actionable) continue;
+    const owner = i.owner || k.default_owner || "";
+    if (owner !== me) { if (owner) others++; continue; }
+    const blocked = i.status === "blocked" || refList(i.waiting_on).some((r) => openKeys.has(i.project_slug + ":" + r));
+    (blocked ? waiting : mine).push(i);
+  }
+  const rank = (i) => [i.status === "doing" ? 0 : 1, -(waiters.get(itemKey(i)) || []).length, kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
+  mine.sort((a, b) => {
+    const x = rank(a), y = rank(b);
+    for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] < y[n] ? -1 : 1;
+    return 0;
+  });
+  state.nextLater = state.nextLater.filter((k) => mine.some((i) => itemKey(i) === k));
+  const queue = [...mine.filter((i) => !state.nextLater.includes(itemKey(i))),
+    ...state.nextLater.map((k) => mine.find((i) => itemKey(i) === k))];
+  const why = (i) => {
+    const parts = [];
+    if (i.status === "doing") parts.push(tr("nextDoing"));
+    const w = waiters.get(itemKey(i));
+    if (w?.length) parts.push(tr("nextBlocks", w.join(", ")));
+    const freed = refList(i.waiting_on).filter((r) => !openKeys.has(i.project_slug + ":" + r));
+    if (freed.length) parts.push(tr("nextFreed", freed.join(", ")));
+    if (!parts.length) parts.push(tr("nextAge", daysAgo(i.created_at)));
+    return parts.join(" · ");
+  };
+  return { queue, waiting, others, why };
+}
+
+function renderNext() {
+  const { queue, waiting, others, why } = nextQueue();
+  const box = $("#next");
+  const scope = state.project === ALL ? tr("allProjects") : currentProject()?.name || "";
+  const cur = queue.find((i) => itemKey(i) === state.nextPick) || queue[0];
+  const notes = [
+    waiting.length ? h("p", { class: "small" }, tr("nextWaiting", waiting.length)) : null,
+    others && state.actor !== "ai" ? h("p", { class: "small" }, tr("nextAi", others)) : null,
+  ];
+  if (!cur) {
+    box.replaceChildren(h("p", { class: "nx-head" }, tr("nextFor", 0, scope)),
+      h("section", { class: "nx-card nx-empty" }, h("h2", null, tr("nextEmpty")), notes));
+    return;
+  }
+  const rest = queue.filter((i) => i !== cur);
+  box.replaceChildren(
+    h("p", { class: "nx-head" }, tr("nextFor", queue.length, scope)),
+    nextCard(cur, why(cur)),
+    h("aside", { class: "nx-side" },
+      rest.length ? h("section", { class: "col" },
+        h("header", { class: "col-head" }, h("h2", null, tr("nextAfter")), h("span", { class: "count" }, rest.length)),
+        h("ul", { class: "nx-list" }, rest.slice(0, 8).map((i) => h("li", null,
+          h("button", { type: "button", style: `--kc:${kindBy(i.kind)?.color || "#6b7280"}`, onclick: () => {
+            state.nextPick = itemKey(i); renderNext(); if ($("#next").getBoundingClientRect().top < 0) toBoardTop();
+          } }, h("span", { class: "ref" }, refLabel(i)), h("span", null, h("span", { class: "t" }, i.title), h("span", { class: "why" }, why(i)))))))) : null,
+      notes,
+      h("p", { class: "small" }, tr("nextOrder")),
+      h("p", { class: "small" }, tr("nextHint"))));
+}
+
+function nextCard(it, whyText) {
+  const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
+  const key = itemKey(it);
+  const decision = it.kind === "D"; // decisions record their outcome (methodology)
+  const result = decision ? h("textarea", { rows: 2, placeholder: tr("nextResultPh"), oninput: (e) => { state.nextDraft[key] = e.target.value; } }) : null;
+  if (result) result.value = state.nextDraft[key] || ""; // survives live re-renders
+  const pr = state.project === ALL ? state.projects.find((p) => p.slug === it.project_slug) : null;
+  return h("article", { class: "nx-card", style: `--kc:${k.color || "#6b7280"}`, "aria-labelledby": "nxTitle" },
+    h("div", { class: "nx-top" },
+      h("span", { class: "kbadge" }, it.kind),
+      h("button", { type: "button", class: "ref", title: tr("copyRef"), onclick: () => copy(`${refLabel(it)} ${it.title}`) }, refLabel(it)),
+      h("span", { class: "nx-kind" }, k.name),
+      h("span", { class: "spacer" }),
+      pr ? h("span", { class: "pill", title: pr.slug }, pr.name) : null,
+      it.source && /^https?:\/\//.test(it.source)
+        ? h("a", { class: "pill", href: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + tr("source")) : null),
+    h("h2", { class: "nx-title", id: "nxTitle" }, it.title),
+    h("p", { class: "nx-why" }, whyText),
+    it.body ? h("p", { class: "nx-body" }, it.body) : null,
+    result ? h("label", null, tr("nextResult"), result) : null,
+    h("div", { class: "nx-actions" },
+      h("button", { type: "button", class: "primary", onclick: () => finishNext(it, result) }, tr(decision ? "nextDecide" : "nextDone")),
+      h("button", { type: "button", class: "btn", onclick: () => {
+        state.nextLater = [...state.nextLater.filter((x) => x !== key), key]; state.nextPick = null; renderNext();
+      } }, tr("nextLater")),
+      h("span", { class: "spacer" }),
+      h("button", { type: "button", class: "btn", onclick: () => openEdit(it) }, tr("nextEdit"))));
+}
+
+// Done (or decided, with the outcome appended to the description); the toast offers to undo both.
+async function finishNext(it, resultEl) {
+  const key = itemKey(it);
+  const text = resultEl?.value.trim();
+  const body = text ? (it.body ? it.body.replace(/\s+$/, "") + "\n\n" : "") + tr("nextResultLine", new Date().toLocaleDateString(LOCALE), text) : null;
+  const path = P(it.project_slug) + "/items/" + it.ref;
+  try {
+    await api(path, { method: "PATCH", body: { status: "done", ...(body != null ? { body } : {}) } });
+    delete state.nextDraft[key];
+    if (state.nextPick === key) state.nextPick = null;
+    toast(tr(it.kind === "D" ? "decidedToast" : "doneToast", refLabel(it)), { label: tr("undo"), onclick: async () => {
+      try {
+        await api(path, { method: "PATCH", body: { status: it.status, ...(body != null ? { body: it.body || "" } : {}) } });
+        if (text) state.nextDraft[key] = text;
+        await refresh(false);
+      } catch (e) { toast(tr("error", e.message)); }
+    } });
+    await refresh(false);
+  } catch (e) { toast(tr("error", e.message)); }
+}
+
+/* ---------------------------------------------------------- history (A54) */
+// Who changed what, newest first, for the current view (one project or all). New = changes by the other side (the
+// AI, when you are signed in yourself) since you last opened the panel – remembered per view on this device. The first
+// time a view is seen, everything before counts as read.
+const hist = { open: false, actor: "", events: [], more: false, seen: 0, scope: null, req: 0 };
+const HIST_PAGE = 50;
+const histScope = () => state.project || ALL;
+const histPath = (scope) => (scope === ALL ? "/events" : P(scope) + "/events");
+function seenMap() { try { return JSON.parse(store.get("cotrack.seen") || "{}") || {}; } catch { return {}; } }
+function seenFor(scope) {
+  const m = seenMap();
+  if (m[scope] == null) { m[scope] = state.globalVersion; store.set("cotrack.seen", JSON.stringify(m)); }
+  return m[scope];
+}
+function setSeen(scope, id) {
+  const m = seenMap();
+  if ((m[scope] ?? -1) >= id) return;
+  m[scope] = id; store.set("cotrack.seen", JSON.stringify(m));
+}
+function showBadge(n) {
+  const b = $("#histBadge");
+  b.hidden = !n; b.textContent = n > 99 ? "99+" : String(n);
+  $("#histBtn").setAttribute("aria-label", n ? tr("histNewAria", n > 99 ? "99+" : n) : tr("hist"));
+}
+async function updateHistBadge() {
+  if (!state.project) return;
+  const scope = histScope();
+  try {
+    const { events } = await api(histPath(scope) + "?limit=100&after=" + seenFor(scope));
+    if (scope === histScope() && !hist.open) showBadge(events.filter((e) => e.actor !== state.actor).length);
+  } catch {}
+}
+function histChanged() { if (hist.open) loadHist("newer"); else updateHistBadge(); }
+
+function openHist() {
+  hist.open = true;
+  $("#hist").hidden = false; $("#histBtn").setAttribute("aria-expanded", "true");
+  $("#histClose").focus();
+  loadHist("reset");
+}
+function closeHist(refocus) {
+  if (!hist.open) return;
+  hist.open = false;
+  $("#hist").hidden = true; $("#histBtn").setAttribute("aria-expanded", "false");
+  if (refocus) $("#histBtn").focus();
+}
+// mode: "reset" (open, other view), "newer" (live update: prepend), "older" (next page)
+async function loadHist(mode) {
+  const scope = histScope();
+  if (!state.project) return;
+  if (hist.scope !== scope) mode = "reset";
+  if (mode === "reset") { hist.scope = scope; hist.seen = seenFor(scope); hist.events = []; hist.more = false; }
+  const req = ++hist.req;
+  const q = mode === "older" && hist.events.length ? "&before=" + hist.events[hist.events.length - 1].id
+    : mode === "newer" && hist.events.length ? "&after=" + hist.events[0].id : "";
+  // Catching up takes the largest page: if even that is full, the list restarts from the newest events (older ones
+  // stay reachable via "Ältere laden"), so no gap opens between new and already shown entries.
+  const limit = mode === "newer" ? 500 : HIST_PAGE;
+  try {
+    const { events } = await api(histPath(scope) + "?limit=" + limit + q);
+    if (req !== hist.req || scope !== histScope()) return;
+    if (mode === "older") { hist.events.push(...events); hist.more = events.length === HIST_PAGE; }
+    else if (mode === "newer" && events.length < limit) hist.events = [...events, ...hist.events];
+    else { hist.events = events; hist.more = events.length === limit; }
+    renderHist();
+    if (hist.events.length) setSeen(scope, hist.events[0].id);
+    showBadge(0);
+  } catch (e) { toast(tr("error", e.message)); }
+}
+
+function dayLabel(iso) {
+  const n = daysAgo(iso);
+  return n === 0 ? tr("today") : n === 1 ? tr("yesterday") : new Date(iso).toLocaleDateString(LOCALE, { weekday: "short", day: "numeric", month: "short" });
+}
+function renderHist() {
+  const shown = hist.events.filter((e) => !hist.actor || e.actor === hist.actor);
+  const fresh = hist.events.filter((e) => e.id > hist.seen && e.actor !== state.actor).length;
+  const out = [];
+  if (fresh) out.push(h("p", { class: "hist-new" }, tr("histNew", fresh)));
+  let day = null;
+  for (const e of shown) {
+    const label = dayLabel(e.at);
+    if (label !== day) { day = label; out.push(h("div", { class: "hist-day" }, label)); }
+    out.push(histEntry(e));
+  }
+  if (!shown.length && !hist.more) out.push(h("p", { class: "empty" }, tr("histEmpty")));
+  if (hist.more) out.push(h("button", { type: "button", class: "btn hist-more", onclick: () => loadHist("older") }, tr("histMore")));
+  $("#histList").replaceChildren(...out);
+}
+// What an event says, from its action and the fields it changed (data holds the new values only).
+function histDetails(e) {
+  const ev = tr("ev"), c = e.data || {};
+  const parts = [];
+  if (e.action === "created") parts.push(ev.created);
+  else if (e.action === "converted") parts.push(ev.converted(c.to));
+  else if (ev[e.action] && e.action !== "updated") parts.push(ev[e.action]);
+  if (e.action === "created" || e.action === "deleted" || e.action === "converted") {
+    if (e.action === "created" && c.owner) parts.push(`${tr("responsible")}: ${ownerLabel(c.owner)}`);
+    return parts;
+  }
+  if ("status" in c && e.action === "updated") parts.push(`${tr("fStatus")}: ${STATUS_LABELS[c.status] || c.status}`);
+  if ("owner" in c) parts.push(`${tr("responsible")}: ${c.owner ? ownerLabel(c.owner) : "–"}`);
+  if ("waiting_on" in c) parts.push(`${tr("fWaiting")}: ${c.waiting_on ? c.waiting_on.replace(/,/g, ", ") : "–"}`);
+  if ("due" in c) parts.push(`${tr("fDue")}: ${c.due || "–"}`);
+  if ("short" in c) parts.push(`${tr("fShort")}: ${c.short || "–"}`);
+  if ("title" in c) parts.push(ev.titleChanged);
+  if ("body" in c) parts.push(ev.bodyChanged);
+  if ("source" in c) parts.push(ev.sourceChanged);
+  return parts.length ? parts : [ev.updated];
+}
+function histEntry(e) {
+  const ev = tr("ev");
+  const pr = state.projects.find((p) => p.slug === e.project_slug);
+  let what, det;
+  if (e.item_ref) {
+    const k = kindBy(e.item_ref.match(/^[A-Z]+/)?.[0]);
+    const ref = histScope() === ALL ? `${pr?.code || e.project_slug}:${e.item_ref}` : e.item_ref;
+    what = [h("span", { class: "ref", style: `--kc:${k?.color || "#6b7280"}` }, ref), e.title ?? e.data?.title ?? ""];
+    det = histDetails(e);
+  } else {
+    what = [pr?.name || e.project_slug];
+    const c = e.data || {};
+    det = [e.action === "project_created" ? ev.projectCreated : "archived" in c ? (c.archived ? ev.archived : ev.restored) : ev.projectUpdated];
+  }
+  const fresh = e.id > hist.seen && e.actor !== state.actor;
+  const kids = [
+    h("span", { class: "who", title: ownerLabel(e.actor), "aria-label": ownerLabel(e.actor) }, e.actor === "ai" ? "🤖" : "👤"),
+    h("span", { class: "txt" }, h("span", { class: "what" }, what), h("span", { class: "det" }, det.join(" · "))),
+    h("time", { datetime: e.at }, new Date(e.at).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" })),
+  ];
+  const cls = "hev" + (fresh ? " new" : "");
+  // Items that still exist open like on the board.
+  if (!e.item_ref || e.action === "deleted") return h("div", { class: cls }, kids);
+  return h("button", { type: "button", class: cls + " link", onclick: () => openHistItem(e) }, kids);
+}
+async function openHistItem(e) {
+  try {
+    const { item } = await api(P(e.project_slug) + "/items/" + encodeURIComponent(e.item_ref));
+    openEdit(item);
+  } catch { toast(tr("histGone", e.item_ref)); }
+}
+$("#histBtn").addEventListener("click", () => (hist.open ? closeHist(true) : openHist()));
+$("#histClose").addEventListener("click", () => closeHist(true));
+$("#histFilter").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  hist.actor = b.dataset.actor;
+  for (const x of $("#histFilter").children) x.setAttribute("aria-pressed", String(x === b));
+  renderHist();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && hist.open && !e.defaultPrevented && !document.querySelector("dialog[open]")) closeHist(true);
+});
+
 /* ---------------------------------------------------------- actions */
 async function setStatus(it, status) {
   try {
@@ -897,10 +1339,13 @@ $("#add").addEventListener("submit", async (e) => {
   } catch (err) { toast(tr("error", err.message)); }
 });
 
+function syncViewChips() { for (const x of $("#viewChips").children) x.setAttribute("aria-pressed", String(x.dataset.view === state.view)); }
+syncViewChips();
 $("#viewChips").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
-  state.view = b.dataset.view;
-  for (const x of $("#viewChips").children) x.setAttribute("aria-pressed", String(x === b));
+  state.view = b.dataset.view; state.nextPick = null;
+  store.set("cotrack.view", state.view);
+  syncViewChips();
   refresh(true);
 });
 $("#ownerChips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) toggleOwner(b.dataset.owner); });
@@ -941,7 +1386,7 @@ $("#menuBtn").addEventListener("click", openMenu);
 window.addEventListener("hashchange", () => { const s = decodeURIComponent(location.hash.slice(1)); if (s && s !== state.project) selectProject(s); });
 
 function selectProject(slug) {
-  state.project = slug; state.version = -1;
+  state.project = slug; state.version = -1; state.nextPick = null;
   store.set("cotrack.project", slug);
   history.replaceState(null, "", "#" + encodeURIComponent(slug));
   renderProjects(); refresh(true); poll();

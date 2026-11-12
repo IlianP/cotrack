@@ -51,8 +51,11 @@ warnings – a one-glance status that survives across conversations.
   per project when several are in play.
 - **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
   ([details below](#prioflow-what-is-next)).
+- **Next** – a view that shows one of your items at a time: first what you have started, then what holds up other
+  items, decisions before actions, oldest first. *Done* (decisions with an optional outcome), *Later*, undo in the toast.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
-- **Audit trail** – every change is logged with who made it (you or the AI).
+- **Audit trail and history** – every change is logged with who made it (you or the AI); the clock in the top bar shows
+  it, marks what the AI changed since you last looked and counts it on the button.
 - **Installable as an app** – Chrome/Edge on Android and the desktop: ☰ → *Install as app*; cotrack then runs in its own
   window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
 - Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), German and English (follows the
@@ -178,7 +181,8 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
-| GET | `/api/projects/:slug/events?after=` | change log |
+| GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
+| GET | `/api/events?after=&before=&limit=` | change log across all projects |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 | GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (defaults `multi`, `👤`, `🤖`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |
