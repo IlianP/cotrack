@@ -1384,6 +1384,8 @@ function page(html) {
         "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
+      // A private instance: keep the sign-in page out of search engines.
+      "x-robots-tag": "noindex, nofollow",
     },
   });
 }
