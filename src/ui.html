@@ -832,7 +832,8 @@ const STRINGS = {
     codeChars: "2–4 Zeichen", fRepo: "GitHub-Repository", fSlug: "Slug (URL)", fName: "Name",
     codeNote: "Das Kürzel (z. B. CT) steht vor Kennungen, wenn mehrere Projekte im Gespräch sind: CT:A14. Es lässt sich später nicht mehr ändern.",
     create: "Anlegen", projectCreated: "Projekt angelegt",
-    signInTitle: " – Anmelden", tokenHelp: "Gib deinen Zugangstoken ein. Er wird nur in diesem Browser gespeichert.", token: "Token", signIn: "Anmelden",
+    signInTitle: " – Anmelden", privateInstance: "Das ist eine private cotrack-Instanz – ohne Zugangstoken gibt es hier nichts zu sehen. cotrack ist Open Source: Code und Anleitung für eine eigene Instanz gibt es auf GitHub.", repoLink: "cotrack auf GitHub", repoUrl: "https://github.com/IlianP/cotrack/blob/main/README.de.md",
+    tokenHelp: "Gib deinen Zugangstoken ein. Er wird nur in diesem Browser gespeichert.", token: "Token", signIn: "Anmelden",
     // Next (A53)
     viewNext: "Next", viewNextTitle: "Next: ein Punkt nach dem anderen",
     nextFor: (n, scope) => `${n === 1 ? "1 Punkt" : n + " Punkte"} für dich · ${scope}`,
@@ -983,7 +984,8 @@ const STRINGS = {
     codeChars: "2–4 characters", fRepo: "GitHub repository", fSlug: "Slug (URL)", fName: "Name",
     codeNote: "The code (e.g. CT) precedes references when several projects are in a conversation: CT:A14. It cannot be changed later.",
     create: "Create", projectCreated: "Project created",
-    signInTitle: " – Sign in", tokenHelp: "Enter your access token. It is stored only in this browser.", token: "Token", signIn: "Sign in",
+    signInTitle: " – Sign in", privateInstance: "This is a private cotrack instance – without an access token there is nothing to see here. cotrack is open source: the code and a guide for running your own instance are on GitHub.", repoLink: "cotrack on GitHub", repoUrl: "https://github.com/IlianP/cotrack",
+    tokenHelp: "Enter your access token. It is stored only in this browser.", token: "Token", signIn: "Sign in",
     // Next (A53)
     viewNext: "Next", viewNextTitle: "Next: one item at a time",
     nextFor: (n, scope) => `${n === 1 ? "1 item" : n + " items"} for you · ${scope}`,
@@ -3077,11 +3079,15 @@ function showLogin(msg) {
   const d = openDialog(
     h("h3", null, "co", h("b", { style: "color:var(--accent)" }, "track"), tr("signInTitle")),
     msg ? h("p", { class: "small", style: "color:var(--danger)" }, msg) : null,
+    // Strangers who land here only see this dialog: say what it is and where the project lives.
+    h("p", { class: "small" }, tr("privateInstance"), " ",
+      h("a", { href: tr("repoUrl"), target: "_blank", rel: "noopener", style: "color:var(--accent)" }, tr("repoLink"))),
     h("p", { class: "small" }, tr("tokenHelp")),
     field(tr("token"), input),
     h("div", { class: "actions" }, h("button", { class: "primary" }, tr("signIn"))),
   );
   d.dataset.locked = "1";
+  input.focus(); // the repo link above comes first, but the token field is what the owner needs
   d.querySelector("form").addEventListener("submit", (e) => {
     e.preventDefault(); state.token = input.value.trim(); store.set("cotrack.token", state.token); closeDialog(); boot();
   });
