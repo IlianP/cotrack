@@ -81,6 +81,7 @@ button { cursor: pointer; }
 .psel-name, .psel-repo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .psel-count { font-size: 12px; color: var(--muted); }
 .psel-repo { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
+.psel-list li.psel-all { border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; margin-bottom: 4px; }
 .psel-empty { padding: 10px 8px; color: var(--muted); font-size: 13px; }
 /* narrow screens: the list spans the whole top bar (its containing block) instead of starting at the button */
 @media (max-width: 560px) {
@@ -2590,13 +2591,15 @@ function selectProject(slug) {
 /* ---------------------------------------------------------- project picker */
 // Searchable project selection (A43): every word typed must appear in the name, code, repository or slug.
 // Case and accents are ignored; exact code and word-start hits come first, otherwise the list order stays.
+// "Alle Projekte" is always the first entry of the full list, so it needs no scrolling however many projects exist.
+// While searching it stays below the project hits, so Enter still picks the best-matching project.
 const picker = { open: false, active: 0, options: [] };
 const fold = (s) => String(s ?? "").normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 const ALL_OPTION = { slug: ALL, all: true, name: tr("allProjects") };
 
 function pickerMatches(query) {
   const terms = fold(query).split(/\s+/).filter(Boolean);
-  if (!terms.length) return [...state.projects, ALL_OPTION];
+  if (!terms.length) return [ALL_OPTION, ...state.projects];
   const hits = [];
   state.projects.forEach((p, i) => {
     const fields = [p.code, p.name, p.repo, p.slug].map(fold);
@@ -2618,7 +2621,7 @@ function renderPicker() {
   const list = $("#projectList");
   list.replaceChildren(
     ...picker.options.map((p, i) =>
-      h("li", { id: "popt-" + i, role: "option", class: p.slug === state.project ? "cur" : "", "aria-selected": "false",
+      h("li", { id: "popt-" + i, role: "option", class: [p.slug === state.project ? "cur" : "", p.all && i === 0 && picker.options.length > 1 ? "psel-all" : ""].filter(Boolean).join(" "), "aria-selected": "false",
           onmousemove: () => setPickerActive(i), onclick: () => choosePicker(i) },
         h("span", { class: "psel-code" }, p.all ? "" : p.code || ""),
         h("span", { class: "psel-name" }, p.name),
