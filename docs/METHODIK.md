@@ -2,7 +2,7 @@
 
 [English](METHODOLOGY.md) · **Deutsch**
 
-## Gültig: Methodik v2.8 (Stand 12. November 2026)
+## Gültig: Methodik v2.9 (Stand 13. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -64,6 +64,8 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.9 hat keine neue Regel: Der Prompt-Text ist nur kürzer (rund 4.100 Zeichen, passt mit eigenen Regeln unter das
+  ChatGPT-Limit von 5.000 Zeichen).
 
 ---
 

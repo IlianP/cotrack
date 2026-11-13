@@ -6,7 +6,7 @@
 > (German, default) or `new: … · done: …` (`lang=en`). The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.8 (as of 12 November 2026)
+## Current: Methodology v2.9 (as of 13 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -69,6 +69,8 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.9 adds no new rule: the prompt text is just shorter (about 3,900 characters, so together with your own rules it fits
+  under ChatGPT's 5,000-character limit).
 
 ---
 
