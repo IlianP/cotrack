@@ -26,6 +26,7 @@ im Prompt. Deshalb braucht es beides.
 | Ob die KI eine Liste führt; wann sie cotrack aufruft (Start, neue Punkte, Erledigtes); Übergabe | **Prompt** | Der Server kann die KI zu nichts bringen, er antwortet nur. |
 | Wann die Fußzeile erscheint (bei „Stand?“, am Ende größerer Arbeiten, etwa alle vier Antworten; sonst die Kurzzeile) | **Prompt** | Nur die KI weiß, wann eine Antwort endet. |
 | Wie die Fußzeile aussieht (Gruppen, Reihenfolge, höchstens acht Einträge, ▶/⏸, ein- oder mehrzeilig, 👤/🤖) | **Server**, Standard in der **Web-App** (☰ → Chat-Fußzeile → Anpassen) | Eine Quelle für alle Chats und Programme. |
+| Sprache dessen, was cotrack der KI schreibt (Anweisung, Werkzeuge, Antworten, Fußzeile) | **Server**, eingestellt in der **Web-App** (☰ → Sprache, dieselbe wie für die Web-App); `lang` in einer Anfrage geht vor | MCP sagt dem Server nicht, welche Sprache der Nutzer spricht. |
 | Kennungen (nie neu vergeben), Abhängigkeiten, wer was geändert hat | **Server** | Die Datenbank erzwingt es. |
 | Welches Projekt zur Unterhaltung gehört | **KI**, nach `COTRACK.md` bzw. `cotrack_projects` | Der Server sieht das Repository nicht. |
 | Arbeiten ohne cotrack (Rückfall) | **Prompt**, Teil 1 | – |

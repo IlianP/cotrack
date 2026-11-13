@@ -73,13 +73,16 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
   einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
   *Zum Home-Bildschirm*.
-- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), Deutsch und Englisch (folgt der
-  Sprache des Browsers oder per ☰), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
+- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
+- **Deutsch und Englisch – für dich und deine KI** – ☰ → *Sprache* stellt eine Sprache für die Web-App auf allen Geräten und
+  für das ein, was cotrack Claude, ChatGPT & Co. sagt (Anweisungen, Werkzeugbeschreibungen, Antworten, Fußzeile). Ohne Wahl
+  („Auto“) folgt die Web-App der Sprache des Browsers, und die KI bekommt Deutsch.
 
 > **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
-> teilen. Siehe Roadmap. Web-App und Chat-Fußzeile gibt es auf Deutsch und Englisch (Fußzeile: `lang`); Code und API sind englisch; dieses README
-> gibt es auf [Englisch](README.md) und Deutsch.
+> teilen. Siehe Roadmap. Alles gibt es auf Deutsch und Englisch: die Web-App und was die KI von cotrack bekommt (MCP,
+> Textantworten, Fußzeile – eine Einstellung, ☰ → *Sprache*), die Freigabeseite (Sprache des Browsers) und die Doku; Code und Feldnamen der
+> API sind englisch. Dieses README gibt es auf [Englisch](README.md) und Deutsch.
 
 ## Architektur
 
@@ -110,7 +113,8 @@ npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex
 
 Öffne deine Worker-Adresse, gib deinen Token ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`
 (OAuth; du bestätigst einmal mit deinem Token). Optional `TOKEN_AI`: ein fester Token für KI-Werkzeuge ohne Browser, siehe
-[docs/MCP.md](docs/MCP.md). Layout und Kennzeichen der Fußzeile: ☰ → *Chat-Fußzeile → Anpassen* in der Web-App.
+[docs/MCP.md](docs/MCP.md). Sprache für Web-App und KI-Assistenten: ☰ → *Sprache* (ohne Wahl bekommt die KI Deutsch).
+Layout und Kennzeichen der Fußzeile: ☰ → *Chat-Fußzeile → Anpassen* in der Web-App.
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.
 
@@ -194,19 +198,22 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | POST | `/api/projects` | anlegen `{slug, name?, repo?, code?}` (ohne `code` wird eines aus dem Slug vorgeschlagen) |
 | PATCH | `/api/projects/:slug` | ändern `{name?, repo?, code?, archived?}`; `code` lässt sich einmal setzen und danach nie ändern. `:slug` darf auch das Kürzel sein |
 | GET | `/api/code-suggestion?slug=` | erstes freies Kürzel für einen Slug (Initialen, dann die ersten 2–4 Buchstaben) |
-| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | Punkte auflisten (`format=text`: eine kompakte Zeile je Punkt, für KI-Assistenten) |
+| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | Punkte auflisten (`format=text`: eine kompakte Zeile je Punkt, für KI-Assistenten) |
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang`: `neu / erledigt` oder `new / done`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
-| GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
+| GET | `/api/projects/:slug/status.md?lang=de\|en` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
 | GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
-| GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (Standard `multi`, `👤`, `🤖`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |
+| GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (Standard `multi`, `👤`, `🤖`, `de`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |
+
+Textantworten (`format=text`, `status.md`, Fußzeile) kommen in der Sprache der Instanz (`language` in `/api/settings`),
+außer die Anfrage nennt `lang=de|en`.
 
 Statuswerte: `open`, `doing`, `blocked`, `done`, `dropped`. Besitzer: `user`, `ai` oder ein beliebiger Name
 (Standard: der Ersteller). Mit `seq` lässt sich eine bestehende Kennung übernehmen (z. B. `A3` aus einem Chat); eine

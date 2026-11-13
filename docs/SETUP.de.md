@@ -139,7 +139,9 @@ Ohne Terminal geht das auch im Browser: <https://dash.cloudflare.com> → **Work
 ## 8. Ausprobieren und KI verbinden
 
 1. `<deine-adresse>` im Browser öffnen, deinen Token eingeben und ein erstes Projekt anlegen.
-2. KI-Assistent verbinden – überall nur mit der Adresse, ohne Token (Details in [MCP.md](MCP.md)):
+2. In der Web-App ☰ → **Sprache** **DE** wählen (oder **EN** für Englisch): Das gilt für die Web-App auf allen Geräten und für
+   das, was cotrack deinen KI-Assistenten schreibt (Anweisungen, Werkzeugbeschreibungen, Antworten). Ohne Wahl bekommt die KI Deutsch.
+3. KI-Assistent verbinden – überall nur mit der Adresse, ohne Token (Details in [MCP.md](MCP.md)):
    - **claude.ai / ChatGPT:** Connector mit der URL `<deine-adresse>/mcp` anlegen. Beim Verbinden öffnet sich die
      cotrack-Freigabeseite: deinen Token eingeben und „Zugriff erlauben“ wählen.
    - **Claude Code:**
@@ -150,9 +152,9 @@ Ohne Terminal geht das auch im Browser: <https://dash.cloudflare.com> → **Work
 
    Der Assistent bekommt dabei eigene, kurzlebige Zugangsdaten. Deinen Token sieht er nicht, und seine Änderungen werden als
    „KI“ protokolliert.
-3. Den passenden Prompt einspielen: [PROMPT.md](PROMPT.md) (Teil 1 + Teil 2) –
+4. Den passenden Prompt einspielen: [PROMPT.md](PROMPT.md) (Teil 1 + Teil 2) –
    [wozu es ihn braucht](PROMPT.md#wozu-der-prompt--wer-regelt-was), obwohl cotrack einen Server hat.
-4. Optional: in der Web-App ☰ → **Chat-Fußzeile → Anpassen** – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und
+5. Optional: in der Web-App ☰ → **Chat-Fußzeile → Anpassen** – Layout der Fußzeile (eine Zeile je Gruppe oder alles in einer Zeile) und
    die Kennzeichen für deine Punkte und die der KI (Standard 👤 / 🤖).
 
 ## Nur im Browser: GitHub + Cloudflare-Dashboard
