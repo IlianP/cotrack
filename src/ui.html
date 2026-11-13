@@ -273,7 +273,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
 .menu-list { display: grid; gap: 6px; }
 .menu-list button { text-align: left; }
-/* menu: sections by scope (this device · projects · chat footer · access) */
+/* menu: sections by scope (this device · projects · AI assistants · chat footer · access) */
 .dlg h4.sec {
   margin: 2px 0 -4px; padding-top: 12px; border-top: 1px solid var(--line);
   font-size: 12.5px; font-weight: 650; color: var(--muted);
@@ -289,6 +289,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .theme-row { display: flex; align-items: center; gap: 8px; }
 .theme-row .seg button { min-width: 44px; font-size: 18px; }
 .theme-row .seg.txt button { min-width: 48px; font-size: 13px; }
+.seg button:disabled { opacity: .55; cursor: default; }
 .dlg h4 { margin: 4px 0 0; font-size: 14px; }
 .preview {
   margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line);
@@ -809,6 +810,9 @@ const STRINGS = {
     installApp: "📲 Als App installieren", installIos: "Als App: im Teilen-Menü „Zum Home-Bildschirm“ wählen.", installed: "cotrack ist installiert",
     appearance: "Darstellung", themeLight: "Hell", themeDark: "Dunkel", themeAuto: "Wie das System",
     language: "Sprache", langAuto: "Automatisch – nach der Sprache des Browsers",
+    secAi: "KI-Assistenten", aiLang: "Sprache",
+    aiLangHelp: "Für alles, was cotrack Claude, ChatGPT & Co. schreibt: Anweisungen, Werkzeuge, Antworten, Fußzeile. Gilt auf allen Geräten.",
+    aiLangSaved: (name) => "KI-Assistenten: " + name,
     footerDialog: "Chat-Fußzeile anpassen",
     settingsIntro: "Gilt auf allen Geräten: für jede KI, die die Fußzeile über cotrack holt (MCP und API), und für ☰ → Chat-Fußzeile → Kopieren. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt.",
     layoutMulti: "Mehrzeilig – je Gruppe eine Zeile", layoutSingle: "Einzeilig – alles in einer Zeile",
@@ -959,6 +963,9 @@ const STRINGS = {
     installApp: "📲 Install as app", installIos: "As an app: Share menu → “Add to Home Screen”.", installed: "cotrack is installed",
     appearance: "Appearance", themeLight: "Light", themeDark: "Dark", themeAuto: "Like the system",
     language: "Language", langAuto: "Automatic – the browser's language",
+    secAi: "AI assistants", aiLang: "Language",
+    aiLangHelp: "For everything cotrack writes to Claude, ChatGPT & co.: instructions, tools, answers, footer. Applies on every device.",
+    aiLangSaved: (name) => "AI assistants: " + name,
     footerDialog: "Customize chat footer",
     settingsIntro: "Applies on every device: to every AI that fetches the footer from cotrack (MCP and API) and to ☰ → Chat footer → Copy. The bar at the bottom always shows it on one line. When the footer appears in the chat is up to your prompt.",
     layoutMulti: "Multi-line – one line per group", layoutSingle: "Single line – everything on one line",
@@ -2862,8 +2869,8 @@ function openEdit(it) {
 const fmt = (iso) => iso ? new Date(iso).toLocaleString(LOCALE, { dateStyle: "short", timeStyle: "short" }) : "–";
 const actorLabel = (a) => STRINGS[LANG].actors[a] || a || "–";
 
-// The menu is grouped by scope: this device (appearance, language), projects, the chat footer (applies to every AI),
-// access. There is no "Settings" entry: everything here is a setting or an action, each named for what it does.
+// The menu is grouped by scope: this device (appearance, language), projects, AI assistants (their language) and the
+// chat footer (both apply to every AI), access. There is no "Settings" entry: everything here is a setting or an action, each named for what it does.
 function openMenu() {
   const go = (fn) => () => { closeDialog(); fn(); };
   const inProject = state.project && state.project !== ALL;
@@ -2878,8 +2885,10 @@ function openMenu() {
     h("div", { class: "menu-list" },
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md?lang=" + LANG), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
       state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
+    sec(tr("secAi")),
+    aiLangRow(),
     sec(tr("secFooter")),
     h("div", { class: "menu-row" },
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
@@ -2932,6 +2941,34 @@ function langRow() {
     h("div", { class: "seg txt", role: "group", "aria-label": tr("language") }, opts.map(([value, label, title]) =>
       h("button", { type: "button", title, "aria-label": title, "aria-pressed": String(value === cur),
         onclick: () => { if (value === cur) return; store.set("cotrack.lang", value === "auto" ? null : value); location.reload(); } }, label))));
+}
+
+// Language for AI assistants (instance setting `language`): what cotrack writes to every AI – MCP instructions, tool
+// descriptions and answers, text lists, the footer. Unlike the UI language above it applies on every device; saved at once,
+// only with the user token. The row appears right away and is filled in once the settings have loaded.
+function aiLangRow() {
+  const opts = [["de", "DE", "Deutsch"], ["en", "EN", "English"]];
+  const note = h("p", { class: "small" }, tr("aiLangHelp"));
+  const show = (lang) => buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(opts[i][0] === lang)));
+  let current = null;
+  const pick = async (value, name) => {
+    if (value === current) return;
+    try {
+      const { settings } = await api("/settings", { method: "PATCH", body: { language: value } });
+      current = settings.language; show(current); toast(tr("aiLangSaved", name));
+    } catch (err) { toast(tr("error", err.message)); }
+  };
+  const buttons = opts.map(([value, label, name]) =>
+    h("button", { type: "button", title: name, "aria-label": name, "aria-pressed": "false", disabled: true, onclick: () => pick(value, name) }, label));
+  api("/settings").then(({ settings, available }) => {
+    current = settings.language; show(current);
+    const canEdit = available && state.actor === "user";
+    for (const b of buttons) b.disabled = !canEdit;
+    if (!available) note.textContent = tr("settingsMigration");
+    else if (!canEdit) note.textContent = tr("settingsAiToken");
+  }).catch(() => { /* the row stays disabled; the menu works without it */ });
+  return [h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("aiLang")), h("span", { class: "spacer" }),
+    h("div", { class: "seg txt", role: "group", "aria-label": tr("secAi") + " – " + tr("aiLang") }, buttons)), note];
 }
 
 const currentProject = () => state.projects.find((p) => p.slug === state.project);

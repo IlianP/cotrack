@@ -3,7 +3,8 @@
 **English** · [Deutsch](METHODIK.md)
 
 > The group markers `👤:` and `🤖:` are the same in every language. Only the short line differs: `neu: … · erledigt: …`
-> (German, default) or `new: … · done: …` (`lang=en`). The letters A/D/I/W and the references are language-independent.
+> (German) or `new: … · done: …` (`lang=en`); without `lang` the language set in the web app applies (☰ → AI assistants →
+> Language, default German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
 ## Current: Methodology v2.9 (as of 13 November 2026)

@@ -21,7 +21,33 @@ const CODE_RE = /^[A-Z]{2}[A-Z0-9]{0,2}$/;
 const QREF_RE = /^([A-Za-z0-9][A-Za-z0-9-]{0,62}):([A-Za-z]{1,4}\d{1,6})$/;
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const OWNER_LABELS = { user: "Du", ai: "KI" };
+// Texts the server writes itself (text lists, STATUS.md section), per language. The language comes from the request
+// (`lang=de|en`) or else from the instance setting `language` (web app ☰ → AI assistants); built-in default German.
+export const LANGS = ["de", "en"];
+const TEXT = {
+  de: {
+    owners: { user: "Du", ai: "KI" },
+    statuses: { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" },
+    none: "(keine)",
+    statusHeading: "## Offene Punkte",
+    statusAsOf: "Stand",
+    statusEmpty: "Keine offenen Punkte.",
+    statusColumns: ["Kennung", "Stichwort", "Art", "Verantwortlich", "Quelle", "Status"],
+  },
+  en: {
+    owners: { user: "You", ai: "AI" },
+    statuses: { open: "open", doing: "in progress", blocked: "blocked", done: "done", dropped: "dropped" },
+    none: "(none)",
+    statusHeading: "## Open points",
+    statusAsOf: "As of",
+    statusEmpty: "No open points.",
+    statusColumns: ["Ref", "Keyword", "Type", "Responsible", "Source", "Status"],
+  },
+};
+// Built-in categories are stored in German (migrations); in English they are translated unless renamed (as in src/ui.html).
+const KIND_DE_NAMES = { D: "Entscheidung", A: "Aufgabe", I: "Idee", W: "Warnung" };
+const KIND_EN_NAMES = { D: "Decision", A: "Action", I: "Idea", W: "Warning" };
+export const kindName = (k, lang) => (lang === "en" && k.name === KIND_DE_NAMES[k.code] ? KIND_EN_NAMES[k.code] : k.name);
 // Footer group labels.
 // Language-independent since v2.6: 👤 = yours, 🤖 = the AI's.
 const FOOTER_OWNER_LABELS = { user: "👤", ai: "🤖" };
@@ -33,10 +59,14 @@ const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { cr
 const FOOTER_LAYOUT_DEFAULT = "multi";
 // Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen). A missing row – or a database
 // without the table – means these built-in defaults.
+// `language` (de|en): the language of everything cotrack writes for AI assistants – MCP instructions, tool descriptions
+// and answers, text lists, the footer's short line – unless a request names its own `lang`. German stays the built-in
+// default so that existing instances keep their behaviour.
 const SETTINGS_DEFAULTS = Object.freeze({
   footer_layout: FOOTER_LAYOUT_DEFAULT,
   footer_label_user: FOOTER_OWNER_LABELS.user,
   footer_label_ai: FOOTER_OWNER_LABELS.ai,
+  language: "de",
 });
 const OWNER_ALIASES = { user: "user", du: "user", me: "user", ich: "user", human: "user", ai: "ai", ki: "ai" };
 // Sub-items (methodology v2.8, decided in D16): a checklist "- [ ] step" / "- [x] step" in the body of a task (A).
@@ -44,7 +74,6 @@ const OWNER_ALIASES = { user: "user", du: "user", me: "user", ich: "user", human
 const CHECK_KIND = "A";
 const MAX_CHECKS = 8; // hard limit; the methodology asks for at most 5
 const CHECK_LINE_RE = /^(\s*[-*]\s+\[)([ xX])(\]\s+)(.*\S)\s*$/;
-const STATUS_LABELS = { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" };
 
 class HttpError extends Error {
   constructor(status, code, detail) {
@@ -68,7 +97,7 @@ export default {
       }
       // Web app manifest and icons (installable app), public like the page itself.
       if (request.method === "GET") {
-        const pwa = pwaResponse(url.pathname);
+        const pwa = pwaResponse(url.pathname, preferredLang(request.headers.get("accept-language")));
         if (pwa) return pwa;
       }
       // "/mcp/" with a trailing slash is the same endpoint: ChatGPT calls it that way (A39).
@@ -169,7 +198,7 @@ async function route(req, db, url, actor) {
       delta: q.get("delta") === "1",
       max: clampInt(q.get("max"), 1, 30, 8),
       layout: normLayout(q.get("layout")),
-      lang: normLang(q.get("lang")),
+      lang: optLang(q.get("lang")),
     });
     if (q.get("format") === "text") return plain(textLine);
     return json({ footer: textLine });
@@ -183,7 +212,9 @@ async function route(req, db, url, actor) {
   // Cross-project view, e.g. GET /api/items?owner=user&status=open
   if (seg[0] === "items" && seg.length === 1 && method === "GET") {
     const items = await listItems(db, filtersFrom(q));
-    if (q.get("format") === "text") return plain(itemsAsText(items, await listKinds(db, true), { withProject: true }));
+    if (q.get("format") === "text") {
+      return plain(itemsAsText(items, await listKinds(db, true), { withProject: true, lang: await langFor(db, q) }));
+    }
     return json({ items });
   }
 
@@ -202,7 +233,7 @@ async function route(req, db, url, actor) {
       if (seg.length === 3) {
         if (method === "GET") {
           const items = await listItems(db, { ...filtersFrom(q), project: project.slug });
-          if (q.get("format") === "text") return plain(itemsAsText(items, await listKinds(db, true)));
+          if (q.get("format") === "text") return plain(itemsAsText(items, await listKinds(db, true), { lang: await langFor(db, q) }));
           return json({ items });
         }
         if (method === "POST") return json({ item: await createItem(db, project, await readJson(req), actor) }, 201);
@@ -235,17 +266,18 @@ async function route(req, db, url, actor) {
           since: q.get("since") || null,
           delta: q.get("delta") === "1",
           layout: normLayout(q.get("layout")),
-          lang: normLang(q.get("lang")),
+          lang: optLang(q.get("lang")),
         });
         if (q.get("format") === "text") return plain(textLine);
         return json({ footer: textLine });
       }
       if (sub === "status.md") {
-        const [items, kinds] = await Promise.all([
+        const [items, kinds, lang] = await Promise.all([
           listItems(db, { project: project.slug, status: "all" }),
           listKinds(db, true),
+          langFor(db, q),
         ]);
-        return plain(buildStatusMarkdown(project, items, kinds, url.origin), "text/markdown; charset=utf-8");
+        return plain(buildStatusMarkdown(project, items, kinds, url.origin, lang), "text/markdown; charset=utf-8");
       }
     }
   }
@@ -729,7 +761,7 @@ function parseRef(ref) {
 export async function getItemByRef(db, slug, ref) {
   const { qualifier, ref: plainRef } = splitRef(ref);
   if (qualifier && (await getProject(db, qualifier)).slug !== slug) {
-    throw new HttpError(400, "ref_project_mismatch", `${ref} gehört nicht zu ${slug}`);
+    throw new HttpError(400, "ref_project_mismatch", `${ref} does not belong to ${slug}`);
   }
   const { kind, seq } = parseRef(plainRef);
   const item = await db
@@ -1119,6 +1151,36 @@ export function normLang(v) {
   return String(v ?? "").toLowerCase().startsWith("en") ? "en" : "de";
 }
 
+// A `lang` given in a request, or null when there is none: then the instance setting `language` applies.
+export function optLang(v) {
+  return v === undefined || v === null || String(v).trim() === "" ? null : normLang(v);
+}
+
+// The language for API text answers: `lang` in the query, otherwise the instance setting.
+async function langFor(db, q) {
+  return optLang(q.get("lang")) || (await getSettings(db)).language;
+}
+
+// Language for pages a browser opens without the web app (OAuth consent page, app manifest), from Accept-Language –
+// the same rule as the web app: the first German (de, gsw) or English entry by preference decides, anything else is English.
+export function preferredLang(header) {
+  const tags = String(header || "")
+    .split(",")
+    .map((part, i) => {
+      const [tag, ...params] = part.trim().split(";");
+      const qp = params.map((x) => x.trim()).find((x) => x.startsWith("q="));
+      const qv = qp ? Number(qp.slice(2)) : 1;
+      return { tag: tag.trim().toLowerCase().split(/[-_]/)[0], q: Number.isFinite(qv) ? qv : 0, i };
+    })
+    .filter((t) => t.tag && t.q > 0)
+    .sort((a, b) => b.q - a.q || a.i - b.i);
+  for (const { tag } of tags) {
+    if (tag === "de" || tag === "gsw") return "de";
+    if (tag === "en") return "en";
+  }
+  return "en";
+}
+
 // "single" | "multi", or null when not given (or unknown): then the web app setting applies.
 export function normLayout(v) {
   const s = String(v ?? "").trim().toLowerCase();
@@ -1167,6 +1229,11 @@ function normSetting(key, v) {
     const layout = normLayout(v);
     if (!layout) throw new HttpError(400, "invalid_field", "footer_layout (multi|single)");
     return layout;
+  }
+  if (key === "language") {
+    const lang = String(v).trim().toLowerCase();
+    if (!LANGS.includes(lang)) throw new HttpError(400, "invalid_field", `language (${LANGS.join("|")})`);
+    return lang;
   }
   // Group markers ("👤", "Du", …): short and on one line; the footer adds the ":" itself.
   const s = text(v, key, 16)?.replace(/:+$/, "").trim();
@@ -1220,7 +1287,8 @@ export function buildMultiFooter(entries, kinds, opts = {}) {
 
 // Footer for one or more projects given by slug or code; a single project has no project label.
 // layout: "multi" | "single" from the request, or null for the web app setting.
-export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = null, lang = "de" } = {}) {
+// lang: "de" | "en" from the request, or null for the instance setting `language`.
+export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = null, lang = null } = {}) {
   const projects = [];
   for (const key of keys) {
     const p = await getProject(db, key);
@@ -1231,7 +1299,7 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
     getSettings(db),
     ...projects.map((p) => listItems(db, { project: p.slug, status: "all" })),
   ]);
-  const opts = { since, deltaOnly: delta, max, lang, ...footerStyle(settings, layout) };
+  const opts = { since, deltaOnly: delta, max, lang: lang || settings.language, ...footerStyle(settings, layout) };
   if (projects.length === 1) return buildFooter(lists[0], kinds, opts);
   return buildMultiFooter(projects.map((project, i) => ({ project, items: lists[i] })), kinds, opts);
 }
@@ -1241,7 +1309,8 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
  * "A2 MCP-Server bauen ⏸D1 [in Arbeit] @Maria" or "D1 Lizenz wählen ▶A2,A4" (▶ = items waiting for it).
  * Bodies are left out; fetch a single item for details.
  */
-export function itemsAsText(items, kinds, { withProject = false } = {}) {
+export function itemsAsText(items, kinds, { withProject = false, lang = "de" } = {}) {
+  const T = TEXT[lang] || TEXT.de;
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const succ = successorMap(items);
   const lines = items.map((it) => {
@@ -1252,35 +1321,36 @@ export function itemsAsText(items, kinds, { withProject = false } = {}) {
     if (it.waiting_on) parts.push(`⏸${it.waiting_on}`);
     const next = succ.get(it.ref);
     if (next && !withProject) parts.push(`▶${next.join(",")}`);
-    if (it.status !== "open") parts.push(`[${STATUS_LABELS[it.status]}]`);
-    if (it.owner && (!k || it.owner !== k.default_owner)) parts.push(`@${OWNER_LABELS[it.owner] || it.owner}`);
+    if (it.status !== "open") parts.push(`[${T.statuses[it.status]}]`);
+    if (it.owner && (!k || it.owner !== k.default_owner)) parts.push(`@${T.owners[it.owner] || it.owner}`);
     if (it.converted_to) parts.push(`→${it.converted_to}`);
     if (it.due) parts.push(`📅${it.due}`);
     return parts.join(" ");
   });
-  return lines.length ? lines.join("\n") + "\n" : "(keine)\n";
+  return lines.length ? lines.join("\n") + "\n" : T.none + "\n";
 }
 
-export function buildStatusMarkdown(project, items, kinds, origin) {
+export function buildStatusMarkdown(project, items, kinds, origin, lang = "de") {
+  const T = TEXT[lang] || TEXT.de;
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const open = items.filter((i) => OPEN.includes(i.status));
   const cell = (s) => String(s ?? "").replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
   const lines = [
-    "## Offene Punkte",
+    T.statusHeading,
     "",
-    `_Stand: ${now().slice(0, 16).replace("T", " ")} UTC · Live: ${origin}/#${project.slug}_`,
+    `_${T.statusAsOf}: ${now().slice(0, 16).replace("T", " ")} UTC · Live: ${origin}/#${project.slug}_`,
     "",
   ];
   if (!open.length) {
-    lines.push("Keine offenen Punkte.");
+    lines.push(T.statusEmpty);
     return lines.join("\n") + "\n";
   }
-  lines.push("| Kennung | Stichwort | Art | Verantwortlich | Quelle | Status |", "|---|---|---|---|---|---|");
+  lines.push(`| ${T.statusColumns.join(" | ")} |`, "|---|---|---|---|---|---|");
   for (const it of open) {
     const k = kindBy.get(it.kind);
-    const status = STATUS_LABELS[it.status] + (it.waiting_on ? ` ⏸${it.waiting_on.split(",").join(" ⏸")}` : "");
+    const status = T.statuses[it.status] + (it.waiting_on ? ` ⏸${it.waiting_on.split(",").join(" ⏸")}` : "");
     lines.push(
-      `| ${it.ref} | ${cell(it.title)} | ${cell(k?.name || it.kind)} | ${cell(OWNER_LABELS[it.owner] || it.owner || "")} | ${cell(it.source)} | ${status} |`,
+      `| ${it.ref} | ${cell(it.title)} | ${cell(k ? kindName(k, lang) : it.kind)} | ${cell(T.owners[it.owner] || it.owner || "")} | ${cell(it.source)} | ${status} |`,
     );
   }
   return lines.join("\n") + "\n";

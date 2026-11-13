@@ -138,9 +138,11 @@ Without a terminal you can do this in the browser: <https://dash.cloudflare.com>
 ## 8. Try it and connect your AI
 
 1. Open `<your-address>` in the browser, enter your token and create a first project.
-2. Connect your AI assistant – always with just the address, no token (details in [MCP.md](MCP.md), German):
+2. In the web app ☰ → **AI assistants → Language**, choose **EN**: then cotrack talks to your AI assistants in English
+   (instructions, tool descriptions, answers). The default is German.
+3. Connect your AI assistant – always with just the address, no token (details in [MCP.en.md](MCP.en.md)):
    - **claude.ai / ChatGPT:** add a connector with the URL `<your-address>/mcp`. When connecting, the cotrack consent page
-     opens: enter your token and choose "Zugriff erlauben" (allow).
+     opens: enter your token and choose "Allow access".
    - **Claude Code:**
      ```bash
      claude mcp add --transport http cotrack <your-address>/mcp
@@ -148,9 +150,9 @@ Without a terminal you can do this in the browser: <https://dash.cloudflare.com>
      Then type `/mcp` in Claude Code, pick `cotrack` and authenticate; the same consent page opens in the browser.
 
    The assistant gets its own short-lived credentials. It never sees your token, and its changes are logged as "AI".
-3. Install the matching prompt: [PROMPT.en.md](PROMPT.en.md) (part 1 + part 2) –
+4. Install the matching prompt: [PROMPT.en.md](PROMPT.en.md) (part 1 + part 2) –
    [why it is needed](PROMPT.en.md#why-a-prompt--who-controls-what) although cotrack has a server.
-4. Optional: in the web app ☰ → **Chat footer → Customize** – footer layout (one line per group or a single line) and the markers
+5. Optional: in the web app ☰ → **Chat footer → Customize** – footer layout (one line per group or a single line) and the markers
    for your items and the AI's (default 👤 / 🤖).
 
 ## Browser only: GitHub + Cloudflare dashboard

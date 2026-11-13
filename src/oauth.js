@@ -19,7 +19,7 @@
  * Only the human can authorize (TOKEN_USER); tokens issued here always act as "ai", so changes made through a
  * connector are attributed to the AI as before. Secrets are stored as SHA-256 hashes only (migrations/0005_oauth.sql).
  */
-import { tokenActor } from "./worker.js";
+import { tokenActor, preferredLang } from "./worker.js";
 
 const SCOPE = "mcp";
 const CODE_TTL = 120; // seconds
@@ -35,6 +35,47 @@ const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, OPTIONS",
   "access-control-allow-headers": "authorization, content-type, mcp-protocol-version",
+};
+
+// The consent page speaks the browser's language (Accept-Language, same rule as the web app: German or English).
+// Only the page is translated; error codes and descriptions for the client stay English, as OAuth expects.
+const PAGE_TEXT = {
+  de: {
+    title: "cotrack verbinden",
+    someApp: "Eine App",
+    intro: (name) =>
+      `<strong>${name}</strong> möchte auf deine offenen Punkte in cotrack zugreifen – lesen und ändern.
+Änderungen über diese Verbindung werden als <strong>KI</strong> protokolliert.`,
+    redirect: "Weiterleitung danach zu:",
+    tokenLabel: "Dein Nutzer-Token (derselbe wie in der Web-App)",
+    wrongToken: "Der Token stimmt nicht. Nur der Nutzer-Token ist hier gültig, nicht der KI-Token.",
+    allow: "Zugriff erlauben",
+    deny: "Ablehnen",
+    notYou: "Nicht du hast die Verbindung gestartet? Dann ablehnen.",
+    fatal: {
+      invalid_request: "Ungültige Anfrage.",
+      unknown_client: "Unbekannter Client. Bitte die Verbindung in der App neu einrichten.",
+      unregistered_redirect: "Die Weiterleitungsadresse ist für diesen Client nicht registriert.",
+    },
+  },
+  en: {
+    title: "Connect cotrack",
+    someApp: "An app",
+    intro: (name) =>
+      `<strong>${name}</strong> wants to access your open points in cotrack – to read and change them.
+Changes made through this connection are logged as <strong>AI</strong>.`,
+    redirect: "Afterwards you are sent back to:",
+    tokenLabel: "Your user token (the same as in the web app)",
+    wrongToken: "That token is not correct. Only the user token works here, not the AI token.",
+    allow: "Allow access",
+    deny: "Deny",
+    notYou: "You did not start this connection? Then deny it.",
+    fatal: {
+      invalid_request: "Invalid request.",
+      unknown_client: "Unknown client. Please set up the connection in the app again.",
+      unregistered_redirect: "The redirect address is not registered for this client.",
+    },
+  },
 };
 
 /** Handles the OAuth endpoints; returns null for any other path. */
@@ -54,8 +95,9 @@ export async function handleOAuth(request, env, url) {
     if (route === "prm" && request.method === "GET") return metadata(protectedResourceMetadata(origin));
     if (route === "asm" && request.method === "GET") return metadata(authorizationServerMetadata(origin));
     if (route === "register" && request.method === "POST") return await register(request, env.DB);
-    if (route === "authorize" && request.method === "GET") return await authorizeGet(env.DB, url);
-    if (route === "authorize" && request.method === "POST") return await authorizePost(request, env, origin);
+    const lang = preferredLang(request.headers.get("accept-language"));
+    if (route === "authorize" && request.method === "GET") return await authorizeGet(env.DB, url, lang);
+    if (route === "authorize" && request.method === "POST") return await authorizePost(request, env, origin, lang);
     if (route === "token" && request.method === "POST") return await token(request, env.DB, origin);
     if (route === "revoke" && request.method === "POST") return await revoke(request, env.DB);
     return new Response("Method Not Allowed", { status: 405, headers: CORS });
@@ -181,35 +223,35 @@ function validRedirectUri(u) {
 
 /* ------------------------------------------------------------- authorize */
 
-async function authorizeGet(db, url) {
+async function authorizeGet(db, url, lang) {
   const p = pickAuthorizeParams((key) => url.searchParams.get(key));
   const check = await checkAuthorizeRequest(db, p, url.origin);
-  if (check.fatal) return consentPage({ fatal: check.fatal }, 400);
+  if (check.fatal) return consentPage({ fatal: check.fatal, lang }, 400);
   if (check.error) return redirectTo(check.redirectUri, { ...check.error, state: p.state, iss: url.origin });
-  return consentPage({ params: p, client: check.client, redirectUri: check.redirectUri });
+  return consentPage({ params: p, client: check.client, redirectUri: check.redirectUri, lang });
 }
 
-async function authorizePost(request, env, origin) {
+async function authorizePost(request, env, origin, lang) {
   let form;
   try {
     form = await request.formData();
   } catch {
-    return consentPage({ fatal: "Ungültige Anfrage." }, 400);
+    return consentPage({ fatal: "invalid_request", lang }, 400);
   }
   const p = pickAuthorizeParams((key) => form.get(key));
   const check = await checkAuthorizeRequest(env.DB, p, origin);
-  if (check.fatal) return consentPage({ fatal: check.fatal }, 400);
+  if (check.fatal) return consentPage({ fatal: check.fatal, lang }, 400);
   if (check.error) return redirectTo(check.redirectUri, { ...check.error, state: p.state, iss: origin });
 
   // Exactly one decision, and it must be "allow"; anything else counts as a refusal.
   const decisions = form.getAll("decision");
   if (decisions.length !== 1 || decisions[0] !== "allow") {
-    return redirectTo(check.redirectUri, { error: "access_denied", error_description: "Der Nutzer hat abgelehnt.", state: p.state, iss: origin });
+    return redirectTo(check.redirectUri, { error: "access_denied", error_description: "The user denied access.", state: p.state, iss: origin });
   }
   // Only the human may connect a client: the AI token is deliberately not accepted here.
   const userToken = form.get("token");
   if (typeof userToken !== "string" || (await tokenActor(userToken.trim(), env)) !== "user") {
-    return consentPage({ params: p, client: check.client, redirectUri: check.redirectUri, wrongToken: true }, 401);
+    return consentPage({ params: p, client: check.client, redirectUri: check.redirectUri, wrongToken: true, lang }, 401);
   }
 
   const code = randomToken("ctk_");
@@ -232,15 +274,16 @@ function pickAuthorizeParams(get) {
 }
 
 /**
- * Validates an authorization request. Problems with client or redirect URI are shown on the page ("fatal") and never
- * redirected, so cotrack cannot be abused as an open redirector; everything else goes back to the client as an error.
+ * Validates an authorization request. Problems with client or redirect URI are shown on the page ("fatal", a key of
+ * PAGE_TEXT.*.fatal) and never redirected, so cotrack cannot be abused as an open redirector; everything else goes back
+ * to the client as an error.
  */
 async function checkAuthorizeRequest(db, p, origin) {
   const client = p.client_id ? await getClient(db, p.client_id) : null;
-  if (!client) return { fatal: "Unbekannter Client. Bitte die Verbindung in der App neu einrichten." };
+  if (!client) return { fatal: "unknown_client" };
   const registered = JSON.parse(client.redirect_uris);
   const redirectUri = p.redirect_uri ?? (registered.length === 1 ? registered[0] : null);
-  if (!redirectUri || !registered.includes(redirectUri)) return { fatal: "Die Weiterleitungsadresse ist für diesen Client nicht registriert." };
+  if (!redirectUri || !registered.includes(redirectUri)) return { fatal: "unregistered_redirect" };
 
   if (p.response_type !== "code") return { redirectUri, error: { error: "unsupported_response_type" } };
   if (p.code_challenge_method !== "S256" || !PKCE_RE.test(p.code_challenge || "")) {
@@ -260,32 +303,33 @@ async function checkAuthorizeRequest(db, p, origin) {
   return { client, redirectUri, resource };
 }
 
-function consentPage({ params, client, redirectUri, wrongToken = false, fatal = null }, status = 200) {
+function consentPage({ params, client, redirectUri, wrongToken = false, fatal = null, lang = "en" }, status = 200) {
+  const T = PAGE_TEXT[lang] || PAGE_TEXT.en;
   let body;
   if (fatal) {
-    body = `<h1>cotrack verbinden</h1><p class="err">${esc(fatal)}</p>`;
+    body = `<h1>${esc(T.title)}</h1><p class="err">${esc(T.fatal[fatal] || T.fatal.invalid_request)}</p>`;
   } else {
     const hidden = Object.entries(params)
       .filter(([k]) => AUTHORIZE_PARAMS.includes(k) && k !== "redirect_uri")
       .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
       .join("");
-    const name = client.client_name || "Eine App";
-    body = `<h1>cotrack verbinden</h1>
-<p><strong>${esc(name)}</strong> möchte auf deine offenen Punkte in cotrack zugreifen – lesen und ändern.
-Änderungen über diese Verbindung werden als <strong>KI</strong> protokolliert.</p>
-<p class="muted">Weiterleitung danach zu: ${esc(new URL(redirectUri).host)}</p>
+    const name = client.client_name || T.someApp;
+    // The client name is chosen by whoever registered the client: always escaped, like every other value here.
+    body = `<h1>${esc(T.title)}</h1>
+<p>${T.intro(esc(name))}</p>
+<p class="muted">${esc(T.redirect)} ${esc(new URL(redirectUri).host)}</p>
 <form method="post" action="/authorize">
 ${hidden}<input type="hidden" name="redirect_uri" value="${esc(redirectUri)}">
-<label for="token">Dein Nutzer-Token (derselbe wie in der Web-App)</label>
+<label for="token">${esc(T.tokenLabel)}</label>
 <input id="token" name="token" type="password" autocomplete="current-password" required autofocus>
-${wrongToken ? '<p class="err">Der Token stimmt nicht. Nur der Nutzer-Token ist hier gültig, nicht der KI-Token.</p>' : ""}
-<div class="row"><button type="submit" name="decision" value="allow">Zugriff erlauben</button>
-<button type="submit" name="decision" value="deny" formnovalidate class="sec">Ablehnen</button></div>
+${wrongToken ? `<p class="err">${esc(T.wrongToken)}</p>` : ""}
+<div class="row"><button type="submit" name="decision" value="allow">${esc(T.allow)}</button>
+<button type="submit" name="decision" value="deny" formnovalidate class="sec">${esc(T.deny)}</button></div>
 </form>
-<p class="muted">Nicht du hast die Verbindung gestartet? Dann ablehnen.</p>`;
+<p class="muted">${esc(T.notYou)}</p>`;
   }
-  const html = `<!doctype html><html lang="de"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>cotrack verbinden</title>
+  const html = `<!doctype html><html lang="${lang === "de" ? "de" : "en"}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(T.title)}</title>
 <style>
 :root{color-scheme:light dark;--bg:#f6f7f9;--fg:#1d2127;--card:#fff;--muted:#5f6670;--acc:#2f6fde;--err:#b42318}
 @media (prefers-color-scheme:dark){:root{--bg:#14171c;--fg:#e8eaed;--card:#1d2127;--muted:#9aa1ab;--acc:#6b9cf5;--err:#f97066}}
@@ -301,6 +345,8 @@ button.sec{background:transparent;color:var(--fg);border:1px solid var(--muted)}
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
+      "content-language": lang === "de" ? "de" : "en",
+      vary: "accept-language",
       // No form-action: browsers apply it to the redirect after the POST, which goes to the client's own URL.
       "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'",
       "x-frame-options": "DENY",

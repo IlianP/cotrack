@@ -13,7 +13,12 @@
 - The web app is bilingual (German/English): it follows the browser language (de-* → German, anything else → English),
   switchable per device in ☰ (localStorage `cotrack.lang`). Every UI text lives in `STRINGS` in `src/ui.html` – add new
   texts in both languages (static markup: `data-t` / `data-t-attr`); built-in category names are translated client-side
-  (`KIND_EN`). Code and API are English. The README exists in two languages: `README.md` (English, default) and `README.de.md` (German) – **change both together**. Methodology and prompt also exist in both languages: `docs/METHODIK.md` ↔ `docs/METHODOLOGY.md` and `docs/PROMPT.md` ↔ `docs/PROMPT.en.md` (current rules at the top of the methodology) – keep all four in sync. The footer language is selected with `lang=de|en` (`src/worker.js`); the English prompt asks for `en`.
+  (`KIND_EN`). Code and API are English. What cotrack tells the AI is bilingual too: MCP instructions, tool descriptions and
+  answers (`INSTRUCTIONS`, `toolList`, `MSG` in `src/mcp.js`) and the text answers of the API (`TEXT` in `src/worker.js`) follow
+  the instance setting `language` (de|en, default de; web app ☰ → KI-Assistenten → Sprache); a `lang` in a request wins –
+  change both languages together. The OAuth consent page (`PAGE_TEXT` in `src/oauth.js`) and the app manifest follow the
+  browser's Accept-Language (`preferredLang`, same rule as the web app). The README exists in two languages: `README.md` (English, default) and `README.de.md` (German) – **change both together**. Methodology and prompt also exist in both languages: `docs/METHODIK.md` ↔ `docs/METHODOLOGY.md` and `docs/PROMPT.md` ↔ `docs/PROMPT.en.md` (current rules at the top of the methodology) – keep all four in sync. The footer language is selected with `lang=de|en` (`src/worker.js`; without it the `language` setting); the English prompt asks for `en`.
+  The MCP guide exists in both languages: `docs/MCP.md` ↔ `docs/MCP.en.md` – keep in sync.
 - PrioFlow skill (the model rates open items and guides the user; no server logic): `skills/de/prioflow/SKILL.md` ↔
   `skills/en/prioflow/SKILL.md` – keep in sync. `.claude/skills/prioflow` is a symlink to the German one for sessions in this repo.
   Folder name must stay `prioflow` (= `name:` in the frontmatter, required for the claude.ai upload).

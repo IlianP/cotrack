@@ -15,6 +15,7 @@ export const MANIFEST = {
   name: "cotrack",
   short_name: "cotrack",
   description: "Open points shared by you and your AI assistants – actions, decisions, ideas, warnings.",
+  lang: "en",
   start_url: "/",
   scope: "/",
   display: "standalone",
@@ -293,10 +294,21 @@ const ICONS = {
 };
 
 // The response for a PWA path, or null for every other path.
-export function pwaResponse(pathname) {
+// The manifest's description in German for German browsers (lang from Accept-Language, see preferredLang in src/worker.js).
+const MANIFEST_DE = {
+  ...MANIFEST,
+  description: "Offene Punkte, gemeinsam für dich und deine KI-Assistenten – Aufgaben, Entscheidungen, Ideen, Warnungen.",
+  lang: "de",
+};
+
+export function pwaResponse(pathname, lang = "en") {
   if (pathname === "/manifest.webmanifest") {
-    return new Response(JSON.stringify(MANIFEST), {
-      headers: { "content-type": "application/manifest+json; charset=utf-8", "cache-control": "public, max-age=3600" },
+    return new Response(JSON.stringify(lang === "de" ? MANIFEST_DE : MANIFEST), {
+      headers: {
+        "content-type": "application/manifest+json; charset=utf-8",
+        "cache-control": "public, max-age=3600",
+        vary: "accept-language",
+      },
     });
   }
   const png = ICONS[pathname];

@@ -7,7 +7,7 @@
 When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still
 have to make, tasks the AI promised to do, ideas, risks. *cotrack* keeps these open points in **one live list
 per project**. You edit it in a responsive web app; your AI assistants read and update the very same list through
-an [MCP server](docs/MCP.md) (or the HTTP API). Every item has a stable reference like `A4` or `D2` that is
+an [MCP server](docs/MCP.en.md) (or the HTTP API). Every item has a stable reference like `A4` or `D2` that is
 **never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
 
 ```
@@ -69,10 +69,14 @@ warnings – a one-glance status that survives across conversations.
   window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
 - Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), German and English (follows the
   browser language, or choose in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
+- **Bilingual for your AI too** – what cotrack tells Claude, ChatGPT & co. (instructions, tool descriptions, answers, footer)
+  is German or English: ☰ → *AI assistants → Language*, once for your installation.
 
 > **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
-> fine for personal use, not for sharing a deployment with strangers. See the roadmap. The web app and the
-> chat footer are available in German and English (footer: `lang`); code and API are English; this README is available in English and [German](README.de.md).
+> fine for personal use, not for sharing a deployment with strangers. See the roadmap. Everything is available in German and
+> English: the web app (per device), what the AI gets from cotrack (MCP, text answers, footer – ☰ → *AI assistants*), the
+> consent page (browser language) and the docs; code and API field names are English. This README is available in English
+> and [German](README.de.md).
 
 ## Architecture
 
@@ -101,7 +105,8 @@ npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 
 ```
 
 Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
-once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.md](docs/MCP.md).
+once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.en.md](docs/MCP.en.md).
+Language for your AI assistants: ☰ → *AI assistants → Language* (default German – switch to `EN` for English).
 Footer layout and markers: ☰ → *Chat footer → Customize* in the web app.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 
@@ -121,7 +126,7 @@ claude mcp add --transport http cotrack <your-address>/mcp
 **claude.ai and ChatGPT** connect via **OAuth** ([`src/oauth.js`](src/oauth.js), no library): add a connector with the
 URL `<your-address>/mcp`; cotrack opens a consent page once, you confirm with your token, and the app gets
 short-lived tokens that act as `ai`. No secret appears in the URL (the old form `/mcp/<token>` has been removed).
-Step by step (German): [docs/MCP.md](docs/MCP.md).
+Step by step: [docs/MCP.en.md](docs/MCP.en.md).
 
 Then install the **custom prompt** ([docs/PROMPT.en.md](docs/PROMPT.en.md)). The server only answers when it is asked;
 the prompt is what makes the AI ask – at the start of a session, for new items, for the footer. Who controls what
@@ -158,7 +163,7 @@ Put a `COTRACK.md` in the repository root so AI assistants know which project th
 (they read it once at the start of a session and whenever a repository is added):
 
 ```markdown
-# cotrack-Zuordnung
+# cotrack mapping
 
 project: cotrack
 code: CT
@@ -169,12 +174,12 @@ instance: https://cotrack.example.workers.dev
 Other text is ignored and never treated as instructions. Without the file, assistants fall back to the project's `repo`
 field (`cotrack_projects` with `repo: "owner/name"`), otherwise they ask once. With several projects in one conversation,
 references are written qualified (`CT:A14`) and the footer gets one block per project.
-Details: [docs/MCP.md](docs/MCP.md), [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+Details: [docs/MCP.en.md](docs/MCP.en.md), [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
 
 ## API
 
 All endpoints except `/`, `/api/health` and the OAuth endpoints for MCP clients (`/.well-known/…`, `/register`,
-`/authorize`, `/token`, `/revoke`; see [docs/MCP.md](docs/MCP.md)) require `Authorization: Bearer <token>`.
+`/authorize`, `/token`, `/revoke`; see [docs/MCP.en.md](docs/MCP.en.md)) require `Authorization: Bearer <token>`.
 The token decides the actor (`user` or `ai`) recorded on every change.
 
 | Method | Path | Purpose |
@@ -183,19 +188,22 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | POST | `/api/projects` | create `{slug, name?, repo?, code?}` (without `code` one is suggested from the slug) |
 | PATCH | `/api/projects/:slug` | update `{name?, repo?, code?, archived?}`; `code` can be set once and never changed. `:slug` may also be the code |
 | GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
-| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | list items (`format=text`: one compact line per item, for AI assistants) |
+| GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | list items (`format=text`: one compact line per item, for AI assistants) |
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
+| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `new: … · done: …`; `lang`: `new / done` or `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
-| GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
+| GET | `/api/projects/:slug/status.md?lang=de\|en` | "Open points" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |
 | GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
-| GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (defaults `multi`, `👤`, `🤖`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |
+| GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (defaults `multi`, `👤`, `🤖`, `de`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |
+
+Text answers (`format=text`, `status.md`, footer) are written in the instance language (`language` in `/api/settings`)
+unless the request has `lang=de|en`.
 
 Status values: `open`, `doing`, `blocked`, `done`, `dropped`. Owners: `user`, `ai` or any name (default: the creator).
 `seq` lets you import an existing reference (e.g. `A3` from a chat); a reference that was ever used is rejected.

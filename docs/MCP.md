@@ -1,5 +1,7 @@
 # cotrack als MCP-Server
 
+[English](MCP.en.md) · **Deutsch**
+
 ## Was ist MCP?
 
 Das **Model Context Protocol** ist eine Steckdose für KI-Assistenten. Ein MCP-Server beschreibt eine Handvoll
@@ -29,7 +31,7 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_add` | neuen Punkt anlegen | schreibt |
 | `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`); `check`/`uncheck` hakt Teilpunkte einer Aufgabe ab | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D | schreibt |
-| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Chat-Fußzeile → Anpassen) | liest |
+| `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Chat-Fußzeile → Anpassen); `lang` = `de` oder `en` | liest |
 | `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions) | liest |
 
 Bewusst **kein Löschen** per KI – Punkte werden mit `status: "dropped"` verworfen, Projekte archiviert, damit nichts verloren geht.
@@ -37,6 +39,19 @@ Slug und Kürzel eines Projekts sind fest: Kennungen wie „CT:A4“ in Chats un
 
 Überall, wo `project` verlangt wird, geht der **Slug oder das Kürzel** (`cotrack` oder `CT`). `cotrack_get`, `cotrack_update`
 und `cotrack_convert` nehmen auch eine **qualifizierte Kennung** (`ref: "CT:A4"`); `project` darf dann fehlen.
+
+## Sprache
+
+Der Server spricht Deutsch oder Englisch – Gebrauchsanweisung (`instructions`), Werkzeugbeschreibungen, Antworten und
+Fehlermeldungen. MCP verrät dem Server nicht, welche Sprache der Nutzer spricht; deshalb stellst du sie einmal für deine
+Installation ein: in der Web-App ☰ → **KI-Assistenten → Sprache** (`DE` / `EN`). Sie gilt ab der nächsten Anfrage für jede
+verbundene KI; Standard ist Deutsch. Die Sprache der Web-App selbst (☰ → Dieses Gerät) ist davon getrennt und gilt je Gerät.
+
+Ausnahme: `cotrack_footer` hat ein eigenes `lang` – für ein Gespräch in der anderen Sprache (`neu / erledigt` bzw.
+`new / done`). Der englische Prompt ([PROMPT.en.md](PROMPT.en.md)) setzt immer `lang "en"`.
+
+Dieselbe Einstellung ist auch der Standard für die Textantworten der API (`format=text`, `status.md`, Fußzeile); auch dort
+geht ein `lang=de|en` in der Anfrage vor. Titel von Punkten bleiben, wie du sie geschrieben hast.
 
 ## Welches Projekt gehört zur Unterhaltung?
 
@@ -86,7 +101,7 @@ aber als „Du“ statt „KI“ protokolliert.
      Felder für OAuth-Client-ID/-Secret leer lassen – die App registriert sich selbst.
    - **ChatGPT:** Einstellungen → Apps & Connectors → Erweitert → Entwicklermodus einschalten → „Erstellen“ →
      Name `cotrack`, URL wie oben, Authentifizierung **„OAuth“**.
-2. Beim Verbinden öffnet sich die cotrack-Seite „cotrack verbinden“. Dort deinen **Nutzer-Token** eingeben (derselbe wie in
+2. Beim Verbinden öffnet sich die cotrack-Seite „cotrack verbinden“ (in der Sprache deines Browsers, Deutsch oder Englisch). Dort deinen **Nutzer-Token** eingeben (derselbe wie in
    der Web-App, nicht der KI-Token) und „Zugriff erlauben“ wählen.
 3. Fertig. Die App bekommt einen Zugangstoken für eine Stunde, den sie selbst erneuert (bis zu 30 Tage ohne Nutzung).
    Änderungen über den Connector werden als „KI“ protokolliert. Trennen in der App beendet die Verbindung.
