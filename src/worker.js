@@ -292,8 +292,9 @@ const median = (xs) => {
 // Everything the statistics views show, counted from items and the change log. Days are local to the reader (tz in
 // minutes, as Date#getTimezoneOffset). "Responsible" = owner, or the kind's default; only kinds with an owner count.
 export async function buildStats(db, { project = null, tz = 0 } = {}) {
-  const [items, kinds, evRes] = await Promise.all([
-    listItems(db, { project, status: "all" }),
+  const [itemRes, kinds, evRes] = await Promise.all([
+    // all items, not the board's capped list
+    db.prepare(`${ITEM_SELECT} WHERE ? IS NULL OR i.project_slug = ?`).bind(project, project).all(),
     listKinds(db, true),
     db
       .prepare(
@@ -303,6 +304,7 @@ export async function buildStats(db, { project = null, tz = 0 } = {}) {
       .bind(project, project)
       .all(),
   ]);
+  const items = itemRes.results;
   const events = evRes.results;
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const local = (iso) => new Date(Date.parse(iso) - tz * 60000);
@@ -318,30 +320,64 @@ export async function buildStats(db, { project = null, tz = 0 } = {}) {
     return k?.actionable ? i.owner || k.default_owner || "user" : null;
   };
 
-  // days: created / done / dropped per local day, open at the end of each day
-  const first = items.length ? items.reduce((m, i) => (i.created_at < m ? i.created_at : m), nowIso) : nowIso;
-  const start = Math.max(dayNum(dayKey(first)), dayNum(today) - 400);
-  const days = [];
-  for (let d = start; d <= dayNum(today); d++) {
-    days.push({ date: new Date(d * DAY_MS).toISOString().slice(0, 10), created: 0, done: 0, dropped: 0, done_user: 0, done_ai: 0, open: 0 });
-  }
-  const dayAt = (iso) => days[dayNum(dayKey(iso)) - start];
-  const doneRefs = new Map(); // date -> refs done that day
-  for (const i of items) {
-    const c = dayAt(i.created_at);
-    if (c) c.created++;
-    if (!i.closed_at || !CLOSED.includes(i.status)) continue;
-    const d = dayAt(i.closed_at);
-    if (!d) continue;
-    d[i.status]++;
-    if (i.status === "done") {
-      const o = ownerOf(i);
-      if (o === "user" || o === "ai") d["done_" + o]++;
-      doneRefs.set(d.date, [...(doneRefs.get(d.date) || []), key(i.project_slug, i.ref)]);
+  // days: created / done / dropped per local day and open at the end of each day, replayed from the change log of the
+  // items that still exist – so a completion stays on its day even if the item was reopened later
+  const tally = new Map(); // dayNum -> counts
+  const at = (iso) => {
+    const n = dayNum(dayKey(iso));
+    if (!tally.has(n)) tally.set(n, { created: 0, done: 0, dropped: 0, done_user: 0, done_ai: 0, reopened: 0, refs: [] });
+    return tally.get(n);
+  };
+  const closedNow = new Map(); // key -> closed in the replay so far
+  const close = (i, k, status, iso) => {
+    if (closedNow.get(k)) return;
+    closedNow.set(k, true);
+    const t = at(iso);
+    t[status]++;
+    if (status !== "done") return;
+    const o = ownerOf(i);
+    if (o === "user" || o === "ai") t["done_" + o]++;
+    t.refs.push(k);
+  };
+  const seen = new Set();
+  for (const e of events) {
+    const k = e.item_ref && key(e.project_slug, e.item_ref);
+    const i = k && byKey.get(k);
+    if (!i) continue;
+    if (e.action === "created") {
+      if (seen.has(k)) continue;
+      seen.add(k);
+      at(e.at).created++;
+      let st;
+      try { st = e.data ? JSON.parse(e.data).status : null; } catch { st = null; }
+      if (CLOSED.includes(st)) close(i, k, st, e.at);
+    } else if (e.action === "done" || e.action === "converted" || e.action === "dropped") {
+      close(i, k, e.action === "dropped" ? "dropped" : "done", e.at);
+    } else if (e.action === "reopened" && closedNow.get(k)) {
+      closedNow.set(k, false);
+      at(e.at).reopened++;
     }
   }
-  let open = items.filter((i) => dayNum(dayKey(i.created_at)) < start && !(i.closed_at && dayNum(dayKey(i.closed_at)) < start)).length;
-  for (const d of days) d.open = open += d.created - d.done - d.dropped;
+  // items without a creation event (none expected): fall back to their own dates
+  for (const i of items) {
+    const k = key(i.project_slug, i.ref);
+    if (seen.has(k)) continue;
+    at(i.created_at).created++;
+    if (i.closed_at && CLOSED.includes(i.status)) close(i, k, i.status, i.closed_at);
+  }
+  const firstDay = tally.size ? Math.min(...tally.keys()) : dayNum(today);
+  const start = Math.max(firstDay, dayNum(today) - 400);
+  let open = 0;
+  for (const [n, t] of tally) if (n < start) open += t.created - t.done - t.dropped + t.reopened;
+  const days = [];
+  const doneRefs = new Map(); // date -> refs done that day
+  for (let n = start; n <= dayNum(today); n++) {
+    const t = tally.get(n) || { created: 0, done: 0, dropped: 0, done_user: 0, done_ai: 0, reopened: 0, refs: [] };
+    const date = new Date(n * DAY_MS).toISOString().slice(0, 10);
+    open += t.created - t.done - t.dropped + t.reopened;
+    days.push({ date, created: t.created, done: t.done, dropped: t.dropped, done_user: t.done_user, done_ai: t.done_ai, open });
+    if (t.refs.length) doneRefs.set(date, t.refs);
+  }
 
   // open now, oldest first
   const aging = items
@@ -425,7 +461,7 @@ export async function buildStats(db, { project = null, tz = 0 } = {}) {
   }
   const recentCut = Date.parse(nowIso) - 14 * DAY_MS;
   return {
-    generated_at: nowIso, project, today, tz,
+    generated_at: nowIso, project, today, tz, items_total: items.length,
     days,
     open: { total: aging.length, by_kind: aging.reduce((m, a) => ((m[a.kind] = (m[a.kind] || 0) + 1), m), {}) },
     aging,

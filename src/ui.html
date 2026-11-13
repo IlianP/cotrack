@@ -1593,7 +1593,7 @@ function renderStats() {
       } }, label))));
   const d = stats.data;
   if (!d) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stLoading")));
-  if (!d.days.length || !d.days.some((x) => x.created)) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stEmpty")));
+  if (!d.items_total) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stEmpty")));
   const body = state.statsTab === "week" ? statsWeek(d) : state.statsTab === "flow" ? statsFlow(d) : statsOverview(d);
   box.replaceChildren(head, ...body);
 }
