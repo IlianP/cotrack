@@ -342,6 +342,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   padding: 34px 20px 36px; width: max-content; min-width: 100%;
 }
 .dg-col { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; }
+.dg-via { width: 1px; height: 6px; flex: none; } /* stop of an arrow that skips this column */
 .dg-edges { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
 .dg-edges path { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linecap: round; }
 .dg-edges path.head { fill: var(--muted); stroke: none; }
@@ -2098,7 +2099,7 @@ function waitCard(d) {
 // wait for (also closed items or unknown references) and what waits behind them. Built here from all items of the view;
 // the server is not involved. Only chains with an open item that waits are shown in "Offen" ("Erledigt": chains that are
 // all closed, "Alle": every chain). Filters and search never cut a chain: items they hide fold into "⋯ n", and in "Offen"
-// closed prerequisites shrink to "✓ A36", so the order stays visible. Columns: prerequisites left, what waits right
+// closed items shrink to "✓ A36" (dropped: "✕ A36"), so the order stays visible. Columns: prerequisites left, what waits right
 // (phones: top to bottom); arrows are an SVG drawn over the cards from their positions.
 const deps = { model: null, chains: [], expanded: new Set(), sideOpen: null };
 const NARROW = matchMedia("(max-width: 699px)");
@@ -2107,6 +2108,7 @@ const isClosed = (i) => i.status === "done" || i.status === "dropped";
 const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true });
 const qref = (slug, ref) => (state.project === ALL ? `${state.projects.find((p) => p.slug === slug)?.code || slug}:${ref}` : ref);
 const shortDate = (iso) => (iso ? new Date(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "numeric" }) : "–");
+const closedMark = (it) => (it.status === "dropped" ? "✕" : "✓");
 const closedText = (it) => tr(it.status === "dropped" ? "depsDroppedOn" : "depsDoneOn", shortDate(it.closed_at || it.updated_at));
 function cmpRank(x, y) {
   for (let n = 0; n < x.length; n++) {
@@ -2287,11 +2289,30 @@ function depsChain(c, filtered, match, compact, before) {
   vnodes.forEach(lv);
   const cols = [];
   for (const x of vnodes) (cols[level.get(x)] ||= []).push(x);
+  // An arrow that skips columns gets an invisible stop in each column in between ("via"): the column makes room for it,
+  // so the arrow runs between the cards instead of through them. For the order, a card counts the last stop as what it
+  // waits for, not the card further left. Phones (rows that wrap) keep the way along the left side instead.
+  const lpre = new Map(vnodes.map((x) => [x, [...x.pre].filter((p) => !back.has(p.key + ">" + x.key))]));
+  const edgeList = [...edges.values()].map((e) => ({
+    ...e, back: back.has(e.a.key + ">" + e.b.key), skip: level.get(e.b) - level.get(e.a) > 1, via: [],
+  }));
+  for (const e of edgeList) {
+    if (e.back || e.a === e.b || NARROW.matches) continue;
+    let prev = e.a;
+    for (let l = level.get(e.a) + 1; l < level.get(e.b); l++) {
+      const v = { key: `via:${e.a.key}>${e.b.key}:${l}`, via: true, pre: new Set([prev]), post: new Set() };
+      lpre.set(v, [prev]);
+      cols[l].push(v);
+      e.via.push(v);
+      prev = v;
+    }
+    if (prev !== e.a) lpre.set(e.b, lpre.get(e.b).map((p) => (p === e.a ? prev : p)));
+  }
   // within a column: near what it waits for (fewer crossing arrows); the first column: what holds up most on top
   const pos = new Map();
   cols.forEach((col, i) => {
     const bary = (x) => {
-      const ps = [...x.pre].filter((p) => pos.has(p));
+      const ps = lpre.get(x).filter((p) => pos.has(p));
       return ps.length ? ps.reduce((s, p) => s + pos.get(p), 0) / ps.length : 1e9;
     };
     col.sort((x, y) => (i === 0 ? y.post.size - x.post.size : bary(x) - bary(y)) || natural(x.key, y.key));
@@ -2300,16 +2321,14 @@ function depsChain(c, filtered, match, compact, before) {
   const els = new Map();
   const graph = h("div", { class: "dg-graph" + (NARROW.matches ? " vert" : "") },
     cols.map((col) => h("div", { class: "dg-col" }, col.map((x) => {
-      const el = depsNode(x, c, compact, before);
+      const el = x.via ? h("span", { class: "dg-via", "aria-hidden": "true" }) : depsNode(x, c, compact, before);
       els.set(x, el);
       return el;
     }))));
   const svg = document.createElementNS(SVGNS, "svg");
   svg.setAttribute("class", "dg-edges"); svg.setAttribute("aria-hidden", "true");
   graph.prepend(svg);
-  deps.chains.push({ graph, svg, els, edges: [...edges.values()].map((e) => ({
-    ...e, back: back.has(e.a.key + ">" + e.b.key), skip: level.get(e.b) - level.get(e.a) > 1,
-  })) });
+  deps.chains.push({ graph, svg, els, cols, edges: edgeList });
   return h("section", { class: "dg-chain" }, graph);
 }
 
@@ -2331,11 +2350,11 @@ function depsNode(x, c, compact, before) {
   const flash = before && !before.has(itemKey(it) + ":" + it.updated_at) ? " flash" : "";
   if (closed && compact) {
     return h("button", { type: "button", class: "dg-pill is-done" + flash, style: kc, "data-key": v.key,
-      title: `${it.ref} ${it.title} – ${closedText(it)}`, onclick: () => openEdit(it) }, "✓ " + it.ref);
+      title: `${it.ref} ${it.title} – ${closedText(it)}`, onclick: () => openEdit(it) }, closedMark(it) + " " + it.ref);
   }
   const cls = "dg-node" + (closed ? " is-done" : "") + (v.free ? " is-free" : "") + (v.cycle ? " is-cycle" : "") + flash;
   return h("button", { type: "button", class: cls, style: kc, "data-key": v.key, onclick: () => openEdit(it) },
-    h("span", { class: "kbadge" }, closed ? "✓" : it.kind),
+    h("span", { class: "kbadge" }, closed ? closedMark(it) : it.kind),
     h("span", { class: "tx" },
       h("span", { class: "dg-t" }, h("b", null, it.ref), " ", h("span", null, it.title)),
       h("span", { class: "dg-sub" }, depsSub(v))));
@@ -2434,9 +2453,10 @@ function depsJump(key) {
   el.classList.remove("ping", "flash"); void el.offsetWidth; el.classList.add("ping");
 }
 
-// Arrows from the cards' positions: prerequisite → what waits (left to right, on phones top to bottom). An arrow that
-// skips a column runs below the cards (phones: along the left side), one that closes a cycle back above them (phones:
-// along the right side), so neither hides behind a card.
+// Arrows from the cards' positions: prerequisite → what waits (left to right, on phones top to bottom). They leave a
+// card at its column's edge (a small "✓ A1" is narrower than the cards next to it) and pass the columns they skip
+// through their stops ("via"); one that closes a cycle runs back above the cards (phones: along the right side), so
+// none hides behind a card.
 function drawDeps() {
   const svgEl = (d, cls) => { const p = document.createElementNS(SVGNS, "path"); p.setAttribute("d", d); if (cls) p.setAttribute("class", cls); return p; };
   for (const ch of deps.chains) {
@@ -2450,25 +2470,40 @@ function drawDeps() {
       const l = b.left - box.left, t = b.top - box.top;
       return { l, t, r: l + b.width, b: t + b.height, cx: l + b.width / 2, cy: t + b.height / 2 };
     };
+    // each column's outer edges (phones: each row's top and bottom)
+    const ext = new Map();
+    for (const col of ch.cols) {
+      const r = col.map(at);
+      const s = vert ? { lo: Math.min(...r.map((q) => q.t)), hi: Math.max(...r.map((q) => q.b)) }
+        : { lo: Math.min(...r.map((q) => q.l)), hi: Math.max(...r.map((q) => q.r)) };
+      for (const x of col) ext.set(x, s);
+    }
     const out = [];
     for (const e of ch.edges) {
       const a = at(e.a), b = at(e.b);
       let d, tip, dir;
-      if (e.a === e.b) {
-        const x = a.r - 16;
-        d = `M${x - 26} ${a.t} C${x - 26} ${a.t - 24} ${x} ${a.t - 24} ${x} ${a.t - 7}`; tip = [x, a.t]; dir = [0, 1];
-      } else if (e.skip && !vert) {
-        const y = Math.max(a.b, b.b) + 22;
-        d = `M${a.cx} ${a.b} C${a.cx} ${y} ${b.cx} ${y} ${b.cx} ${b.b + 7}`; tip = [b.cx, b.b]; dir = [0, -1];
-      } else if (e.skip) {
+      if (!e.back && e.a !== e.b && !vert) {
+        // a → stops → b; between columns a curve, across a column a straight line
+        const pts = [e.a, ...e.via, e.b];
+        d = `M${a.r} ${a.cy}`;
+        if (ext.get(e.a).hi > a.r) d += ` H${ext.get(e.a).hi}`;
+        for (let n = 1; n < pts.length; n++) {
+          const p = at(pts[n - 1]), q = at(pts[n]), last = n === pts.length - 1;
+          const x0 = ext.get(pts[n - 1]).hi, x1 = last ? Math.min(ext.get(pts[n]).lo, q.l - 7) : ext.get(pts[n]).lo;
+          const c = Math.max(18, (x1 - x0) / 2);
+          d += ` C${x0 + c} ${p.cy} ${x1 - c} ${q.cy} ${x1} ${q.cy}`;
+          d += last ? (x1 < q.l - 7 ? ` H${q.l - 7}` : "") : ` H${ext.get(pts[n]).hi}`;
+        }
+        tip = [b.l, b.cy]; dir = [1, 0];
+      } else if (e.skip && !e.back) {
         const x = Math.min(a.l, b.l) - 22;
         d = `M${a.l} ${a.cy} C${x} ${a.cy} ${x} ${b.cy} ${b.l - 7} ${b.cy}`; tip = [b.l, b.cy]; dir = [1, 0];
-      } else if (!e.back && !vert) {
-        const c = Math.max(18, (b.l - a.r) / 2);
-        d = `M${a.r} ${a.cy} C${a.r + c} ${a.cy} ${b.l - c} ${b.cy} ${b.l - 7} ${b.cy}`; tip = [b.l, b.cy]; dir = [1, 0];
-      } else if (!e.back) {
+      } else if (!e.back && e.a !== e.b) {
         const c = Math.max(12, (b.t - a.b) / 2);
         d = `M${a.cx} ${a.b} C${a.cx} ${a.b + c} ${b.cx} ${b.t - c} ${b.cx} ${b.t - 7}`; tip = [b.cx, b.t]; dir = [0, 1];
+      } else if (e.a === e.b) {
+        const x = a.r - 16;
+        d = `M${x - 26} ${a.t} C${x - 26} ${a.t - 24} ${x} ${a.t - 24} ${x} ${a.t - 7}`; tip = [x, a.t]; dir = [0, 1];
       } else if (!vert) {
         const y = Math.min(a.t, b.t) - 26;
         d = `M${a.cx} ${a.t} C${a.cx} ${y} ${b.cx} ${y} ${b.cx} ${b.t - 7}`; tip = [b.cx, b.t]; dir = [0, 1];
