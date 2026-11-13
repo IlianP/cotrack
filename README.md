@@ -56,6 +56,9 @@ warnings – a one-glance status that survives across conversations.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail and history** – every change is logged with who made it (you or the AI); the clock in the top bar shows
   it, marks what the AI changed since you last looked and counts it on the button.
+- **Statistics** – ☰ → *Statistics*, for one project or all: an overview (key figures, created and done per day,
+  open by category, lead times, activity by weekday and hour), a weekly report (with streak, records and what becomes of
+  ideas; copyable as text) and flow & age (cumulative flow, the age of every open item, waiting times).
 - **Installable as an app** – Chrome/Edge on Android and the desktop: ☰ → *Install as app*; cotrack then runs in its own
   window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
 - Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), German and English (follows the
@@ -183,6 +186,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/projects/:slug/status.md` | "Offene Punkte" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |
+| GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 | GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (defaults `multi`, `👤`, `🤖`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |

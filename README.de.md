@@ -61,6 +61,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll und Verlauf** – jede Änderung wird mit Urheber (du oder die KI) festgehalten; die Uhr oben zeigt
   sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf.
+- **Statistiken** – ☰ → *Statistiken*, für ein Projekt oder alle: eine Übersicht (Kennzahlen, angelegt und erledigt pro
+  Tag, offen nach Kategorie, Durchlaufzeiten, Aktivität nach Wochentag und Uhrzeit), eine Wochenbilanz (mit Serie, Rekorden
+  und dem, was aus Ideen wird; als Text kopierbar) und Fluss & Alter (aufsummierter Fluss, Alter jedes offenen Punkts, Wartezeiten).
 - **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
   einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
   *Zum Home-Bildschirm*.
@@ -194,6 +197,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/projects/:slug/status.md` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
+| GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
 | GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai}` (Standard `multi`, `👤`, `🤖`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |

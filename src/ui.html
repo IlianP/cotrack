@@ -298,6 +298,127 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 /* views without the board: the filter bar's toggles and the search apply to the board only */
 #board[hidden], .next[hidden], #filterBar[hidden], #searchBox[hidden] { display: none; }
 
+/* Statistics (☰ → Statistiken, A58): replaces bar and board while open. Chart colours are checked for colour vision
+   deficiencies in both themes (categories in the order D · A · W · I; KI teal / Du orange). */
+:root {
+  --c-done: #0d9488; --c-made: #b9b9b1; --c-ai: #0d9488; --c-user: #c2410c;
+  --heat-0: #eef7f5; --heat-1: #b6e0d9; --heat-2: #6cbdb1; --heat-3: #0d9488; --heat-4: #0b5a54;
+}
+:root[data-theme="dark"] {
+  --c-done: #0f9f91; --c-made: #5f5f59; --c-ai: #0f9f91; --c-user: #e2611f;
+  --heat-0: #232c2a; --heat-1: #1d4f49; --heat-2: #17766f; --heat-3: #22a596; --heat-4: #79dccf;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-done: #0f9f91; --c-made: #5f5f59; --c-ai: #0f9f91; --c-user: #e2611f;
+    --heat-0: #232c2a; --heat-1: #1d4f49; --heat-2: #17766f; --heat-3: #22a596; --heat-4: #79dccf;
+  }
+}
+.stats-mode #bar, .stats-mode #board, .stats-mode #next, .stats-mode #fab, .stats-mode #add { display: none !important; }
+.stats[hidden] { display: none; }
+.stats { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+.st-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.st-head h1 { margin: 0; font-size: 24px; letter-spacing: -.02em; }
+.st-head .scope { color: var(--muted); font-size: 14px; flex: 1 1 auto; }
+.st-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.st-kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.st-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+.st-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+  padding: 16px; display: grid; gap: 10px; min-width: 0;
+}
+.st-card.wide { grid-column: 1 / -1; }
+.st-card h2 { margin: 0; font-size: 15.5px; }
+.st-card h2 .sub { font-weight: 400; font-size: 13px; color: var(--muted); }
+.st-label { font-size: 13px; color: var(--muted); }
+.st-big { font-size: 32px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.st-note { font-size: 13px; color: var(--muted); margin: 0; }
+.st-tip { min-height: 20px; font-size: 13px; }
+.st-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.st-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.st-sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.st-spark { width: 100%; height: 34px; }
+.st-split { display: flex; gap: 2px; height: 12px; }
+.st-split span { min-width: 4px; }
+.st-split span:first-child { border-radius: 4px 0 0 4px; }
+.st-split span:last-child { border-radius: 0 4px 4px 0; }
+.st-split.tall { height: 28px; }
+.st-split.tall span { color: #fff; font-size: 13px; font-weight: 650; display: flex; align-items: center; padding: 0 8px; white-space: nowrap; overflow: hidden; }
+/* columns: one button per day (hover or focus shows the numbers) */
+.st-cols { display: flex; align-items: flex-end; gap: 4px; height: 190px; border-bottom: 1px solid var(--line); }
+.st-cols button {
+  flex: 1; min-width: 0; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px;
+  border: 0; padding: 0 1px; background: none; border-radius: 6px 6px 0 0; cursor: default;
+}
+.st-cols button:hover, .st-cols button:focus-visible { background: var(--surface-2); }
+.st-cols i { display: block; flex: 1; max-width: 16px; border-radius: 4px 4px 0 0; min-height: 0; }
+.st-xl { display: flex; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.st-xl span { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: visible; }
+.st-stack { display: flex; flex-direction: column; gap: 2px; height: 220px; }
+.st-stack span { min-height: 22px; color: #fff; font-size: 13px; font-weight: 650; display: flex; align-items: center; padding: 0 10px; }
+.st-stack span:first-child { border-radius: 4px 4px 0 0; }
+.st-stack span:last-child { border-radius: 0 0 4px 4px; }
+.st-bars { display: grid; gap: 10px; }
+.st-bar { display: grid; grid-template-columns: minmax(80px, 120px) minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 14px; }
+.st-bar .track { height: 14px; background: var(--surface-2); border-radius: 4px; display: flex; overflow: hidden; }
+.st-bar .track i { display: block; border-radius: 4px; }
+.st-bar b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 40px; }
+.st-heat { display: grid; grid-template-columns: 26px repeat(8, minmax(0, 1fr)); gap: 3px; font-size: 11.5px; color: var(--muted); }
+.st-heat i { display: block; height: 22px; border-radius: 3px; }
+.st-table { font-size: 13px; }
+.st-table summary { cursor: pointer; color: var(--muted); }
+.st-table table { border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.st-table th, .st-table td { padding: 2px 10px 2px 0; text-align: right; }
+.st-table th:first-child, .st-table td:first-child { text-align: left; }
+/* weekly report */
+.st-week { max-width: 760px; width: 100%; margin: 0 auto; display: grid; gap: 16px; }
+.st-hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.st-hero .n { font-size: 84px; font-weight: 800; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.st-hero .w { font-size: 24px; font-weight: 650; }
+.st-kicker { font-size: 14px; font-weight: 600; color: var(--accent); }
+.st-cards2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.st-mini { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+.st-mini span { flex: 1; display: grid; justify-items: center; gap: 3px; align-self: stretch; align-content: end; font-size: 10.5px; color: var(--muted); }
+.st-mini i { display: block; width: 100%; max-width: 30px; border-radius: 3px 3px 0 0; }
+.st-list { display: grid; gap: 6px; }
+.st-list button {
+  display: flex; gap: 8px; align-items: baseline; text-align: left; width: 100%; padding: 9px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+}
+.st-list .age { margin-left: auto; font-size: 13px; color: var(--muted); white-space: nowrap; }
+/* flow and age */
+.st-flow { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; }
+.st-flow .y { display: flex; flex-direction: column; justify-content: space-between; font-size: 11.5px; color: var(--muted); text-align: right; height: 230px; }
+.st-plot { position: relative; height: 230px; border-bottom: 1px solid var(--line); }
+.st-plot svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.st-plot .hit { position: absolute; inset: 0; display: flex; }
+.st-plot .hit button { flex: 1; border: 0; padding: 0; background: none; cursor: default; }
+.st-plot .lbl { position: absolute; right: 4px; font-size: 12.5px; font-weight: 650; padding: 0 4px; background: var(--surface); border-radius: 4px; }
+.st-lane { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 10px; align-items: center; border-bottom: 1px solid var(--surface-2); }
+.st-lane .dots { position: relative; margin: 0 20px; }
+.st-lane .dots button {
+  position: absolute; width: 40px; height: 26px; margin-left: -20px; border-radius: 13px; border: 2px solid var(--surface);
+  background: var(--kc); color: #fff; font-size: 11px; font-weight: 650; padding: 0; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.st-lane .dots button:hover, .st-lane .dots button:focus-visible { box-shadow: 0 0 0 2px var(--text); }
+.st-axis { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 10px; font-size: 11.5px; color: var(--muted); }
+.st-axis div { display: flex; justify-content: space-between; margin: 0 20px; }
+.st-wait { display: grid; gap: 4px; font-size: 14px; }
+.st-wait .track { height: 8px; background: var(--surface-2); border-radius: 4px; display: flex; }
+.st-wait .track i { display: block; border-radius: 4px; }
+@media (max-width: 560px) {
+  .st-head h1 { font-size: 21px; }
+  .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .st-card { padding: 12px; }
+  .st-big { font-size: 26px; }
+  .st-grid { grid-template-columns: minmax(0, 1fr); }
+  .st-hero .n { font-size: 64px; }
+  .st-lane, .st-axis { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .st-axis > span { display: none; }
+  .st-lane > span { padding-top: 6px; font-size: 13px; color: var(--muted); }
+  .st-bar { grid-template-columns: 92px minmax(0, 1fr) auto; font-size: 13px; }
+}
+
 /* Next: one item at a time, the rest in order beside it (A53) */
 .next { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; max-width: 1080px; }
 @media (max-width: 860px) { .next { grid-template-columns: minmax(0, 1fr); } }
@@ -455,6 +576,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 
   <div id="board" class="board"></div>
   <div id="next" class="next" hidden></div>
+  <section id="stats" class="stats" hidden aria-labelledby="statsHead"></section>
 </main>
 
 <aside id="hist" class="hist" hidden aria-labelledby="histHead">
@@ -598,6 +720,53 @@ const STRINGS = {
       projectUpdated: "Projekt geändert", archived: "Projekt archiviert", restored: "Projekt zurückgeholt",
       titleChanged: "Titel geändert", bodyChanged: "Beschreibung geändert", sourceChanged: "Quelle geändert",
     },
+    // Statistiken (A58)
+    menuStats: "📊 Statistiken", stTitle: "Statistiken", stBack: "← Board", stLoading: "Wird gezählt …",
+    stEmpty: "Noch keine Punkte – hier gibt es noch nichts zu zählen.",
+    stTabOverview: "Übersicht", stTabWeek: "Wochenbilanz", stTabFlow: "Fluss & Alter",
+    stRange: "Zeitraum", stLast: (n) => `${n} Tage`, stSince: "Seit Beginn", stKpis: "Kennzahlen",
+    stOpenNow: "Offen jetzt", stOpenDelta: (d, n) => `${d} in ${n} Tagen`, stDone: "Erledigt",
+    stPerDay: (avg, made) => `Ø ${avg} pro Tag · ${made} angelegt`, stLead: "Durchlaufzeit (Median)",
+    stLeadD: (x) => `Entscheidungen: ${x}`, stWho: "Erledigt – wer war zuständig?", stAiShare: (p) => `${p} % KI`,
+    stMin: (n) => `${n} Min.`, stHours: (n) => `${n} Std.`, stDays: (x) => `${x} Tage`, stWeekOf: (d) => `Woche ab ${d}`,
+    stHover: "Zeig oder tipp auf einen Balken für die Zahlen.", stFlowHover: "Zeig oder tipp in die Fläche für die Zahlen eines Tages.",
+    stDayTip: (t, c, d, o) => `${t}: ${c} angelegt · ${d} erledigt · danach ${o} offen`,
+    stPerDayTitle: "Angelegt und erledigt pro Tag", stPerWeekTitle: "Angelegt und erledigt pro Woche",
+    stCreated: "angelegt", stDoneLower: "erledigt", stOpenLower: "offen", stAsTable: "Als Tabelle",
+    stOpenByKind: "Offen nach Kategorie", stLeadTitle: "Wie lange bis erledigt?", stMedian: "Median",
+    stLeadN: (n) => `aus ${n} Punkten`, stLeadNote: "Ideen zählen bis zur Zusage oder Absage.",
+    stWeekdays: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"], stHeatTitle: "Wann passiert etwas?",
+    stHeatSub: "Änderungen je Wochentag und Uhrzeit", stHeatCell: (d, a, b, n) => `${d} ${a}–${b} Uhr: ${n} Änderungen`,
+    stLess: "weniger", stMore: "mehr",
+    stSameAsBefore: (p) => `So viele wie in den 7 Tagen davor (${p}).`,
+    stMoreThanBefore: (x, p) => `${x} mehr als in den 7 Tagen davor (${p}).`,
+    stLessThanBefore: (x, p) => `${x} weniger als in den 7 Tagen davor (${p}).`,
+    stWeekKicker: (r, s) => `Wochenbilanz · ${r} · ${s}`, stItemsDone: "Punkte erledigt",
+    stWeekGrowth: (m, g) => `Angelegt wurden ${m} – die Liste ist ${g > 0 ? `um ${g} gewachsen` : g < 0 ? `um ${-g} geschrumpft` : "gleich lang geblieben"}.`,
+    stWhoDone: "Wer hat erledigt?", stWhoDoneText: (ai, u) => `Die KI hat ${ai} ihrer Punkte erledigt, du ${u} deiner.`,
+    stStreak: (n) => (n === 1 ? "1 Tag mit Erledigtem" : `${n} Tage in Folge etwas erledigt`), stNoStreak: "Gerade keine Serie",
+    stStreakBest: (n) => `Rekord: ${n}`, stIdeas: "Ideen", stAccepted: "zugesagt", stImplemented: "umgesetzt",
+    stBestDay: "Rekordtag", stBestDayValue: (d, n) => `${d} – ${n} erledigt`,
+    stFastest: "Schnellste Entscheidung (7 Tage)", stFastestValue: (r, t) => `${r} in ${t}`,
+    stBusiest: "Am häufigsten geändert (7 Tage)", stBusiestValue: (r, n) => `${r} – ${n} Änderungen`,
+    stOldest: "Am längsten offen", stOldestValue: (r, n) => `${r} – seit ${n === 1 ? "1 Tag" : n + " Tagen"}`,
+    stIdeaFunnel: "Was aus Ideen wird", stIdeaRest: (d, o) => `${d} verworfen, ${o} noch offen.`,
+    stIdeaRecent: (l) => `Zuletzt zugesagt: ${l}.`, stNextWeek: "Nächste Woche im Blick", stOldestMine: "Deine drei ältesten offenen Punkte:",
+    stDaysOld: (n) => (n === 1 ? "1 Tag" : `${n} Tage`), stCopyWeek: "Bilanz als Text kopieren", stCopied: "Bilanz kopiert",
+    stCopyHint: "… zum Einfügen in den Chat oder ein Wochen-Update.",
+    stTextHead: (r, s) => `cotrack · Wochenbilanz ${r} · ${s}`,
+    stTextDone: (d, p, m, o, g) => `${d} erledigt${p == null ? "" : ` (davor ${p})`} · ${m} angelegt · ${o} offen (${g > 0 ? "+" : ""}${g})`,
+    stFlowTitle: "Angelegt und abgeschlossen, aufsummiert", stFlowSub: "die Fläche dazwischen = offen", stClosed: "abgeschlossen",
+    stFlowTip: (d, m, c, o) => `${d}: ${m} angelegt · ${c} abgeschlossen · ${o} offen`,
+    stFlowAria: (m, c, o) => `Aufsummiert ${m} angelegt, ${c} abgeschlossen, ${o} offen`,
+    stCreatedN: (n) => `${n} angelegt`, stClosedN: (n) => `${n} abgeschlossen`,
+    stFlowNote: (o) => `Abgeschlossen = erledigt oder verworfen. Offen sind gerade ${o}.`,
+    stAgeTitle: "Wie alt ist, was offen ist?", stAgeSub: "jeder Punkt ein Kreis, Alter in Tagen",
+    stAgeHover: "Zeig auf einen Kreis; ein Klick öffnet den Punkt. Rechts liegt, was lange wartet.",
+    stAgeTip: (r, t, n) => `${r} ${t} – seit ${n === 1 ? "1 Tag" : n + " Tagen"} offen`,
+    stWaitTitle: "Warten aufeinander", stWaitsFor: "wartet auf", stWaitedFor: "wartete auf",
+    stWaitStill: (t) => `seit ${t} · noch offen`, stWaitFreed: (t, d) => `${t} · frei seit ${d}`,
+    stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
   },
   en: {
     owners: { user: "You", ai: "AI" },
@@ -679,6 +848,53 @@ const STRINGS = {
       projectUpdated: "Project changed", archived: "Project archived", restored: "Project restored",
       titleChanged: "Title changed", bodyChanged: "Description changed", sourceChanged: "Source changed",
     },
+    // Statistics (A58)
+    menuStats: "📊 Statistics", stTitle: "Statistics", stBack: "← Board", stLoading: "Counting …",
+    stEmpty: "No items yet – nothing to count here.",
+    stTabOverview: "Overview", stTabWeek: "Weekly report", stTabFlow: "Flow & age",
+    stRange: "Range", stLast: (n) => `${n} days`, stSince: "Since the start", stKpis: "Key figures",
+    stOpenNow: "Open now", stOpenDelta: (d, n) => `${d} in ${n} days`, stDone: "Done",
+    stPerDay: (avg, made) => `Ø ${avg} per day · ${made} created`, stLead: "Lead time (median)",
+    stLeadD: (x) => `Decisions: ${x}`, stWho: "Done – who was responsible?", stAiShare: (p) => `${p} % AI`,
+    stMin: (n) => `${n} min`, stHours: (n) => `${n} h`, stDays: (x) => `${x} days`, stWeekOf: (d) => `Week from ${d}`,
+    stHover: "Point at or tap a bar for the numbers.", stFlowHover: "Point at or tap the chart for a day's numbers.",
+    stDayTip: (t, c, d, o) => `${t}: ${c} created · ${d} done · ${o} open after`,
+    stPerDayTitle: "Created and done per day", stPerWeekTitle: "Created and done per week",
+    stCreated: "created", stDoneLower: "done", stOpenLower: "open", stAsTable: "As a table",
+    stOpenByKind: "Open by category", stLeadTitle: "How long until done?", stMedian: "median",
+    stLeadN: (n) => `from ${n} items`, stLeadNote: "Ideas count until accepted or dropped.",
+    stWeekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], stHeatTitle: "When do things happen?",
+    stHeatSub: "changes by weekday and time", stHeatCell: (d, a, b, n) => `${d} ${a}–${b}h: ${n} changes`,
+    stLess: "less", stMore: "more",
+    stSameAsBefore: (p) => `As many as in the 7 days before (${p}).`,
+    stMoreThanBefore: (x, p) => `${x} more than in the 7 days before (${p}).`,
+    stLessThanBefore: (x, p) => `${x} fewer than in the 7 days before (${p}).`,
+    stWeekKicker: (r, s) => `Weekly report · ${r} · ${s}`, stItemsDone: "items done",
+    stWeekGrowth: (m, g) => `${m} were created – the list ${g > 0 ? `grew by ${g}` : g < 0 ? `shrank by ${-g}` : "kept its length"}.`,
+    stWhoDone: "Who got things done?", stWhoDoneText: (ai, u) => `The AI finished ${ai} of its items, you ${u} of yours.`,
+    stStreak: (n) => (n === 1 ? "1 day with something done" : `${n} days in a row with something done`), stNoStreak: "No streak right now",
+    stStreakBest: (n) => `Record: ${n}`, stIdeas: "Ideas", stAccepted: "accepted", stImplemented: "implemented",
+    stBestDay: "Record day", stBestDayValue: (d, n) => `${d} – ${n} done`,
+    stFastest: "Fastest decision (7 days)", stFastestValue: (r, t) => `${r} in ${t}`,
+    stBusiest: "Changed most often (7 days)", stBusiestValue: (r, n) => `${r} – ${n} changes`,
+    stOldest: "Open the longest", stOldestValue: (r, n) => `${r} – for ${n === 1 ? "1 day" : n + " days"}`,
+    stIdeaFunnel: "What becomes of ideas", stIdeaRest: (d, o) => `${d} dropped, ${o} still open.`,
+    stIdeaRecent: (l) => `Accepted lately: ${l}.`, stNextWeek: "Next week", stOldestMine: "Your three oldest open items:",
+    stDaysOld: (n) => (n === 1 ? "1 day" : `${n} days`), stCopyWeek: "Copy the report as text", stCopied: "Report copied",
+    stCopyHint: "… to paste into the chat or a weekly update.",
+    stTextHead: (r, s) => `cotrack · weekly report ${r} · ${s}`,
+    stTextDone: (d, p, m, o, g) => `${d} done${p == null ? "" : ` (before: ${p})`} · ${m} created · ${o} open (${g > 0 ? "+" : ""}${g})`,
+    stFlowTitle: "Created and closed, cumulative", stFlowSub: "the area between = open", stClosed: "closed",
+    stFlowTip: (d, m, c, o) => `${d}: ${m} created · ${c} closed · ${o} open`,
+    stFlowAria: (m, c, o) => `Cumulative: ${m} created, ${c} closed, ${o} open`,
+    stCreatedN: (n) => `${n} created`, stClosedN: (n) => `${n} closed`,
+    stFlowNote: (o) => `Closed = done or dropped. ${o} are open right now.`,
+    stAgeTitle: "How old is what is open?", stAgeSub: "one circle per item, age in days",
+    stAgeHover: "Point at a circle; a click opens the item. What waits long sits on the right.",
+    stAgeTip: (r, t, n) => `${r} ${t} – open for ${n === 1 ? "1 day" : n + " days"}`,
+    stWaitTitle: "Waiting for each other", stWaitsFor: "waits for", stWaitedFor: "waited for",
+    stWaitStill: (t) => `for ${t} · still open`, stWaitFreed: (t, d) => `${t} · free since ${d}`,
+    stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
   },
 };
 const lookup = (dict, key) => key.split(".").reduce((o, k) => (o == null ? o : o[k]), dict);
@@ -844,7 +1060,7 @@ async function poll() {
     // Only acknowledge a version once the refresh for it succeeded, so a failed refresh is retried.
     if (v.version !== state.version) {
       if (state.version !== -1) await refresh(state.version === null);
-      if (project === state.project) { state.version = v.version; histChanged(); }
+      if (project === state.project) { state.version = v.version; histChanged(); if (state.stats) loadStats(); }
     }
     setLive(true);
   } catch { setLive(false); }
@@ -1297,6 +1513,355 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && hist.open && !e.defaultPrevented && !document.querySelector("dialog[open]")) closeHist(true);
 });
 
+/* ---------------------------------------------------------- statistics (A58) */
+// Three views on the counts the server builds (GET /api/stats): an overview dashboard, a weekly report and flow/age.
+// Hidden in ☰ → Projekte → Statistiken; replaces bar and board while open and follows the live poll.
+const stats = { data: null, req: 0, tip: null };
+state.stats = false;
+state.statsTab = ["overview", "week", "flow"].includes(store.get("cotrack.statsTab")) ? store.get("cotrack.statsTab") : "overview";
+state.statsRange = ["7", "30", "all"].includes(store.get("cotrack.statsRange")) ? store.get("cotrack.statsRange") : "30";
+const SVG_NS = "http://www.w3.org/2000/svg";
+function svg(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, v);
+  for (const c of kids.flat()) if (c) el.append(c);
+  return el;
+}
+const num = (x, digits = 0) => (x == null ? "–" : Number(x).toLocaleString(LOCALE, { maximumFractionDigits: digits, minimumFractionDigits: 0 }));
+// a span of days, readable: "25 Min.", "5 Std.", "1,4 Tage"
+function span(days) {
+  if (days == null) return "–";
+  if (days < 1 / 24) return tr("stMin", Math.max(1, Math.round(days * 1440)));
+  if (days < 1) return tr("stHours", Math.round(days * 24));
+  return tr("stDays", num(days, 1));
+}
+const dayShort = (date) => new Date(date + "T12:00:00Z").toLocaleDateString(LOCALE, { weekday: "short", timeZone: "UTC" });
+const dayDate = (date, opts = { day: "numeric", month: "short" }) => new Date(date + "T12:00:00Z").toLocaleDateString(LOCALE, { ...opts, timeZone: "UTC" });
+const kindColor = (code) => kindBy(code)?.color || "#6b7280";
+const kindName = (code) => kindBy(code)?.name || code;
+// fixed order for anything coloured by category: D · A · W · I passes the colour-vision checks, A next to I does not
+const KIND_ORDER = ["D", "A", "W", "I"];
+const orderKinds = (codes) => [...new Set(codes)].sort((a, b) => (KIND_ORDER.indexOf(a) + 1 || 99) - (KIND_ORDER.indexOf(b) + 1 || 99) || a.localeCompare(b));
+const statRef = (o) => refLabel({ project_slug: o.project_slug, ref: o.ref });
+const openRef = (o) => openHistItem({ project_slug: o.project_slug, item_ref: o.ref });
+
+function openStats() {
+  state.stats = true;
+  document.body.classList.add("stats-mode");
+  $("#stats").hidden = false;
+  closeHist();
+  window.scrollTo(0, 0);
+  stats.data = null;
+  renderStats();
+  loadStats();
+}
+function closeStats() {
+  state.stats = false;
+  document.body.classList.remove("stats-mode");
+  $("#stats").hidden = true;
+  updateMetrics();
+}
+async function loadStats() {
+  if (!state.project) return;
+  const req = ++stats.req, scope = state.project;
+  const params = new URLSearchParams({ tz: String(new Date().getTimezoneOffset()) });
+  if (scope !== ALL) params.set("project", scope);
+  try {
+    const data = await api("/stats?" + params);
+    if (req !== stats.req || scope !== state.project || !state.stats) return;
+    stats.data = data;
+    renderStats();
+  } catch (e) { toast(tr("error", e.message)); }
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state.stats && !e.defaultPrevented && !hist.open && !document.querySelector("dialog[open]")) closeStats();
+});
+let statsResize;
+window.addEventListener("resize", () => { if (state.stats) { clearTimeout(statsResize); statsResize = setTimeout(renderStats, 150); } });
+
+function renderStats() {
+  const box = $("#stats");
+  const scope = state.project === ALL ? tr("allProjects") : currentProject() ? projectLabel(currentProject()).replace(/ \(\d+\)$/, "") : "";
+  const tabs = [["overview", tr("stTabOverview")], ["week", tr("stTabWeek")], ["flow", tr("stTabFlow")]];
+  const head = h("div", { class: "st-head" },
+    h("button", { type: "button", class: "btn", onclick: closeStats }, tr("stBack")),
+    h("h1", { id: "statsHead" }, tr("stTitle")),
+    h("span", { class: "scope" }, scope),
+    h("div", { class: "chips", role: "group", "aria-label": tr("stTitle") }, tabs.map(([id, label]) =>
+      h("button", { type: "button", "aria-pressed": String(state.statsTab === id), onclick: () => {
+        state.statsTab = id; store.set("cotrack.statsTab", id); renderStats();
+      } }, label))));
+  const d = stats.data;
+  if (!d) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stLoading")));
+  if (!d.days.length || !d.days.some((x) => x.created)) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stEmpty")));
+  const body = state.statsTab === "week" ? statsWeek(d) : state.statsTab === "flow" ? statsFlow(d) : statsOverview(d);
+  box.replaceChildren(head, ...body);
+}
+
+/* overview: key figures, created/done per day (per week for long ranges), open by kind, lead time, when */
+function statsOverview(d) {
+  const n = state.statsRange === "7" ? 7 : state.statsRange === "30" ? 30 : d.days.length;
+  const days = d.days.slice(-n);
+  const sum = (k) => days.reduce((s, x) => s + x[k], 0);
+  const done = sum("done"), made = sum("created"), byAi = sum("done_ai"), byUser = sum("done_user");
+  const before = d.days.length > days.length ? d.days[d.days.length - days.length - 1].open : 0;
+  const delta = d.open.total - before;
+  const ranges = [["7", tr("stLast", 7)], ["30", tr("stLast", 30)], ["all", tr("stSince")]];
+  const rangeChips = h("div", { class: "chips", role: "group", "aria-label": tr("stRange") }, ranges.map(([id, label]) =>
+    h("button", { type: "button", "aria-pressed": String(state.statsRange === id), onclick: () => {
+      state.statsRange = id; store.set("cotrack.statsRange", id); renderStats();
+    } }, label)));
+  const share = byAi + byUser ? Math.round(byAi / (byAi + byUser) * 100) : null;
+  const kpi = (label, big, ...rest) => h("div", { class: "st-card" }, h("span", { class: "st-label" }, label), h("span", { class: "st-big" }, big), rest);
+  const spark = sparkline(days.map((x) => x.open));
+  return [
+    h("div", { class: "st-row" }, rangeChips),
+    h("section", { class: "st-kpis", "aria-label": tr("stKpis") },
+      kpi(tr("stOpenNow"), num(d.open.total), h("span", { class: "st-note" }, tr("stOpenDelta", (delta > 0 ? "+" : "") + num(delta), days.length)), spark),
+      kpi(tr("stDone"), num(done), h("span", { class: "st-note" }, tr("stPerDay", num(done / days.length, 1), num(made)))),
+      kpi(tr("stLead"), span(d.lead.overall), h("span", { class: "st-note" }, d.lead.by_kind.D ? tr("stLeadD", span(d.lead.by_kind.D.median)) : "")),
+      kpi(tr("stWho"), share == null ? "–" : tr("stAiShare", share), splitBar([[byAi, "var(--c-ai)", "🤖 " + num(byAi)], [byUser, "var(--c-user)", "👤 " + num(byUser)]]),
+        h("span", { class: "st-note" }, `🤖 ${OWNER_LABELS.ai} ${num(byAi)} · 👤 ${OWNER_LABELS.user} ${num(byUser)}`))),
+    h("div", { class: "st-grid" },
+      columnsCard(days),
+      openByKindCard(d),
+      leadCard(d),
+      heatCard(d)),
+  ];
+}
+function sparkline(values) {
+  if (values.length < 2) return null;
+  const max = Math.max(...values), min = Math.min(...values), r = max - min || 1;
+  const pts = values.map((v, i) => `${(i / (values.length - 1) * 200).toFixed(1)},${(32 - (v - min) / r * 28).toFixed(1)}`);
+  return svg("svg", { class: "st-spark", viewBox: "0 0 200 34", preserveAspectRatio: "none", "aria-hidden": "true" },
+    svg("polyline", { points: pts.join(" "), fill: "none", stroke: "var(--c-done)", "stroke-width": "2", "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }));
+}
+// parts: [value, colour, label] – labels only where a part is wide enough (tall bar)
+function splitBar(parts, tall) {
+  const total = parts.reduce((s, p) => s + p[0], 0) || 1;
+  return h("div", { class: "st-split" + (tall ? " tall" : ""), role: "img", "aria-label": parts.map((p) => p[2]).join(", ") },
+    parts.filter((p) => p[0] > 0).map(([v, c, label]) => h("span", { style: `flex:${v};background:${c}` }, tall && v / total > 0.12 ? label : "")));
+}
+function columnsCard(days) {
+  // long ranges: one column per week (the last column ends today)
+  let cols = days.map((x) => ({ ...x, label: days.length <= 7 ? dayShort(x.date) : dayDate(x.date, { day: "numeric" }), title: dayDate(x.date, { weekday: "short", day: "numeric", month: "short" }) }));
+  const weekly = cols.length > 31;
+  if (weekly) {
+    const out = [];
+    for (let end = cols.length; end > 0; end -= 7) {
+      const part = cols.slice(Math.max(0, end - 7), end);
+      out.unshift({ created: part.reduce((s, x) => s + x.created, 0), done: part.reduce((s, x) => s + x.done, 0), open: part.at(-1).open,
+        label: dayDate(part[0].date, { day: "numeric", month: "numeric" }), title: tr("stWeekOf", dayDate(part[0].date)) });
+    }
+    cols = out;
+  }
+  const max = Math.max(1, ...cols.map((x) => Math.max(x.created, x.done)));
+  const tip = h("div", { class: "st-tip" }, tr("stHover"));
+  const every = Math.ceil(cols.length / 12);
+  const text = (x) => tr("stDayTip", x.title, x.created, x.done, x.open);
+  return h("section", { class: "st-card wide" },
+    h("div", { class: "st-row" }, h("h2", { style: "flex:1" }, tr(weekly ? "stPerWeekTitle" : "stPerDayTitle")),
+      h("div", { class: "st-legend" }, h("span", null, h("i", { class: "st-sw", style: "background:var(--c-made)" }), tr("stCreated")),
+        h("span", null, h("i", { class: "st-sw", style: "background:var(--c-done)" }), tr("stDoneLower")))),
+    tip,
+    h("div", { class: "st-cols" }, cols.map((x) => h("button", { type: "button", "aria-label": text(x),
+      onmouseenter: () => { tip.textContent = text(x); }, onfocus: () => { tip.textContent = text(x); } },
+      h("i", { style: `height:${x.created / max * 100}%;background:var(--c-made)` }),
+      h("i", { style: `height:${x.done / max * 100}%;background:var(--c-done)` })))),
+    h("div", { class: "st-xl", "aria-hidden": "true" }, cols.map((x, i) => h("span", null, i % every === 0 || i === cols.length - 1 ? x.label : ""))),
+    h("details", { class: "st-table" }, h("summary", null, tr("stAsTable")),
+      h("table", null, h("tr", null, h("th", null, ""), h("th", null, tr("stCreated")), h("th", null, tr("stDoneLower")), h("th", null, tr("stOpenLower"))),
+        cols.map((x) => h("tr", null, h("td", null, x.title), h("td", null, x.created), h("td", null, x.done), h("td", null, x.open))))));
+}
+function openByKindCard(d) {
+  const codes = orderKinds(Object.keys(d.open.by_kind));
+  return h("section", { class: "st-card" },
+    h("h2", null, tr("stOpenByKind")),
+    codes.length ? h("div", { class: "st-stack", role: "img", "aria-label": codes.map((c) => `${kindName(c)} ${d.open.by_kind[c]}`).join(", ") },
+      codes.map((c) => h("span", { style: `flex:${d.open.by_kind[c]};background:${kindColor(c)}` }, d.open.by_kind[c]))) : h("p", { class: "st-note" }, tr("nothingOpen")),
+    h("div", { class: "st-legend" }, codes.map((c) => h("span", null, h("i", { class: "st-sw", style: `background:${kindColor(c)}` }), kindName(c)))));
+}
+function leadCard(d) {
+  const rows = Object.entries(d.lead.by_kind).filter(([, v]) => v.median != null).sort((a, b) => b[1].median - a[1].median);
+  const max = Math.max(...rows.map(([, v]) => v.median), 0.01);
+  return h("section", { class: "st-card" },
+    h("h2", null, tr("stLeadTitle"), " ", h("span", { class: "sub" }, tr("stMedian"))),
+    h("div", { class: "st-bars" }, rows.map(([code, v]) => h("div", { class: "st-bar" },
+      h("span", null, kindName(code)),
+      h("span", { class: "track" }, h("i", { style: `width:${v.median / max * 100}%;background:var(--c-done)` })),
+      h("b", { title: tr("stLeadN", v.n) }, span(v.median))))),
+    h("p", { class: "st-note" }, tr("stLeadNote")));
+}
+function heatCard(d) {
+  const max = Math.max(1, ...d.heat.flat());
+  const names = tr("stWeekdays");
+  const level = (v) => (v === 0 ? 0 : Math.min(4, 1 + Math.floor(v / max * 3.999)));
+  return h("section", { class: "st-card" },
+    h("h2", null, tr("stHeatTitle"), " ", h("span", { class: "sub" }, tr("stHeatSub"))),
+    h("div", { class: "st-heat" }, h("span"), [0, 3, 6, 9, 12, 15, 18, 21].map((x) => h("span", null, x)),
+      d.heat.map((row, r) => [h("span", null, names[r]), row.map((v, c) =>
+        h("i", { title: tr("stHeatCell", names[r], c * 3, c * 3 + 3, v), style: `background:var(--heat-${level(v)})` }))])),
+    h("div", { class: "st-legend" }, tr("stLess"), [0, 1, 2, 3, 4].map((l) => h("i", { class: "st-sw", style: `width:16px;background:var(--heat-${l})` })), tr("stMore")));
+}
+
+/* weekly report: the last 7 days against the 7 before */
+function weekFigures(d) {
+  const week = d.days.slice(-7), prev = d.days.slice(-14, -7);
+  const sum = (a, k) => a.reduce((s, x) => s + x[k], 0);
+  const openBefore = d.days.length > 7 ? d.days[d.days.length - 8].open : 0;
+  return {
+    week, prev, done: sum(week, "done"), prevDone: prev.length ? sum(prev, "done") : null, made: sum(week, "created"),
+    ai: sum(week, "done_ai"), user: sum(week, "done_user"), grew: d.open.total - openBefore,
+    from: week[0].date, to: week.at(-1).date,
+  };
+}
+function statsWeek(d) {
+  const f = weekFigures(d), r = d.records, me = state.actor === "ai" ? "ai" : "user";
+  const scope = state.project === ALL ? tr("allProjects") : currentProject()?.name || "";
+  const cmp = f.prevDone == null ? "" : f.done === f.prevDone ? tr("stSameAsBefore", f.prevDone)
+    : tr(f.done > f.prevDone ? "stMoreThanBefore" : "stLessThanBefore", Math.abs(f.done - f.prevDone), f.prevDone);
+  const card = (label, big, sub, onclick) => h(onclick ? "button" : "div", { class: "st-card", type: onclick ? "button" : null, onclick,
+    style: onclick ? "text-align:left;cursor:pointer;font:inherit;color:inherit" : null },
+    h("span", { class: "st-label" }, label), h("span", { style: "font-size:20px;font-weight:700" }, big), sub ? h("span", { class: "st-note" }, sub) : null);
+  const streakDays = d.days.slice(-14);
+  const maxDone = Math.max(1, ...streakDays.map((x) => x.done));
+  const streakEnd = streakDays.length - (streakDays.at(-1).done ? 1 : 2); // today may still be empty
+  const inStreak = (i) => i <= streakEnd && i > streakEnd - d.streak.current;
+  const ideas = d.ideas;
+  const funnel = [[tr("stIdeas"), ideas.total], [tr("stAccepted"), ideas.accepted], [tr("stImplemented"), ideas.implemented]];
+  const mine = d.aging.filter((a) => a.owner === me).slice(0, 3);
+  return [h("div", { class: "st-week" },
+    h("div", null,
+      h("div", { class: "st-kicker" }, tr("stWeekKicker", `${dayDate(f.from)} – ${dayDate(f.to)}`, scope)),
+      h("div", { class: "st-hero" }, h("span", { class: "n" }, num(f.done)), h("span", { class: "w" }, tr("stItemsDone"))),
+      h("p", { class: "st-note", style: "font-size:15px" }, [cmp, tr("stWeekGrowth", f.made, f.grew)].filter(Boolean).join(" "))),
+    h("section", { class: "st-card" },
+      h("h2", null, tr("stWhoDone")),
+      h("p", { style: "margin:0" }, tr("stWhoDoneText", f.ai, f.user)),
+      splitBar([[f.ai, "var(--c-ai)", `🤖 ${OWNER_LABELS.ai} ${f.ai}`], [f.user, "var(--c-user)", `👤 ${OWNER_LABELS.user} ${f.user}`]], true)),
+    h("section", { class: "st-card" },
+      h("div", { class: "st-row" }, h("h2", { style: "flex:1" }, d.streak.current ? tr("stStreak", d.streak.current) : tr("stNoStreak")),
+        h("span", { class: "st-note" }, tr("stStreakBest", d.streak.best))),
+      h("div", { class: "st-mini", role: "img", "aria-label": streakDays.map((x) => `${dayDate(x.date)}: ${x.done}`).join(", ") },
+        streakDays.map((x, i) => h("span", null,
+          h("i", { style: `height:${Math.max(3, x.done / maxDone * 56)}px;background:${inStreak(i) ? "var(--c-done)" : "var(--c-made)"}` }),
+          dayShort(x.date).slice(0, 2))))),
+    h("div", { class: "st-cards2" },
+      r.best_day ? card(tr("stBestDay"), tr("stBestDayValue", dayDate(r.best_day.date, { weekday: "short", day: "numeric", month: "short" }), r.best_day.done),
+        r.best_day.refs.map((k) => { const [slug, ref] = k.split(":"); return refLabel({ project_slug: slug, ref }); }).join(", ")) : null,
+      r.fastest_decision ? card(tr("stFastest"), tr("stFastestValue", statRef(r.fastest_decision), span(r.fastest_decision.minutes / 1440)),
+        r.fastest_decision.title, () => openRef(r.fastest_decision)) : null,
+      r.most_changed ? card(tr("stBusiest"), tr("stBusiestValue", statRef(r.most_changed), r.most_changed.changes),
+        r.most_changed.title, () => openRef(r.most_changed)) : null,
+      r.oldest_open ? card(tr("stOldest"), tr("stOldestValue", statRef(r.oldest_open), r.oldest_open.days),
+        r.oldest_open.title, () => openRef(r.oldest_open)) : null),
+    ideas.total ? h("section", { class: "st-card" },
+      h("h2", null, tr("stIdeaFunnel")),
+      h("div", { class: "st-bars" }, funnel.map(([label, v]) => h("div", { class: "st-bar" }, h("span", null, label),
+        h("span", { class: "track", style: "height:20px" }, h("i", { style: `width:${v / ideas.total * 100}%;background:${kindColor("I")}` })), h("b", null, v)))),
+      h("p", { class: "st-note" }, [tr("stIdeaRest", ideas.dropped, ideas.open),
+        ideas.recent.length ? tr("stIdeaRecent", ideas.recent.map((x) => `${statRef(x)} → ${x.to}`).join(", ")) : ""].filter(Boolean).join(" "))) : null,
+    mine.length ? h("section", { class: "st-card" },
+      h("h2", null, tr("stNextWeek")), h("span", { class: "st-note" }, tr("stOldestMine")),
+      h("div", { class: "st-list" }, mine.map((a) => h("button", { type: "button", style: `--kc:${kindColor(a.kind)}`, onclick: () => openRef(a) },
+        h("span", { class: "ref" }, statRef(a)), h("span", null, a.title), h("span", { class: "age" }, tr("stDaysOld", a.days)))))) : null,
+    h("div", { class: "st-row" },
+      h("button", { type: "button", class: "primary", onclick: () => copy(weekText(d), tr("stCopied")) }, tr("stCopyWeek")),
+      h("span", { class: "st-note" }, tr("stCopyHint"))))];
+}
+function weekText(d) {
+  const f = weekFigures(d), r = d.records;
+  const scope = state.project === ALL ? tr("allProjects") : currentProject()?.name || "";
+  return [
+    tr("stTextHead", `${dayDate(f.from)} – ${dayDate(f.to)}`, scope),
+    tr("stTextDone", f.done, f.prevDone, f.made, d.open.total, f.grew),
+    `🤖 ${OWNER_LABELS.ai} ${f.ai} · 👤 ${OWNER_LABELS.user} ${f.user}` + (d.streak.current ? " · " + tr("stStreak", d.streak.current) : ""),
+    r.most_changed ? `${tr("stBusiest")}: ${statRef(r.most_changed)} ${r.most_changed.title} (${r.most_changed.changes})` : "",
+    r.oldest_open ? `${tr("stOldest")}: ${statRef(r.oldest_open)} ${r.oldest_open.title} (${tr("stDaysOld", r.oldest_open.days)})` : "",
+    d.ideas.total ? `${tr("stIdeas")}: ${d.ideas.total} → ${d.ideas.accepted} ${tr("stAccepted")} → ${d.ideas.implemented} ${tr("stImplemented")}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+/* flow and age: cumulative created vs closed (the gap = open), age of what is open, waiting times */
+function statsFlow(d) {
+  return [h("div", { class: "st-grid" }, flowCard(d), ageCard(d), waitCard(d))];
+}
+function flowCard(d) {
+  const days = d.days.slice(-120);
+  let made = 0, closed = 0;
+  const base = d.days.length > days.length ? d.days[d.days.length - days.length - 1] : null;
+  // cumulative from the start of the shown range; open = made - closed (+ what was open before)
+  const startOpen = base ? base.open : 0;
+  const pts = days.map((x) => ({ x, made: (made += x.created), closed: (closed += x.done + x.dropped) }));
+  const top = Math.max(1, startOpen + made);
+  const W = 1000, H = 230, X = (i) => (pts.length < 2 ? W : i / (pts.length - 1) * W), Y = (v) => H - v / top * (H - 8);
+  const line = (key, add) => pts.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p[key] + add).toFixed(1)}`).join(" ");
+  const band = line("made", startOpen) + " " + pts.slice().reverse().map((p, k) => `L${X(pts.length - 1 - k).toFixed(1)} ${Y(p.closed).toFixed(1)}`).join(" ") + " Z";
+  const cross = svg("line", { x1: -10, x2: -10, y1: 0, y2: H, stroke: "var(--text)", "stroke-width": 1, "vector-effect": "non-scaling-stroke" });
+  const tip = h("div", { class: "st-tip" }, tr("stFlowHover"));
+  const last = pts.at(-1);
+  const yMade = Y(last.made + startOpen) / H * 100, yClosed = Y(last.closed) / H * 100;
+  const show = (p, i) => { cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); tip.textContent = tr("stFlowTip", dayDate(p.x.date), p.made + startOpen, p.closed, p.x.open); };
+  return h("section", { class: "st-card wide" },
+    h("div", { class: "st-row" }, h("h2", { style: "flex:1" }, tr("stFlowTitle"), " ", h("span", { class: "sub" }, tr("stFlowSub"))),
+      h("div", { class: "st-legend" }, h("span", null, h("i", { class: "st-sw", style: "height:3px;background:var(--muted)" }), tr("stCreated")),
+        h("span", null, h("i", { class: "st-sw", style: "height:3px;background:var(--c-done)" }), tr("stClosed")))),
+    tip,
+    h("div", { class: "st-flow" },
+      h("div", { class: "y", "aria-hidden": "true" }, h("span", null, num(top)), h("span", null, num(top / 2)), h("span", null, "0")),
+      h("div", { class: "st-plot" },
+        svg("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", role: "img", "aria-label": tr("stFlowAria", last.made + startOpen, last.closed, d.open.total) },
+          svg("path", { d: band, fill: "var(--c-done)", "fill-opacity": "0.12" }),
+          svg("path", { d: line("made", startOpen), fill: "none", stroke: "var(--muted)", "stroke-width": 2, "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }),
+          svg("path", { d: line("closed", 0), fill: "none", stroke: "var(--c-done)", "stroke-width": 2, "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }),
+          cross),
+        h("div", { class: "hit" }, pts.map((p, i) => h("button", { type: "button", "aria-label": tr("stFlowTip", dayDate(p.x.date), p.made + startOpen, p.closed, p.x.open),
+          onmouseenter: () => show(p, i), onfocus: () => show(p, i) }))),
+        h("span", { class: "lbl", style: `top:calc(${yMade}% - 22px)` }, tr("stCreatedN", num(last.made + startOpen))),
+        h("span", { class: "lbl", style: `top:calc(${yClosed}% + 4px);color:var(--c-done)` }, tr("stClosedN", num(last.closed)))),
+      h("span"),
+      h("div", { class: "st-xl", style: "justify-content:space-between" }, h("span", { style: "flex:none" }, dayDate(days[0].date)), h("span", { style: "flex:none" }, dayDate(days.at(-1).date)))),
+    h("p", { class: "st-note" }, tr("stFlowNote", d.open.total)));
+}
+function ageCard(d) {
+  const tip = h("div", { class: "st-tip" }, tr("stAgeHover"));
+  const width = $("#stats").clientWidth || 800;
+  const slots = width < 560 ? 7 : width < 900 ? 11 : 16;
+  const maxAge = Math.max(7, ...d.aging.map((a) => a.days));
+  const lanes = orderKinds(d.aging.map((a) => a.kind)).map((code) => {
+    const items = d.aging.filter((a) => a.kind === code);
+    const stack = {};
+    let rows = 1;
+    const dots = items.map((a) => {
+      const slot = Math.round(a.days / maxAge * (slots - 1));
+      const k = (stack[slot] = (stack[slot] || 0) + 1);
+      rows = Math.max(rows, k);
+      const label = tr("stAgeTip", statRef(a), a.title, a.days);
+      return h("button", { type: "button", "aria-label": label, title: label, style: `left:${slot / (slots - 1) * 100}%;top:${6 + (k - 1) * 30}px`,
+        onmouseenter: () => { tip.textContent = label; }, onfocus: () => { tip.textContent = label; }, onclick: () => openRef(a) }, a.ref);
+    });
+    return h("div", { class: "st-lane", style: `--kc:${kindColor(code)}` }, h("span", null, kindName(code)),
+      h("div", { class: "dots", style: `height:${rows * 30 + 8}px` }, dots));
+  });
+  return h("section", { class: "st-card wide" },
+    h("h2", null, tr("stAgeTitle"), " ", h("span", { class: "sub" }, tr("stAgeSub"))),
+    tip,
+    lanes.length ? lanes : h("p", { class: "st-note" }, tr("nothingOpen")),
+    lanes.length ? h("div", { class: "st-axis" }, h("span"), h("div", null, h("span", null, tr("today")), h("span", null, tr("stDaysOld", Math.round(maxAge / 2))), h("span", null, tr("stDaysOld", maxAge)))) : null);
+}
+function waitCard(d) {
+  const list = d.waits.list;
+  const max = Math.max(1, ...list.map((w) => w.days));
+  return h("section", { class: "st-card" },
+    h("h2", null, tr("stWaitTitle")),
+    list.length ? list.map((w) => h("div", { class: "st-wait" },
+      h("span", null, h("b", { style: `color:${kindColor(w.kind)}` }, statRef(w)), " ", tr(w.still ? "stWaitsFor" : "stWaitedFor"), " ",
+        h("b", { style: `color:${kindColor(w.on_kind)}` }, state.project === ALL ? `${statRef(w).split(":")[0]}:${w.on}` : w.on)),
+      h("span", { class: "track" }, h("i", { style: `width:${Math.max(3, w.days / max * 100)}%;background:${w.still ? "var(--c-user)" : "var(--c-made)"}` })),
+      h("span", { class: "st-note" }, w.still ? tr("stWaitStill", span(w.days)) : tr("stWaitFreed", span(w.days), dayDate(w.freed.slice(0, 10)))))) : h("p", { class: "st-note" }, tr("stWaitNone")),
+    d.waits.avg_days != null ? h("p", { class: "st-note" }, tr("stWaitAvg", span(d.waits.avg_days))) : null);
+}
+
 /* ---------------------------------------------------------- actions */
 async function setStatus(it, status) {
   try {
@@ -1648,7 +2213,8 @@ function openMenu() {
     h("div", { class: "menu-list" },
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
-      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null),
+      inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md"), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
+      state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
     sec(tr("secFooter")),
     h("div", { class: "menu-row" },
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
