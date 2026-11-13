@@ -146,6 +146,13 @@ async function route(req, db, url, actor) {
   // Change log across all projects, newest first, e.g. GET /api/events?limit=50&before=1234 (web app: Verlauf)
   if (seg.length === 1 && seg[0] === "events" && method === "GET") return json({ events: await listEvents(db, eventRange(q)) });
 
+  // Statistics for the web app (☰ → Statistiken), e.g. GET /api/stats?project=CT&tz=-60 (no project = all projects;
+  // tz = the browser's getTimezoneOffset(), so days and hours are the reader's own)
+  if (seg.length === 1 && seg[0] === "stats" && method === "GET") {
+    const project = q.get("project") ? (await getProject(db, q.get("project"))).slug : null;
+    return json(await buildStats(db, { project, tz: clampInt(q.get("tz"), -840, 840, 0) }));
+  }
+
   // Suggested project code for a slug, e.g. GET /api/code-suggestion?slug=festival-workshop-planner
   if (seg.length === 1 && seg[0] === "code-suggestion" && method === "GET") {
     const slug = (q.get("slug") || "").toLowerCase();
@@ -276,6 +283,209 @@ export async function listEvents(db, { project = null, after = 0, before = null,
     .bind(...args, limit)
     .all();
   return results.map((e) => ({ ...e, data: e.data ? JSON.parse(e.data) : null }));
+}
+
+/* ----------------------------------------------------------- statistics */
+
+const DAY_MS = 864e5;
+const median = (xs) => {
+  if (!xs.length) return null;
+  const a = [...xs].sort((x, y) => x - y), m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+};
+
+// Everything the statistics views show, counted from items and the change log. Days are local to the reader (tz in
+// minutes, as Date#getTimezoneOffset). "Responsible" = owner, or the kind's default; only kinds with an owner count.
+export async function buildStats(db, { project = null, tz = 0 } = {}) {
+  const [itemRes, kinds, evRes] = await Promise.all([
+    // all items, not the board's capped list
+    db.prepare(`${ITEM_SELECT} WHERE ? IS NULL OR i.project_slug = ?`).bind(project, project).all(),
+    listKinds(db, true),
+    db
+      .prepare(
+        `SELECT project_slug, item_ref, action, actor, data, at FROM events
+         WHERE ? IS NULL OR project_slug = ? ORDER BY id LIMIT 50000`,
+      )
+      .bind(project, project)
+      .all(),
+  ]);
+  const items = itemRes.results;
+  const events = evRes.results;
+  const kindBy = new Map(kinds.map((k) => [k.code, k]));
+  const local = (iso) => new Date(Date.parse(iso) - tz * 60000);
+  const dayKey = (iso) => local(iso).toISOString().slice(0, 10);
+  const nowIso = now();
+  const today = dayKey(nowIso);
+  const dayNum = (key) => Date.parse(key + "T00:00:00Z") / DAY_MS;
+  const key = (slug, ref) => slug + ":" + ref;
+  const byKey = new Map(items.map((i) => [key(i.project_slug, i.ref), i]));
+  const isOpen = (i) => OPEN.includes(i.status);
+  const ownerOf = (i) => {
+    const k = kindBy.get(i.kind);
+    return k?.actionable ? i.owner || k.default_owner || "user" : null;
+  };
+
+  // days: created / done / dropped per local day and open at the end of each day, replayed from the change log of the
+  // items that still exist – so a completion stays on its day even if the item was reopened later
+  const tally = new Map(); // dayNum -> counts
+  const at = (iso) => {
+    const n = dayNum(dayKey(iso));
+    if (!tally.has(n)) tally.set(n, { created: 0, done: 0, dropped: 0, done_user: 0, done_ai: 0, reopened: 0, refs: [] });
+    return tally.get(n);
+  };
+  const closedNow = new Map(); // key -> closed in the replay so far
+  const close = (i, k, status, iso) => {
+    if (closedNow.get(k)) return;
+    closedNow.set(k, true);
+    const t = at(iso);
+    t[status]++;
+    if (status !== "done") return;
+    const o = ownerOf(i);
+    if (o === "user" || o === "ai") t["done_" + o]++;
+    t.refs.push(k);
+  };
+  const seen = new Set();
+  for (const e of events) {
+    const k = e.item_ref && key(e.project_slug, e.item_ref);
+    const i = k && byKey.get(k);
+    if (!i) continue;
+    if (e.action === "created") {
+      if (seen.has(k)) continue;
+      seen.add(k);
+      at(e.at).created++;
+      let st;
+      try { st = e.data ? JSON.parse(e.data).status : null; } catch { st = null; }
+      if (CLOSED.includes(st)) close(i, k, st, e.at);
+    } else if (e.action === "done" || e.action === "converted" || e.action === "dropped") {
+      close(i, k, e.action === "dropped" ? "dropped" : "done", e.at);
+    } else if (e.action === "reopened" && closedNow.get(k)) {
+      closedNow.set(k, false);
+      at(e.at).reopened++;
+    }
+  }
+  // items without a creation event (none expected): fall back to their own dates
+  for (const i of items) {
+    const k = key(i.project_slug, i.ref);
+    if (seen.has(k)) continue;
+    at(i.created_at).created++;
+    if (i.closed_at && CLOSED.includes(i.status)) close(i, k, i.status, i.closed_at);
+  }
+  const firstDay = tally.size ? Math.min(...tally.keys()) : dayNum(today);
+  const start = Math.max(firstDay, dayNum(today) - 400);
+  let open = 0;
+  for (const [n, t] of tally) if (n < start) open += t.created - t.done - t.dropped + t.reopened;
+  const days = [];
+  const doneRefs = new Map(); // date -> refs done that day
+  for (let n = start; n <= dayNum(today); n++) {
+    const t = tally.get(n) || { created: 0, done: 0, dropped: 0, done_user: 0, done_ai: 0, reopened: 0, refs: [] };
+    const date = new Date(n * DAY_MS).toISOString().slice(0, 10);
+    open += t.created - t.done - t.dropped + t.reopened;
+    days.push({ date, created: t.created, done: t.done, dropped: t.dropped, done_user: t.done_user, done_ai: t.done_ai, open });
+    if (t.refs.length) doneRefs.set(date, t.refs);
+  }
+
+  // open now, oldest first
+  const aging = items
+    .filter(isOpen)
+    .map((i) => ({ project_slug: i.project_slug, ref: i.ref, kind: i.kind, title: i.short || i.title, owner: ownerOf(i),
+      status: i.status, days: dayNum(today) - dayNum(dayKey(i.created_at)) }))
+    .sort((a, b) => b.days - a.days);
+
+  // lead time in days (created → done; ideas also until dropped), median per kind
+  const leadLists = {};
+  for (const i of items) {
+    if (!i.closed_at || !(i.status === "done" || (i.status === "dropped" && i.kind === "I"))) continue;
+    (leadLists[i.kind] ||= []).push(Math.max(0, Date.parse(i.closed_at) - Date.parse(i.created_at)) / DAY_MS);
+  }
+  const lead = Object.fromEntries(Object.entries(leadLists).map(([k, xs]) => [k, { median: median(xs), n: xs.length }]));
+  const allLead = items.filter((i) => i.status === "done" && i.closed_at).map((i) => Math.max(0, Date.parse(i.closed_at) - Date.parse(i.created_at)) / DAY_MS);
+
+  // streaks of days with something done (today may still be empty: then the streak runs up to yesterday)
+  let best = 0, run = 0;
+  for (const d of days) { run = d.done ? run + 1 : 0; best = Math.max(best, run); }
+  let current = 0;
+  for (let n = days.length - 1 - (days.at(-1)?.done ? 0 : 1); n >= 0 && days[n].done; n--) current++;
+
+  // records: the whole history; "this week" = the last 7 local days
+  const weekStart = dayNum(today) - 6;
+  const inWeek = (iso) => iso && dayNum(dayKey(iso)) >= weekStart;
+  const bestDay = days.reduce((m, d) => (d.done > (m?.done || 0) ? d : m), null);
+  const pick = (i) => i && { project_slug: i.project_slug, ref: i.ref, title: i.short || i.title, status: i.status };
+  let fastest = null;
+  for (const i of items) {
+    if (i.kind !== "D" || i.status !== "done" || i.converted_to || !inWeek(i.closed_at)) continue;
+    const min = Math.max(0, Date.parse(i.closed_at) - Date.parse(i.created_at)) / 60000;
+    if (!fastest || min < fastest.minutes) fastest = { ...pick(i), minutes: Math.round(min) };
+  }
+  const changes = new Map();
+  const heat = Array.from({ length: 7 }, () => Array(8).fill(0)); // Mon..Sun × 3-hour blocks
+  for (const e of events) {
+    const t = local(e.at);
+    heat[(t.getUTCDay() + 6) % 7][Math.floor(t.getUTCHours() / 3)]++;
+    if (e.item_ref && inWeek(e.at)) changes.set(key(e.project_slug, e.item_ref), (changes.get(key(e.project_slug, e.item_ref)) || 0) + 1);
+  }
+  const [busyKey, busyN] = [...changes].sort((a, b) => b[1] - a[1])[0] || [];
+  const busy = busyKey && byKey.get(busyKey) ? { ...pick(byKey.get(busyKey)), changes: busyN } : null;
+
+  // ideas: accepted (converted), of those done, dropped, still open
+  const ideas = items.filter((i) => i.kind === "I");
+  const accepted = ideas.filter((i) => i.converted_to && i.converted_to !== "pending");
+  const ideaStats = {
+    total: ideas.length,
+    accepted: accepted.length,
+    implemented: accepted.filter((i) => byKey.get(key(i.project_slug, i.converted_to))?.status === "done").length,
+    dropped: ideas.filter((i) => i.status === "dropped").length,
+    open: ideas.filter(isOpen).length,
+    recent: accepted.sort((a, b) => (b.closed_at || "").localeCompare(a.closed_at || "")).slice(0, 3)
+      .map((i) => ({ project_slug: i.project_slug, ref: i.ref, to: i.converted_to, title: i.short || i.title })),
+  };
+
+  // waiting: from the first event that set the reference (else the item's creation) until the blocker or the waiting
+  // item closed; still waiting, or resolved within the last 14 days, are listed
+  const waitStart = new Map();
+  for (const e of events) {
+    if (!e.item_ref || !e.data) continue;
+    let w;
+    try { w = JSON.parse(e.data).waiting_on; } catch { continue; }
+    for (const r of String(w || "").split(",").filter(Boolean)) {
+      const k = key(e.project_slug, e.item_ref) + ">" + r;
+      if (!waitStart.has(k)) waitStart.set(k, e.at);
+    }
+  }
+  const waits = [];
+  for (const i of items) {
+    for (const r of String(i.waiting_on || "").split(",").filter(Boolean)) {
+      const blocker = byKey.get(key(i.project_slug, r));
+      if (!blocker) continue;
+      const from = waitStart.get(key(i.project_slug, i.ref) + ">" + r) || i.created_at;
+      const until = [blocker.closed_at, i.closed_at, nowIso].filter(Boolean).sort()[0];
+      const still = isOpen(i) && isOpen(blocker);
+      waits.push({ project_slug: i.project_slug, ref: i.ref, kind: i.kind, on: r, on_kind: blocker.kind, still,
+        days: Math.max(0, (Date.parse(until) - Date.parse(from)) / DAY_MS), freed: still ? null : blocker.closed_at });
+    }
+  }
+  const recentCut = Date.parse(nowIso) - 14 * DAY_MS;
+  return {
+    generated_at: nowIso, project, today, tz, items_total: items.length,
+    days,
+    open: { total: aging.length, by_kind: aging.reduce((m, a) => ((m[a.kind] = (m[a.kind] || 0) + 1), m), {}) },
+    aging,
+    lead: { overall: median(allLead), by_kind: lead },
+    streak: { current, best },
+    records: {
+      best_day: bestDay && { date: bestDay.date, done: bestDay.done, refs: (doneRefs.get(bestDay.date) || []).slice(0, 5) },
+      fastest_decision: fastest,
+      most_changed: busy,
+      oldest_open: aging[0] || null,
+    },
+    heat,
+    ideas: ideaStats,
+    waits: {
+      avg_days: waits.length ? waits.reduce((s, w) => s + w.days, 0) / waits.length : null,
+      list: waits.filter((w) => w.still || (w.freed && Date.parse(w.freed) >= recentCut))
+        .sort((a, b) => b.still - a.still || b.days - a.days).slice(0, 6),
+    },
+  };
 }
 
 /* ------------------------------------------------------------- projects */
