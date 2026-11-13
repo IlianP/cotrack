@@ -19,6 +19,9 @@
   Folder name must stay `prioflow` (= `name:` in the frontmatter, required for the claude.ai upload).
 - Setup guide for people new to Cloudflare in both languages: `docs/SETUP.md` ↔ `docs/SETUP.de.md` – keep in sync. User-facing
   setup docs use the placeholder `<your-address>` / `<deine-adresse>`, never the author's instance.
+- Sub-items (decision D16, methodology v2.8): a checklist `- [ ] step` in the body of an action (A) – no table, no refs of
+  their own. Parsed in `src/worker.js` (`parseChecks`, `checkProgress`, `PATCH {check|uncheck}`) and in `src/ui.html` (same
+  regex) – keep both in sync. Max 8 on the server; the methodology asks for at most 5 and only on the user's request.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.

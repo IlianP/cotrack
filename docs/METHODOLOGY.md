@@ -6,7 +6,7 @@
 > (German, default) or `new: … · done: …` (`lang=en`). The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.7 (as of 8 November 2026)
+## Current: Methodology v2.8 (as of 12 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -19,6 +19,20 @@
 - **Dependencies:** only "A4 waits for D2" is stored. What is displayed is the sequence: **"D2 ▶A4"** (D2 first, then A4),
   with several successors "D2 ▶A4,A5". In the footer, ▶ appears only on the preceding item of a pair; **"A4 ⏸D2"** only if D2
   is not in the line. Completed predecessors disappear from the display. The successor is computed, not maintained.
+- **Sub-items (v2.8, decision D16):** An action (A) may carry a short checklist – lines `- [ ] step` / `- [x] step` in its
+  description. Sub-items get **no reference of their own**, no status, no responsibility and no dependency; only the progress
+  is shown ("A17 Post 2/4" in the footer, without brackets – "(+7)" stays reserved for hidden items). Guard rails against
+  over-splitting:
+  - Useful only for **2–5 non-obvious steps** with the same responsibility, when the action spans several sessions and the
+    progress is of interest. Never for the obvious ("code, test, PR"), never on I, D or W.
+  - **At most five**; the server rejects more than eight.
+  - The AI does **not create sub-items on its own**: only when you name the steps or agree to its suggestion. It may tick them
+    itself (`cotrack_update` with `check`) once a step is done.
+  - **An item of its own instead of a sub-item** when a step has a different responsibility, is a decision of its own, blocks
+    or waits for another item, or must be referenced on its own: then A/D with "waits for"; the checklist keeps at most a
+    pointer ("→A60").
+  - Ticking the last box does not close the action, and an action may be closed with open boxes. A tick does not count as
+    "done" in the short line. On `/convert` (I → A) the checklist moves along.
 - **Footer:** full only on "Status?", at the end of larger pieces of work, or roughly every four answers;
   when items change just the short line "neu: … · erledigt: …"; otherwise nothing at all.
 - **Group markers (v2.6):** The footer shows `👤:` for your items and `🤖:` for the AI's (instead of "Du:" and "🤖KI:") –

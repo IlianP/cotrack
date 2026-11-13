@@ -39,6 +39,8 @@ warnings – a one-glance status that survives across conversations.
 - **Stable references** per project and category, never renumbered or reused. Accepting an idea *converts* it
   (`I3` → `A7`); the idea stays visible with a link. Dropped ideas are kept as "verworfen", not deleted.
 - **Dependencies** – `D1 ▶A2` = D1 first, then A2; `A2 ⏸D1` = A2 waits for D1. Stored one way, computed both ways.
+- **Sub-items** – an action (A) can carry a short checklist (`- [ ] step` in its description, at most 8). No references of
+  their own; board, lists and footer show the progress (`A17 Post 2/4`), and the AI ticks a step with `cotrack_update check`.
 - **Projects** – one per GitHub repository (or anything else), plus a cross-project view. Each has a unique slug and an
   optional 2–4 character **code** you choose (e.g. `CT`), used for qualified references like `CT:A14` when one
   conversation spans several projects.
@@ -176,7 +178,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | list items (`format=text`: one compact line per item, for AI assistants) |
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3` |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `neu: … · erledigt: …`; `lang=en`: `new / done` instead of `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |

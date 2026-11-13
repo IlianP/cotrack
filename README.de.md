@@ -42,6 +42,8 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   erhalten, sie werden nicht gelöscht.
 - **Abhängigkeiten** – `D1 ▶A2` = erst D1, dann A2; `A2 ⏸D1` = A2 wartet auf D1. Einseitig gespeichert, in beide
   Richtungen berechnet.
+- **Teilpunkte** – eine Aufgabe (A) kann eine kurze Checkliste haben (`- [ ] Schritt` in der Beschreibung, höchstens 8). Sie
+  bekommen keine eigenen Kennungen; Board, Listen und Fußzeile zeigen den Stand (`A17 Post 2/4`), die KI hakt mit `cotrack_update check` ab.
 - **Projekte** – eines pro GitHub-Repository (oder beliebig), dazu eine projektübergreifende Ansicht. Jedes hat einen
   eindeutigen Slug und ein optionales, selbst gewähltes **Kürzel** aus 2–4 Zeichen (z. B. `CT`) für qualifizierte
   Kennungen wie `CT:A14`, wenn eine Unterhaltung mehrere Projekte berührt.
@@ -187,7 +189,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/code-suggestion?slug=` | erstes freies Kürzel für einen Slug (Initialen, dann die ersten 2–4 Buchstaben) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text` | Punkte auflisten (`format=text`: eine kompakte Zeile je Punkt, für KI-Assistenten) |
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3` |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang=en`: `new / done` statt `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |

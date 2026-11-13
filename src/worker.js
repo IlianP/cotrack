@@ -39,6 +39,11 @@ const SETTINGS_DEFAULTS = Object.freeze({
   footer_label_ai: FOOTER_OWNER_LABELS.ai,
 });
 const OWNER_ALIASES = { user: "user", du: "user", me: "user", ich: "user", human: "user", ai: "ai", ki: "ai" };
+// Sub-items (methodology v2.8, decided in D16): a checklist "- [ ] step" / "- [x] step" in the body of a task (A).
+// No extra table and no references of their own; the server only counts them ("2/4") and can tick one (check/uncheck).
+const CHECK_KIND = "A";
+const MAX_CHECKS = 8; // hard limit; the methodology asks for at most 5
+const CHECK_LINE_RE = /^(\s*[-*]\s+\[)([ xX])(\]\s+)(.*\S)\s*$/;
 const STATUS_LABELS = { open: "offen", doing: "in Arbeit", blocked: "blockiert", done: "erledigt", dropped: "verworfen" };
 
 class HttpError extends Error {
@@ -553,6 +558,7 @@ export async function createItem(db, project, input, actor) {
     updated_at: t,
   };
   row.closed_at = CLOSED.includes(row.status) ? t : null;
+  assertCheckLimit(kind.code, row.body);
 
   const stmts = [];
   let seqSql;
@@ -608,41 +614,72 @@ export async function createItem(db, project, input, actor) {
 }
 
 export async function updateItem(db, project, item, input, actor) {
-  const t = now();
-  const changes = {};
-  const set = (col, val) => {
-    if (val !== item[col]) changes[col] = val;
-  };
-  if ("title" in input) set("title", text(input.title, "title", 500, { required: true }));
-  if ("short" in input) set("short", text(input.short, "short", 40));
-  if ("body" in input) set("body", text(input.body, "body", 20000));
-  if ("owner" in input) set("owner", normOwner(input.owner));
-  if ("waiting_on" in input) set("waiting_on", normRefs(input.waiting_on));
-  if ("source" in input) set("source", text(input.source, "source", 1000));
-  if ("due" in input) set("due", normDate(input.due));
-  if ("status" in input) {
-    const st = normStatus(input.status);
-    set("status", st);
-    if (st !== item.status && CLOSED.includes(st) !== CLOSED.includes(item.status)) {
-      set("closed_at", CLOSED.includes(st) ? t : null);
+  const ticking = ["check", "uncheck"].some((k) => input[k] !== undefined && input[k] !== null && input[k] !== "");
+  // Sub-item texts in order when the request arrived: a retry may only re-apply the selectors if they still mean the same lines.
+  const layout = (it) => JSON.stringify(parseChecks(it.body).map((c) => c.text));
+  const firstLayout = ticking ? layout(item) : null;
+  // Ticking rewrites the body on the server; if it changed in between (another client), read again and retry.
+  for (let attempt = 0; ; attempt++) {
+    const t = now();
+    const changes = {};
+    const set = (col, val) => {
+      if (val !== item[col]) changes[col] = val;
+    };
+    let ticks = null;
+    if (ticking) {
+      ticks = applyChecks(item, input);
+      set("body", ticks.body);
     }
+    if ("title" in input) set("title", text(input.title, "title", 500, { required: true }));
+    if ("short" in input) set("short", text(input.short, "short", 40));
+    if ("body" in input) set("body", text(input.body, "body", 20000));
+    if ("owner" in input) set("owner", normOwner(input.owner));
+    if ("waiting_on" in input) set("waiting_on", normRefs(input.waiting_on));
+    if ("source" in input) set("source", text(input.source, "source", 1000));
+    if ("due" in input) set("due", normDate(input.due));
+    if ("status" in input) {
+      const st = normStatus(input.status);
+      set("status", st);
+      if (st !== item.status && CLOSED.includes(st) !== CLOSED.includes(item.status)) {
+        set("closed_at", CLOSED.includes(st) ? t : null);
+      }
+    }
+    if ("body" in changes && !ticks) assertCheckLimit(item.kind, changes.body);
+    const cols = Object.keys(changes);
+    if (!cols.length) return item;
+
+    let action = "updated";
+    if (changes.status === "done") action = "done";
+    else if (changes.status === "dropped") action = "dropped";
+    else if (changes.status && CLOSED.includes(item.status)) action = "reopened";
+    // A tick is logged by what was ticked, not with the whole body.
+    let data = changes;
+    if (ticks) {
+      const { body, ...rest } = changes;
+      data = { ...rest, ...(ticks.checked.length ? { checked: ticks.checked } : {}), ...(ticks.unchecked.length ? { unchecked: ticks.unchecked } : {}) };
+      if (cols.length === 1) action = "checked";
+    }
+
+    const update = db
+      .prepare(
+        `UPDATE items SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ?, updated_by = ? WHERE id = ?` +
+          (ticks ? " AND body IS ?" : ""),
+      )
+      .bind(...cols.map((c) => changes[c]), t, actor, item.id, ...(ticks ? [item.body] : []));
+    // The event is only written if the update hit the row (changes() refers to the statement before it).
+    const event = db
+      .prepare(
+        "INSERT INTO events (project_slug, item_ref, action, actor, data, at) SELECT ?, ?, ?, ?, ?, ? WHERE changes() > 0",
+      )
+      .bind(project.slug, item.ref, action, actor, JSON.stringify(data), t);
+    const [res] = await db.batch([update, event, touchProject(db, project.slug, t)]);
+    const fresh = await db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(item.id).first();
+    if (res.meta.changes || !ticks) return fresh;
+    if (attempt >= 2 || !fresh || layout(fresh) !== firstLayout) {
+      throw new HttpError(409, "conflict", "the checklist changed meanwhile, read it again and retry");
+    }
+    item = fresh;
   }
-  const cols = Object.keys(changes);
-  if (!cols.length) return item;
-
-  let action = "updated";
-  if (changes.status === "done") action = "done";
-  else if (changes.status === "dropped") action = "dropped";
-  else if (changes.status && CLOSED.includes(item.status)) action = "reopened";
-
-  await db.batch([
-    db
-      .prepare(`UPDATE items SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ?, updated_by = ? WHERE id = ?`)
-      .bind(...cols.map((c) => changes[c]), t, actor, item.id),
-    eventStmt(db, project.slug, item.ref, action, actor, changes, t),
-    touchProject(db, project.slug, t),
-  ]);
-  return db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(item.id).first();
 }
 
 async function deleteItem(db, project, item, actor) {
@@ -705,6 +742,73 @@ function shortLabel(item) {
   if (item.short) return item.short;
   const words = item.title.split(/\s+/);
   return words.slice(0, 3).join(" ") + (words.length > 3 ? " …" : "");
+}
+
+// Checklist lines of a body: [{ line, done, text }] (line = index in body.split("\n")).
+export function parseChecks(body) {
+  if (!body) return [];
+  const out = [];
+  body.split("\n").forEach((l, line) => {
+    const m = l.match(CHECK_LINE_RE);
+    if (m) out.push({ line, done: m[2] !== " ", text: m[4].trim() });
+  });
+  return out;
+}
+
+// "2/4" for a task with a checklist, otherwise null.
+export function checkProgress(item) {
+  if (!item || item.kind !== CHECK_KIND) return null;
+  const checks = parseChecks(item.body);
+  return checks.length ? `${checks.filter((c) => c.done).length}/${checks.length}` : null;
+}
+
+function assertCheckLimit(kind, body) {
+  if (kind === CHECK_KIND && parseChecks(body).length > MAX_CHECKS) {
+    throw new HttpError(400, "too_many_checks", `max ${MAX_CHECKS} sub-items; split independent steps into own items`);
+  }
+}
+
+// check / uncheck selectors: 2, "2", "2,3", [2, 3] or (part of) the text of one sub-item.
+function checkTargets(checks, sel, field) {
+  if (sel === undefined || sel === null || sel === "") return [];
+  const list = Array.isArray(sel) ? sel : /^\s*\d+(\s*,\s*\d+)*\s*$/.test(String(sel)) ? String(sel).split(",") : [sel];
+  return list.map((s) => {
+    const str = String(s).trim();
+    if (/^\d+$/.test(str)) {
+      const n = Number(str);
+      if (n < 1 || n > checks.length) throw new HttpError(400, "check_not_found", `${field}: ${str} (1-${checks.length})`);
+      return checks[n - 1];
+    }
+    const needle = str.toLowerCase();
+    if (!needle) throw new HttpError(400, "invalid_field", field);
+    for (const test of [(t) => t === needle, (t) => t.startsWith(needle), (t) => t.includes(needle)]) {
+      const hits = checks.filter((c) => test(c.text.toLowerCase()));
+      if (hits.length === 1) return hits[0];
+      if (hits.length > 1) throw new HttpError(400, "check_ambiguous", `${field}: ${str}`);
+    }
+    throw new HttpError(400, "check_not_found", `${field}: ${str}`);
+  });
+}
+
+// Applies check/uncheck to a body. Returns the new body and which sub-items actually changed.
+function applyChecks(item, input) {
+  if (item.kind !== CHECK_KIND) throw new HttpError(400, "checks_only_for_tasks", item.ref);
+  if ("body" in input) throw new HttpError(400, "invalid_field", "check/uncheck cannot be combined with body");
+  const checks = parseChecks(item.body);
+  if (!checks.length) throw new HttpError(400, "no_checks", `${item.ref} has no "- [ ]" lines in its body`);
+  const on = checkTargets(checks, input.check, "check");
+  const off = checkTargets(checks, input.uncheck, "uncheck");
+  if (on.some((c) => off.includes(c))) throw new HttpError(400, "invalid_field", "same sub-item in check and uncheck");
+  const lines = item.body.split("\n");
+  const checked = [], unchecked = [];
+  for (const [list, done, log] of [[on, true, checked], [off, false, unchecked]]) {
+    for (const c of new Set(list)) {
+      if (c.done === done) continue;
+      lines[c.line] = lines[c.line].replace(CHECK_LINE_RE, (_, a, _x, b, t) => `${a}${done ? "x" : " "}${b}${t}`);
+      log.push(c.text);
+    }
+  }
+  return { body: lines.join("\n"), checked, unchecked };
 }
 
 /**
@@ -779,7 +883,8 @@ export function buildFooter(
           (r) => (!status.has(r) || OPEN.includes(status.get(r))) && !shownRefs.has(r),
         );
         const marks = [next.length ? `▶${next.join(",")}` : "", waits.length ? `⏸${waits.join(",")}` : ""].filter(Boolean);
-        return `${it.ref}${marks.length ? " " + marks.join(" ") : ""} ${shortLabel(it)}`;
+        const progress = checkProgress(it);
+        return `${it.ref}${marks.length ? " " + marks.join(" ") : ""} ${shortLabel(it)}${progress ? " " + progress : ""}`;
       });
       const hidden = g.items.length - shown[i];
       return `${g.label} ${entries.join(" · ")}${hidden ? ` (+${hidden})` : ""}`;
@@ -932,6 +1037,8 @@ export function itemsAsText(items, kinds, { withProject = false } = {}) {
   const lines = items.map((it) => {
     const k = kindBy.get(it.kind);
     const parts = [withProject ? `${it.project_slug}/${it.ref}` : it.ref, it.title];
+    const progress = checkProgress(it);
+    if (progress) parts.push(`☑${progress}`);
     if (it.waiting_on) parts.push(`⏸${it.waiting_on}`);
     const next = succ.get(it.ref);
     if (next && !withProject) parts.push(`▶${next.join(",")}`);
