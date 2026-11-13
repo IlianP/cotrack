@@ -1162,8 +1162,8 @@ function nextCard(it, whyText) {
     h("p", { class: "nx-why" }, whyText),
     nxChecks.length ? (nxRest ? h("p", { class: "nx-body" }, nxRest) : null) : it.body ? h("p", { class: "nx-body" }, it.body) : null,
     nxChecks.length ? h("div", { class: "checks" }, checksHead(nxChecks),
-      nxChecks.map((c, i) => h("label", { class: "chk" + (c.done ? " on" : "") },
-        h("input", { type: "checkbox", checked: c.done, onchange: (e) => tickCheck(it, i + 1, e.target.checked) }),
+      nxChecks.map((c) => h("label", { class: "chk" + (c.done ? " on" : "") },
+        h("input", { type: "checkbox", checked: c.done, onchange: (e) => tickCheck(it, c.text, e.target.checked) }),
         h("span", null, c.text)))) : null,
     result ? h("label", null, tr("nextResult"), result) : null,
     h("div", { class: "nx-actions" },
@@ -1175,9 +1175,10 @@ function nextCard(it, whyText) {
       h("button", { type: "button", class: "btn", onclick: () => openEdit(it) }, tr("nextEdit"))));
 }
 
-// Tick a sub-item right away (server-side check/uncheck, so nothing else in the description is touched).
-async function tickCheck(it, n, on) {
-  try { await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body: on ? { check: n } : { uncheck: n } }); }
+// Tick a sub-item right away (server-side check/uncheck, so nothing else in the description is touched). It is named by its
+// text, not its number: if the list changed since this view was drawn, the number could point at another step.
+async function tickCheck(it, text, on) {
+  try { await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body: on ? { check: text } : { uncheck: text } }); }
   catch (err) { toast(tr("error", err.message)); }
   refresh(false);
 }
@@ -1671,7 +1672,9 @@ function openEdit(it) {
         h("span", null, c.text),
         h("button", { type: "button", class: "x", title: tr("checkRemove"), "aria-label": `${tr("checkRemove")}: ${c.text}`,
           onclick: (e) => { e.preventDefault(); checks.splice(i, 1); renderChecks(); addInput.focus(); } }, "×"))),
-      checks.length < MAX_CHECKS ? addInput : h("p", { class: "small" }, tr("checksFull", MAX_CHECKS))].flat().filter(Boolean));
+      checks.length < MAX_CHECKS ? addInput : h("p", { class: "small" }, tr("checksFull", MAX_CHECKS)),
+      // Texts and order live in spans, not in form fields: this hidden field lets "unsaved changes?" notice them too.
+      h("input", { type: "hidden", value: JSON.stringify(checks.map((c) => [c.done, c.text])) })].flat().filter(Boolean));
     if (focusAt != null) checkBox.querySelectorAll("input[type=checkbox]")[focusAt]?.focus();
   };
   if (isTask) renderChecks();

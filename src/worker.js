@@ -615,6 +615,9 @@ export async function createItem(db, project, input, actor) {
 
 export async function updateItem(db, project, item, input, actor) {
   const ticking = ["check", "uncheck"].some((k) => input[k] !== undefined && input[k] !== null && input[k] !== "");
+  // Sub-item texts in order when the request arrived: a retry may only re-apply the selectors if they still mean the same lines.
+  const layout = (it) => JSON.stringify(parseChecks(it.body).map((c) => c.text));
+  const firstLayout = ticking ? layout(item) : null;
   // Ticking rewrites the body on the server; if it changed in between (another client), read again and retry.
   for (let attempt = 0; ; attempt++) {
     const t = now();
@@ -672,7 +675,9 @@ export async function updateItem(db, project, item, input, actor) {
     const [res] = await db.batch([update, event, touchProject(db, project.slug, t)]);
     const fresh = await db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(item.id).first();
     if (res.meta.changes || !ticks) return fresh;
-    if (attempt >= 2 || !fresh) throw new HttpError(409, "conflict", "the body changed meanwhile, try again");
+    if (attempt >= 2 || !fresh || layout(fresh) !== firstLayout) {
+      throw new HttpError(409, "conflict", "the checklist changed meanwhile, read it again and retry");
+    }
     item = fresh;
   }
 }
