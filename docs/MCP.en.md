@@ -44,8 +44,8 @@ and `cotrack_convert` also take a **qualified reference** (`ref: "CT:A4"`); `pro
 
 The server speaks German or English – the usage note (`instructions`), the tool descriptions, the answers and error
 messages. MCP itself does not tell the server which language the user speaks, so you choose it once for your
-installation: in the web app ☰ → **AI assistants → Language** (`DE` / `EN`). It applies to every connected AI from the
-next request on; the default is German. The web app's own language (☰ → This device) is separate and per device.
+installation: in the web app ☰ → **Language** (`DE` / `EN`) – the same setting as the web app's own language, on every
+device. It applies to every connected AI from the next request on; without a choice ("Auto") the AI gets German.
 
 Exception: `cotrack_footer` has its own `lang` – for a conversation in the other language (`new / done` vs.
 `neu / erledigt`). The English prompt ([PROMPT.en.md](PROMPT.en.md)) always sets `lang "en"`.

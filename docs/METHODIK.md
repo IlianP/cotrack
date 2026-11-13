@@ -3,8 +3,8 @@
 [English](METHODOLOGY.md) · **Deutsch**
 
 > Die Kennzeichen `👤:` und `🤖:` sind in jeder Sprache gleich. Nur die Kurzzeile unterscheidet sich: `neu: … · erledigt: …`
-> (Deutsch) oder `new: … · done: …` (`lang=en`); ohne `lang` gilt die Sprache aus der Web-App (☰ → KI-Assistenten → Sprache,
-> Standard Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
+> (Deutsch) oder `new: … · done: …` (`lang=en`); ohne `lang` gilt die Sprache aus der Web-App (☰ → Sprache,
+> dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
 ## Gültig: Methodik v2.9 (Stand 13. November 2026)

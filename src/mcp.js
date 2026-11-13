@@ -43,8 +43,8 @@ const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
 /*
  * Language: everything this server says – instructions, tool descriptions, answers, errors – exists in German and
- * English. MCP carries no locale, so the instance setting `language` decides (web app ☰ → AI assistants; built-in
- * default German). It is read once per request. Only cotrack_footer has a `lang` of its own, for a conversation in the
+ * English. MCP carries no locale, so the instance setting `language` decides (web app ☰ → Sprache – the same
+ * language as the web app's; built-in default German). It is read once per request. Only cotrack_footer has a `lang` of its own, for a conversation in the
  * other language. Keep both languages in sync when changing a text here.
  */
 const INSTRUCTIONS = {

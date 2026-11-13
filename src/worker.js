@@ -22,7 +22,8 @@ const QREF_RE = /^([A-Za-z0-9][A-Za-z0-9-]{0,62}):([A-Za-z]{1,4}\d{1,6})$/;
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 // Texts the server writes itself (text lists, STATUS.md section), per language. The language comes from the request
-// (`lang=de|en`) or else from the instance setting `language` (web app ☰ → AI assistants); built-in default German.
+// (`lang=de|en`) or else from the instance setting `language` (web app ☰ → Sprache, which also sets the web app's own
+// language on every device); built-in default German.
 export const LANGS = ["de", "en"];
 const TEXT = {
   de: {
@@ -59,8 +60,9 @@ const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { cr
 const FOOTER_LAYOUT_DEFAULT = "multi";
 // Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen). A missing row – or a database
 // without the table – means these built-in defaults.
-// `language` (de|en): the language of everything cotrack writes for AI assistants – MCP instructions, tool descriptions
-// and answers, text lists, the footer's short line – unless a request names its own `lang`. German stays the built-in
+// `language` (de|en): one language for everything (decided 2026-11-13, D19) – the web app on every device and what cotrack
+// writes for AI assistants: MCP instructions, tool descriptions and answers, text lists, the footer's short line – unless a
+// request names its own `lang`. Not stored = "Auto": the web app follows the browser, the AI gets German. German stays the built-in
 // default so that existing instances keep their behaviour.
 const SETTINGS_DEFAULTS = Object.freeze({
   footer_layout: FOOTER_LAYOUT_DEFAULT,
@@ -1202,7 +1204,8 @@ export function footerStyle(settings, layout = null) {
 const SETTING_KEYS = Object.keys(SETTINGS_DEFAULTS);
 const isMissingTable = (err) => /no such table/i.test(String(err?.message ?? err));
 
-// { settings, defaults, available }. `available` is false while migration 0006 is not applied yet – everything
+// { settings, defaults, stored, available }. `stored` lists the keys set explicitly (the web app shows "Auto" for a
+// language that was never chosen). `available` is false while migration 0006 is not applied yet – everything
 // keeps working with the built-in defaults, only saving is not possible.
 export async function readSettings(db) {
   const settings = { ...SETTINGS_DEFAULTS };
@@ -1214,8 +1217,13 @@ export async function readSettings(db) {
     if (!isMissingTable(err)) throw err;
     available = false;
   }
-  for (const r of rows) if (SETTING_KEYS.includes(r.key)) settings[r.key] = r.value;
-  return { settings, defaults: SETTINGS_DEFAULTS, available };
+  const stored = [];
+  for (const r of rows) {
+    if (!SETTING_KEYS.includes(r.key)) continue;
+    settings[r.key] = r.value;
+    stored.push(r.key);
+  }
+  return { settings, defaults: SETTINGS_DEFAULTS, stored, available };
 }
 
 export async function getSettings(db) {

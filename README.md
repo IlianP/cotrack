@@ -67,14 +67,14 @@ warnings – a one-glance status that survives across conversations.
   ideas; copyable as text) and flow & age (cumulative flow, the age of every open item, waiting times).
 - **Installable as an app** – Chrome/Edge on Android and the desktop: ☰ → *Install as app*; cotrack then runs in its own
   window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
-- Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), German and English (follows the
-  browser language, or choose in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
-- **Bilingual for your AI too** – what cotrack tells Claude, ChatGPT & co. (instructions, tool descriptions, answers, footer)
-  is German or English: ☰ → *AI assistants → Language*, once for your installation.
+- Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
+- **German and English – for you and your AI** – ☰ → *Language* sets one language for the web app on every device and for
+  what cotrack tells Claude, ChatGPT & co. (instructions, tool descriptions, answers, footer). Without a choice ("Auto") the
+  web app follows the browser language and the AI gets German.
 
 > **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
 > fine for personal use, not for sharing a deployment with strangers. See the roadmap. Everything is available in German and
-> English: the web app (per device), what the AI gets from cotrack (MCP, text answers, footer – ☰ → *AI assistants*), the
+> English: the web app and what the AI gets from cotrack (MCP, text answers, footer – one setting, ☰ → *Language*), the
 > consent page (browser language) and the docs; code and API field names are English. This README is available in English
 > and [German](README.de.md).
 
@@ -106,7 +106,7 @@ npx wrangler secret put TOKEN_USER         # your token, e.g. openssl rand -hex 
 
 Open your worker address, enter your token, create a project. Connect your AI with `<your-address>/mcp` (OAuth; you confirm
 once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a browser, see [docs/MCP.en.md](docs/MCP.en.md).
-Language for your AI assistants: ☰ → *AI assistants → Language* (default German – switch to `EN` for English).
+Language for the web app and your AI assistants: ☰ → *Language* (`EN` for English; without a choice the AI gets German).
 Footer layout and markers: ☰ → *Chat footer → Customize* in the web app.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
 

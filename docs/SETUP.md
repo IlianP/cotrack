@@ -138,8 +138,8 @@ Without a terminal you can do this in the browser: <https://dash.cloudflare.com>
 ## 8. Try it and connect your AI
 
 1. Open `<your-address>` in the browser, enter your token and create a first project.
-2. In the web app ☰ → **AI assistants → Language**, choose **EN**: then cotrack talks to your AI assistants in English
-   (instructions, tool descriptions, answers). The default is German.
+2. In the web app ☰ → **Language**, choose **EN**: then the web app (on every device) and cotrack's texts for your AI
+   assistants (instructions, tool descriptions, answers) are English. Without a choice the AI gets German.
 3. Connect your AI assistant – always with just the address, no token (details in [MCP.en.md](MCP.en.md)):
    - **claude.ai / ChatGPT:** add a connector with the URL `<your-address>/mcp`. When connecting, the cotrack consent page
      opens: enter your token and choose "Allow access".

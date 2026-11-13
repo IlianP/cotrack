@@ -139,8 +139,8 @@ Ohne Terminal geht das auch im Browser: <https://dash.cloudflare.com> → **Work
 ## 8. Ausprobieren und KI verbinden
 
 1. `<deine-adresse>` im Browser öffnen, deinen Token eingeben und ein erstes Projekt anlegen.
-2. In der Web-App ☰ → **KI-Assistenten → Sprache**: Deutsch ist Standard. Wer mit der KI auf Englisch arbeitet, wählt
-   **EN** – dann spricht cotrack Englisch mit den KI-Assistenten (Anweisungen, Werkzeugbeschreibungen, Antworten).
+2. In der Web-App ☰ → **Sprache** **DE** wählen (oder **EN** für Englisch): Das gilt für die Web-App auf allen Geräten und für
+   das, was cotrack deinen KI-Assistenten schreibt (Anweisungen, Werkzeugbeschreibungen, Antworten). Ohne Wahl bekommt die KI Deutsch.
 3. KI-Assistent verbinden – überall nur mit der Adresse, ohne Token (Details in [MCP.md](MCP.md)):
    - **claude.ai / ChatGPT:** Connector mit der URL `<deine-adresse>/mcp` anlegen. Beim Verbinden öffnet sich die
      cotrack-Freigabeseite: deinen Token eingeben und „Zugriff erlauben“ wählen.

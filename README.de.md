@@ -73,15 +73,15 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
   einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
   *Zum Home-Bildschirm*.
-- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), Deutsch und Englisch (folgt der
-  Sprache des Browsers oder per ☰), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
-- **Auch für die KI zweisprachig** – was cotrack Claude, ChatGPT & Co. sagt (Anweisungen, Werkzeugbeschreibungen, Antworten,
-  Fußzeile), ist Deutsch oder Englisch: ☰ → *KI-Assistenten → Sprache*, einmal für deine Installation.
+- Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
+- **Deutsch und Englisch – für dich und deine KI** – ☰ → *Sprache* stellt eine Sprache für die Web-App auf allen Geräten und
+  für das ein, was cotrack Claude, ChatGPT & Co. sagt (Anweisungen, Werkzeugbeschreibungen, Antworten, Fußzeile). Ohne Wahl
+  („Auto“) folgt die Web-App der Sprache des Browsers, und die KI bekommt Deutsch.
 
 > **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
-> teilen. Siehe Roadmap. Alles gibt es auf Deutsch und Englisch: die Web-App (je Gerät), was die KI von cotrack bekommt (MCP,
-> Textantworten, Fußzeile – ☰ → *KI-Assistenten*), die Freigabeseite (Sprache des Browsers) und die Doku; Code und Feldnamen der
+> teilen. Siehe Roadmap. Alles gibt es auf Deutsch und Englisch: die Web-App und was die KI von cotrack bekommt (MCP,
+> Textantworten, Fußzeile – eine Einstellung, ☰ → *Sprache*), die Freigabeseite (Sprache des Browsers) und die Doku; Code und Feldnamen der
 > API sind englisch. Dieses README gibt es auf [Englisch](README.md) und Deutsch.
 
 ## Architektur
@@ -113,7 +113,7 @@ npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex
 
 Öffne deine Worker-Adresse, gib deinen Token ein und lege ein Projekt an. Die KI verbindest du mit `<deine-adresse>/mcp`
 (OAuth; du bestätigst einmal mit deinem Token). Optional `TOKEN_AI`: ein fester Token für KI-Werkzeuge ohne Browser, siehe
-[docs/MCP.md](docs/MCP.md). Sprache für deine KI-Assistenten: ☰ → *KI-Assistenten → Sprache* (Standard Deutsch).
+[docs/MCP.md](docs/MCP.md). Sprache für Web-App und KI-Assistenten: ☰ → *Sprache* (ohne Wahl bekommt die KI Deutsch).
 Layout und Kennzeichen der Fußzeile: ☰ → *Chat-Fußzeile → Anpassen* in der Web-App.
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.

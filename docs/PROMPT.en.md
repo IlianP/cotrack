@@ -25,7 +25,7 @@ prompt. That is why you need both.
 | Whether the AI keeps a list; when it calls cotrack (start, new items, completed ones); handover | **Prompt** | The server cannot make the AI do anything, it only answers. |
 | When the footer appears (on "Status?", at the end of larger pieces of work, roughly every four answers; otherwise the short line) | **Prompt** | Only the AI knows when an answer ends. |
 | What the footer looks like (groups, order, at most eight entries, ▶/⏸, single- or multi-line, 👤/🤖) | **Server**, default set in the **web app** (☰ → Chat footer → Customize) | One source for all chats and programs. |
-| Language of what cotrack writes to the AI (instructions, tools, answers, footer) | **Server**, set in the **web app** (☰ → AI assistants → Language); `lang` in a request wins | MCP does not tell the server which language the user speaks. |
+| Language of what cotrack writes to the AI (instructions, tools, answers, footer) | **Server**, set in the **web app** (☰ → Language, the same as the web app's); `lang` in a request wins | MCP does not tell the server which language the user speaks. |
 | References (never reused), dependencies, who changed what | **Server** | The database enforces it. |
 | Which project the conversation belongs to | **The AI**, from `COTRACK.md` or `cotrack_projects` | The server cannot see the repository. |
 | Working without cotrack (fallback) | **Prompt**, part 1 | – |
@@ -59,7 +59,7 @@ v2.5: The full footer is multi-line (one line per group, trial phase); the short
 v2.4: Project assignment via `COTRACK.md`, project codes and qualified references ("CT:A14"), one footer block per project when several projects are involved.
 v2.2: cotrack is the leading list where available; the status file then contains only a link. Declined ideas are dropped (stay visible) instead of deleted.
 
-The footer follows the language of the prompt: with `lang=en` cotrack writes "new:" and "done:" (German: "neu:", "erledigt:"; without `lang` the language set in ☰ → AI assistants applies); the group markers 👤 and 🤖 are the same in every language. The letters A/D/I/W and the references are language-independent.
+The footer follows the language of the prompt: with `lang=en` cotrack writes "new:" and "done:" (German: "neu:", "erledigt:"; without `lang` the language set in ☰ → Language applies); the group markers 👤 and 🤖 are the same in every language. The letters A/D/I/W and the references are language-independent.
 
 ## Part 1 – Base (always)
 

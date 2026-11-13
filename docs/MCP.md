@@ -44,8 +44,8 @@ und `cotrack_convert` nehmen auch eine **qualifizierte Kennung** (`ref: "CT:A4"`
 
 Der Server spricht Deutsch oder Englisch – Gebrauchsanweisung (`instructions`), Werkzeugbeschreibungen, Antworten und
 Fehlermeldungen. MCP verrät dem Server nicht, welche Sprache der Nutzer spricht; deshalb stellst du sie einmal für deine
-Installation ein: in der Web-App ☰ → **KI-Assistenten → Sprache** (`DE` / `EN`). Sie gilt ab der nächsten Anfrage für jede
-verbundene KI; Standard ist Deutsch. Die Sprache der Web-App selbst (☰ → Dieses Gerät) ist davon getrennt und gilt je Gerät.
+Installation ein: in der Web-App ☰ → **Sprache** (`DE` / `EN`) – dieselbe Einstellung wie die Sprache der Web-App, auf allen
+Geräten. Sie gilt ab der nächsten Anfrage für jede verbundene KI; ohne Wahl („Auto“) bekommt die KI Deutsch.
 
 Ausnahme: `cotrack_footer` hat ein eigenes `lang` – für ein Gespräch in der anderen Sprache (`neu / erledigt` bzw.
 `new / done`). Der englische Prompt ([PROMPT.en.md](PROMPT.en.md)) setzt immer `lang "en"`.

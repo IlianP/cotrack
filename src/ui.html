@@ -273,7 +273,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
 .menu-list { display: grid; gap: 6px; }
 .menu-list button { text-align: left; }
-/* menu: sections by scope (this device · projects · AI assistants · chat footer · access) */
+/* menu: sections by scope (this device · projects · chat footer · access) */
 .dlg h4.sec {
   margin: 2px 0 -4px; padding-top: 12px; border-top: 1px solid var(--line);
   font-size: 12.5px; font-weight: 650; color: var(--muted);
@@ -754,9 +754,11 @@ const store = {
   set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
 };
 /* ---------------------------------------------------------- language */
-// UI language per device (☰ → Sprache, localStorage "cotrack.lang"): a stored choice wins; otherwise the first German
-// or English entry in the browser's language list decides (de, de-DE, de-AT, de-CH … and gsw count as German), and
-// anything else gets English. Every UI text lives in STRINGS: add new ones in both languages. Code and API stay English.
+// One language for the web app on every device and for the AI (decided 2026-11-13, D19): ☰ → Sprache saves it on the
+// server (setting `language`); localStorage "cotrack.lang" only caches it so the page starts in the right language, and
+// syncLang() brings it up to date after sign-in. Not chosen ("Auto"): the first German or English entry in the browser's
+// language list decides (de, de-DE, de-AT, de-CH … and gsw count as German), anything else gets English – and the AI
+// gets German. Every UI text lives in STRINGS: add new ones in both languages. Code and API stay English.
 const LANGS = ["de", "en"];
 const primaryTag = (tag) => String(tag || "").toLowerCase().split(/[-_]/)[0];
 function detectLang() {
@@ -809,10 +811,8 @@ const STRINGS = {
     signOut: "Abmelden",
     installApp: "📲 Als App installieren", installIos: "Als App: im Teilen-Menü „Zum Home-Bildschirm“ wählen.", installed: "cotrack ist installiert",
     appearance: "Darstellung", themeLight: "Hell", themeDark: "Dunkel", themeAuto: "Wie das System",
-    language: "Sprache", langAuto: "Automatisch – nach der Sprache des Browsers",
-    secAi: "KI-Assistenten", aiLang: "Sprache",
-    aiLangHelp: "Für alles, was cotrack Claude, ChatGPT & Co. schreibt: Anweisungen, Werkzeuge, Antworten, Fußzeile. Gilt auf allen Geräten.",
-    aiLangSaved: (name) => "KI-Assistenten: " + name,
+    language: "Sprache", langAuto: "Automatisch – Web-App nach der Sprache des Browsers, KI auf Deutsch",
+    langHelp: "Gilt auf allen Geräten und für deine KI-Assistenten (Anweisungen, Werkzeuge, Antworten, Fußzeile).",
     footerDialog: "Chat-Fußzeile anpassen",
     settingsIntro: "Gilt auf allen Geräten: für jede KI, die die Fußzeile über cotrack holt (MCP und API), und für ☰ → Chat-Fußzeile → Kopieren. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt.",
     layoutMulti: "Mehrzeilig – je Gruppe eine Zeile", layoutSingle: "Einzeilig – alles in einer Zeile",
@@ -962,10 +962,8 @@ const STRINGS = {
     signOut: "Sign out",
     installApp: "📲 Install as app", installIos: "As an app: Share menu → “Add to Home Screen”.", installed: "cotrack is installed",
     appearance: "Appearance", themeLight: "Light", themeDark: "Dark", themeAuto: "Like the system",
-    language: "Language", langAuto: "Automatic – the browser's language",
-    secAi: "AI assistants", aiLang: "Language",
-    aiLangHelp: "For everything cotrack writes to Claude, ChatGPT & co.: instructions, tools, answers, footer. Applies on every device.",
-    aiLangSaved: (name) => "AI assistants: " + name,
+    language: "Language", langAuto: "Automatic – web app in the browser's language, AI in German",
+    langHelp: "Applies on every device and to your AI assistants (instructions, tools, answers, footer).",
     footerDialog: "Customize chat footer",
     settingsIntro: "Applies on every device: to every AI that fetches the footer from cotrack (MCP and API) and to ☰ → Chat footer → Copy. The bar at the bottom always shows it on one line. When the footer appears in the chat is up to your prompt.",
     layoutMulti: "Multi-line – one line per group", layoutSingle: "Single line – everything on one line",
@@ -1177,6 +1175,7 @@ async function boot() {
     // Global version is read before the project list, so a project created in between is picked up by the next poll.
     const [me, kinds, ver] = await Promise.all([api("/me"), api("/kinds?all=1"), api("/version")]);
     state.globalVersion = ver.version;
+    syncLang();
     state.actor = me.actor; state.allKinds = kinds.kinds.map(localizeKind); state.kinds = state.allKinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
@@ -2869,8 +2868,8 @@ function openEdit(it) {
 const fmt = (iso) => iso ? new Date(iso).toLocaleString(LOCALE, { dateStyle: "short", timeStyle: "short" }) : "–";
 const actorLabel = (a) => STRINGS[LANG].actors[a] || a || "–";
 
-// The menu is grouped by scope: this device (appearance, language), projects, AI assistants (their language) and the
-// chat footer (both apply to every AI), access. There is no "Settings" entry: everything here is a setting or an action, each named for what it does.
+// The menu is grouped by scope: this device (appearance; the language row sits here too but applies everywhere, see
+// langRow), projects, the chat footer (applies to every AI), access. There is no "Settings" entry: everything here is a setting or an action, each named for what it does.
 function openMenu() {
   const go = (fn) => () => { closeDialog(); fn(); };
   const inProject = state.project && state.project !== ALL;
@@ -2887,8 +2886,6 @@ function openMenu() {
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md?lang=" + LANG), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
       state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
-    sec(tr("secAi")),
-    aiLangRow(),
     sec(tr("secFooter")),
     h("div", { class: "menu-row" },
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
@@ -2914,7 +2911,6 @@ function themeRow() {
       onclick: (e) => { setTheme(theme); for (const b of seg.children) b.setAttribute("aria-pressed", String(b === e.currentTarget)); } }, icon)));
   return h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("appearance")), h("span", { class: "spacer" }), seg);
 }
-// Language per device (localStorage); "Auto" follows the browser. The page reloads so that every text switches.
 // Install as an app: Chrome and Edge (Android, desktop) announce it with beforeinstallprompt once manifest and icons
 // qualify; the menu then offers it (the browser may also suggest it on its own). Installed, cotrack runs in its own
 // window with its own entry in the app switcher. iOS has no such event: the menu names the way via the share sheet.
@@ -2934,41 +2930,38 @@ function installRow() {
   }
   return isIos() ? h("p", { class: "small" }, tr("installIos")) : null;
 }
+// Language (setting `language`, D19): one choice for the web app on every device and for the AI. Saved on the server –
+// only with the user token – then the page reloads so that every text switches. "Auto" removes the choice.
 function langRow() {
   const cur = LANGS.includes(store.get("cotrack.lang")) ? store.get("cotrack.lang") : "auto";
   const opts = [["auto", "Auto", tr("langAuto")], ["de", "DE", "Deutsch"], ["en", "EN", "English"]];
-  return h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("language")), h("span", { class: "spacer" }),
-    h("div", { class: "seg txt", role: "group", "aria-label": tr("language") }, opts.map(([value, label, title]) =>
-      h("button", { type: "button", title, "aria-label": title, "aria-pressed": String(value === cur),
-        onclick: () => { if (value === cur) return; store.set("cotrack.lang", value === "auto" ? null : value); location.reload(); } }, label))));
-}
-
-// Language for AI assistants (instance setting `language`): what cotrack writes to every AI – MCP instructions, tool
-// descriptions and answers, text lists, the footer. Unlike the UI language above it applies on every device; saved at once,
-// only with the user token. The row appears right away and is filled in once the settings have loaded.
-function aiLangRow() {
-  const opts = [["de", "DE", "Deutsch"], ["en", "EN", "English"]];
-  const note = h("p", { class: "small" }, tr("aiLangHelp"));
-  const show = (lang) => buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(opts[i][0] === lang)));
-  let current = null;
-  const pick = async (value, name) => {
-    if (value === current) return;
+  const note = h("p", { class: "small" }, tr("langHelp"));
+  const pick = async (value) => {
+    if (value === cur) return;
     try {
-      const { settings } = await api("/settings", { method: "PATCH", body: { language: value } });
-      current = settings.language; show(current); toast(tr("aiLangSaved", name));
+      await api("/settings", { method: "PATCH", body: { language: value === "auto" ? null : value } });
+      store.set("cotrack.lang", value === "auto" ? null : value);
+      location.reload();
     } catch (err) { toast(tr("error", err.message)); }
   };
-  const buttons = opts.map(([value, label, name]) =>
-    h("button", { type: "button", title: name, "aria-label": name, "aria-pressed": "false", disabled: true, onclick: () => pick(value, name) }, label));
-  api("/settings").then(({ settings, available }) => {
-    current = settings.language; show(current);
-    const canEdit = available && state.actor === "user";
-    for (const b of buttons) b.disabled = !canEdit;
-    if (!available) note.textContent = tr("settingsMigration");
-    else if (!canEdit) note.textContent = tr("settingsAiToken");
-  }).catch(() => { /* the row stays disabled; the menu works without it */ });
-  return [h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("aiLang")), h("span", { class: "spacer" }),
-    h("div", { class: "seg txt", role: "group", "aria-label": tr("secAi") + " – " + tr("aiLang") }, buttons)), note];
+  const canEdit = state.actor === "user";
+  if (!canEdit) note.textContent = tr("settingsAiToken");
+  return [h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("language")), h("span", { class: "spacer" }),
+    h("div", { class: "seg txt", role: "group", "aria-label": tr("language") }, opts.map(([value, label, title]) =>
+      h("button", { type: "button", title, "aria-label": title, "aria-pressed": String(value === cur), disabled: !canEdit,
+        onclick: () => pick(value) }, label)))), note];
+}
+
+// After sign-in: take over the language saved on the server (another device may have changed it). Reloads only when the
+// page's language actually changes; a failure leaves the cached choice as it is.
+async function syncLang() {
+  try {
+    const { settings, stored } = await api("/settings");
+    const want = stored?.includes("language") && LANGS.includes(settings.language) ? settings.language : null;
+    if ((store.get("cotrack.lang") || null) === want) return;
+    store.set("cotrack.lang", want);
+    if ((want || detectLang()) !== LANG) location.reload();
+  } catch { /* offline or old server: keep the cached language */ }
 }
 
 const currentProject = () => state.projects.find((p) => p.slug === state.project);
