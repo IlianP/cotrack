@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.9 (as of 13 November 2026)
+## Current: Methodology v2.10 (as of 14 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -63,6 +63,20 @@
   project: single-line `CT ▸ 👤: … · 🤖: …`, multi-line a `CT ▸` line with the group lines below. On changes, only projects
   with changes. New items belong to the project of the repo being worked on; if unclear, ask. Dependencies across project
   boundaries do not exist for now.
+- **Effort and benefit (v2.10, decision D21):** Actions (A) and ideas (I) can carry two optional, coarse values –
+  **effort** as the time of whoever is responsible (`XS` ≤ 5 min · `S` ≤ 30 min · `M` ≤ 2 h · `L` ≤ 1 day · `XL` more) and
+  **benefit** for the project goal (low · medium · high). Never required.
+  - The **AI estimates both when it adds an item**. Its values count as an estimate (dashed in the web app, marked "?" in lists:
+    `⏱S·★high?`) until you confirm or change them – with one tap in Next or in the item, or in the chat (the AI then saves them
+    with `confirmed`). The AI changes confirmed values only when you ask.
+  - **Decisions** get no values: they inherit the benefit of the items waiting for them (computed, not stored). Warnings stay
+    out. With `/convert` the values move along into an action.
+  - **Next** sorts by them: in progress first, then benefit relative to effort – an item is worth at least as much as what waits
+    for it, plus a little for each item it holds up; without an estimate it counts as "medium" or M, decisions count as S. Plus a
+    time filter (5 min · 30 min · 2 h). The statistics show a benefit × effort matrix, benefit done per week, lead time per effort
+    class and a rough forecast.
+  - Footer and prompt stay unchanged: the rule lives in the MCP server's instructions (no room left in the ChatGPT prompt).
+    PrioFlow uses the stored values and fills in missing ones.
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
@@ -70,6 +84,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.10 does not change the prompt (effort and benefit are covered by the server's instructions).
   v2.9 adds no new rule: the prompt text is just shorter (about 3,900 characters, so together with your own rules it fits
   under ChatGPT's 5,000-character limit).
 

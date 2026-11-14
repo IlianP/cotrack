@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.9 (Stand 13. November 2026)
+## Gültig: Methodik v2.10 (Stand 14. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -34,6 +34,20 @@
     Checkliste bleibt höchstens ein Verweis („→A60“).
   - Das letzte Häkchen schließt die Aufgabe nicht automatisch, und eine Aufgabe darf mit offenen Häkchen abgeschlossen werden.
     Ein Häkchen gilt nicht als „erledigt“ in der Kurzzeile. Bei `/convert` (I → A) wandert die Liste mit.
+- **Aufwand und Nutzen (v2.10, Entscheidung D21):** Aufgaben (A) und Ideen (I) können zwei optionale, grobe Werte haben –
+  **Aufwand** als Zeit des Zuständigen (`XS` ≤ 5 Min. · `S` ≤ 30 Min. · `M` ≤ 2 Std. · `L` ≤ 1 Tag · `XL` mehr) und **Nutzen**
+  fürs Projektziel (gering · mittel · hoch). Nie Pflicht.
+  - Die **KI schätzt beides beim Anlegen**. Ihre Werte gelten als Schätzung (Web-App gestrichelt, Listen mit „?“: `⏱S·★hoch?`),
+    bis du sie bestätigst oder änderst – mit einem Tipp in Next oder im Punkt, oder im Chat (dann speichert die KI sie mit
+    `confirmed`). Bestätigte Werte ändert die KI nur auf deinen Wunsch.
+  - **Entscheidungen** bekommen keine Werte: Sie erben den Nutzen der Punkte, die auf sie warten (berechnet, nicht gespeichert).
+    Warnungen bleiben außen vor. Bei `/convert` wandern die Werte in eine Aufgabe mit.
+  - **Next** sortiert danach: in Arbeit zuerst, dann Nutzen im Verhältnis zum Aufwand – ein Punkt ist mindestens so viel wert
+    wie das, was auf ihn wartet, plus etwas für jeden Punkt, den er aufhält; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen
+    zählen als S. Dazu ein Zeit-Filter (5 Min. · 30 Min. · 2 Std.). Die Statistiken zeigen die Matrix Nutzen × Aufwand,
+    erledigten Nutzen je Woche, Liegezeit je Aufwandsklasse und eine grobe Prognose.
+  - Fußzeile und Prompt bleiben unverändert: Die Regel steht in der Server-Anweisung des MCP-Servers (kein Platz mehr im
+    ChatGPT-Prompt). PrioFlow nutzt die gespeicherten Werte und ergänzt fehlende.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
@@ -69,6 +83,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.10 ändert den Prompt nicht (Aufwand und Nutzen regelt die Server-Anweisung).
   v2.9 hat keine neue Regel: Der Prompt-Text ist nur kürzer (rund 4.100 Zeichen, passt mit eigenen Regeln unter das
   ChatGPT-Limit von 5.000 Zeichen).
 

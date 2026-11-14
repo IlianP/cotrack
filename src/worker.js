@@ -34,6 +34,7 @@ const TEXT = {
     statusAsOf: "Stand",
     statusEmpty: "Keine offenen Punkte.",
     statusColumns: ["Kennung", "Stichwort", "Art", "Verantwortlich", "Quelle", "Status"],
+    benefits: { low: "gering", medium: "mittel", high: "hoch" },
   },
   en: {
     owners: { user: "You", ai: "AI" },
@@ -43,6 +44,7 @@ const TEXT = {
     statusAsOf: "As of",
     statusEmpty: "No open points.",
     statusColumns: ["Ref", "Keyword", "Type", "Responsible", "Source", "Status"],
+    benefits: { low: "low", medium: "medium", high: "high" },
   },
 };
 // Built-in categories are stored in German (migrations); in English they are translated unless renamed (as in src/ui.html).
@@ -76,6 +78,15 @@ const OWNER_ALIASES = { user: "user", du: "user", me: "user", ich: "user", human
 const CHECK_KIND = "A";
 const MAX_CHECKS = 8; // hard limit; the methodology asks for at most 5
 const CHECK_LINE_RE = /^(\s*[-*]\s+\[)([ xX])(\]\s+)(.*\S)\s*$/;
+// Effort and benefit (decision D21, methodology v2.10): optional, coarse, only for actions and ideas. Decisions inherit the
+// benefit of what waits for them (computed in the web app), warnings get none. `sized_by` = who set them last
+// ('ai' = an estimate until the human confirms or changes it). Keep in sync with src/ui.html (EFFORTS, BENEFITS).
+export const SIZED_KINDS = ["A", "I"];
+export const EFFORTS = ["XS", "S", "M", "L", "XL"];
+export const BENEFITS = ["low", "medium", "high"];
+const BENEFIT_ALIASES = { low: "low", gering: "low", niedrig: "low", 1: "low", medium: "medium", mittel: "medium", 2: "medium", high: "high", hoch: "high", 3: "high" };
+// Rough hours per effort class (for the forecast in the statistics): a typical item of the class, not its upper bound.
+const EFFORT_HOURS = { XS: 0.05, S: 0.25, M: 1, L: 4, XL: 12 };
 
 class HttpError extends Error {
   constructor(status, code, detail) {
@@ -499,6 +510,45 @@ export async function buildStats(db, { project = null, tz = 0 } = {}) {
     }
   }
   const recentCut = Date.parse(nowIso) - 14 * DAY_MS;
+
+  // effort and benefit (v2.10): matrix of the open actions and ideas, lead time per effort class, benefit done per
+  // week, and a rough forecast per owner (open effort against the pace of the last four weeks)
+  const sizable = (i) => SIZED_KINDS.includes(i.kind);
+  const openSizable = items.filter((i) => isOpen(i) && sizable(i));
+  const matrix = openSizable.filter((i) => i.effort && i.benefit).map((i) => ({ project_slug: i.project_slug, ref: i.ref,
+    kind: i.kind, title: i.short || i.title, owner: ownerOf(i), effort: i.effort, benefit: i.benefit, estimated: i.sized_by !== "user" }));
+  const doneActions = items.filter((i) => i.kind === "A" && i.status === "done" && i.closed_at);
+  const byEffort = EFFORTS.map((e) => {
+    const xs = doneActions.filter((i) => i.effort === e).map((i) => Math.max(0, Date.parse(i.closed_at) - Date.parse(i.created_at)) / DAY_MS);
+    return { effort: e, open: openSizable.filter((i) => i.effort === e).length, median: median(xs), n: xs.length };
+  });
+  const weeks = [];
+  for (let w = 7; w >= 0; w--) {
+    const from = dayNum(today) - 6 - 7 * w, to = from + 6;
+    const inside = doneActions.filter((i) => { const n = dayNum(dayKey(i.closed_at)); return n >= from && n <= to; });
+    const count = (b) => inside.filter((i) => (i.benefit || null) === b).length;
+    weeks.push({ from: new Date(from * DAY_MS).toISOString().slice(0, 10), high: count("high"), medium: count("medium"), low: count("low"), none: count(null) });
+  }
+  const paceFrom = dayNum(today) - 27;
+  const forecast = {};
+  for (const owner of ["user", "ai"]) {
+    const mine = items.filter((i) => i.kind === "A" && ownerOf(i) === owner);
+    const open = mine.filter(isOpen);
+    const recent = mine.filter((i) => i.status === "done" && i.closed_at && i.effort && dayNum(dayKey(i.closed_at)) >= paceFrom);
+    const hours = (xs) => xs.reduce((s, i) => s + (EFFORT_HOURS[i.effort] || 0), 0);
+    const pace = hours(recent) / 4;
+    forecast[owner] = { open_hours: hours(open.filter((i) => i.effort)), open_sized: open.filter((i) => i.effort).length,
+      open_unsized: open.filter((i) => !i.effort).length, pace_hours_week: pace, basis: recent.length };
+  }
+  const sizing = {
+    matrix,
+    unsized: openSizable.filter((i) => !i.effort || !i.benefit).length,
+    estimated: openSizable.filter((i) => (i.effort || i.benefit) && i.sized_by !== "user").length,
+    by_effort: byEffort,
+    weeks,
+    forecast,
+  };
+
   return {
     generated_at: nowIso, project, today, tz, items_total: items.length,
     days,
@@ -519,6 +569,7 @@ export async function buildStats(db, { project = null, tz = 0 } = {}) {
       list: waits.filter((w) => w.still || (w.freed && Date.parse(w.freed) >= recentCut))
         .sort((a, b) => b.still - a.still || b.days - a.days).slice(0, 6),
     },
+    sizing,
   };
 }
 
@@ -780,7 +831,8 @@ async function getKind(db, code) {
   return k;
 }
 
-export async function createItem(db, project, input, actor) {
+// sizedBy: only for conversions, which keep who set the values (an estimate stays an estimate).
+export async function createItem(db, project, input, actor, { sizedBy = null } = {}) {
   const kind = await getKind(db, String(input.kind || "").toUpperCase());
   const t = now();
   const row = {
@@ -803,6 +855,12 @@ export async function createItem(db, project, input, actor) {
   };
   row.closed_at = CLOSED.includes(row.status) ? t : null;
   assertCheckLimit(kind.code, row.body);
+  // Only written when given, so the insert also works on a database without migration 0009 as long as nobody sizes.
+  const effort = normEffort(input.effort), benefit = normBenefit(input.benefit);
+  if (effort || benefit) {
+    assertSizable(kind.code);
+    Object.assign(row, { effort, benefit, sized_by: sizedBy || sizer(input, actor) });
+  }
 
   const stmts = [];
   let seqSql;
@@ -850,7 +908,8 @@ export async function createItem(db, project, input, actor) {
         `INSERT INTO events (project_slug, item_ref, action, actor, data, at)
          SELECT ?, kind || seq, 'created', ?, ?, ? FROM items WHERE id = ?`,
       )
-      .bind(project.slug, actor, JSON.stringify({ title: row.title, owner: row.owner, status: row.status }), t, row.id),
+      .bind(project.slug, actor, JSON.stringify({ title: row.title, owner: row.owner, status: row.status,
+        ...(row.sized_by ? { effort: row.effort, benefit: row.benefit, sized_by: row.sized_by } : {}) }), t, row.id),
   );
   stmts.push(touchProject(db, project.slug, t));
   await db.batch(stmts);
@@ -881,6 +940,15 @@ export async function updateItem(db, project, item, input, actor) {
     if ("waiting_on" in input) set("waiting_on", normRefs(input.waiting_on));
     if ("source" in input) set("source", text(input.source, "source", 1000));
     if ("due" in input) set("due", normDate(input.due));
+    if ("effort" in input || "benefit" in input) {
+      // Sending the values again (even unchanged) records who stands behind them: the human confirms an estimate that way.
+      const effort = "effort" in input ? normEffort(input.effort) : item.effort ?? null;
+      const benefit = "benefit" in input ? normBenefit(input.benefit) : item.benefit ?? null;
+      if (effort || benefit) assertSizable(item.kind);
+      set("effort", effort);
+      set("benefit", benefit);
+      set("sized_by", effort || benefit ? sizer(input, actor) : null);
+    }
     if ("status" in input) {
       const st = normStatus(input.status);
       set("status", st);
@@ -948,7 +1016,7 @@ export async function convertItem(db, project, item, input, actor) {
   if (!claim.meta.changes) throw new HttpError(409, "already_converted");
   let target;
   try {
-    target = await createItem(db, project, conversionInput(item, input), actor);
+    target = await createItem(db, project, conversionInput(item, input), actor, { sizedBy: item.sized_by });
   } catch (err) {
     await db
       .prepare("UPDATE items SET converted_to = NULL WHERE id = ? AND converted_to = 'pending'")
@@ -976,6 +1044,8 @@ function conversionInput(item, input) {
     body: input.body ?? item.body,
     source: item.source,
     waiting_on: item.waiting_on,
+    // Effort and benefit travel to an action; a decision inherits its benefit instead.
+    ...(SIZED_KINDS.includes(String(input.kind || "").toUpperCase()) ? { effort: item.effort, benefit: item.benefit } : {}),
     ...("owner" in input ? { owner: input.owner } : {}),
   };
 }
@@ -1326,6 +1396,8 @@ export function itemsAsText(items, kinds, { withProject = false, lang = "de" } =
     const parts = [withProject ? `${it.project_slug}/${it.ref}` : it.ref, it.title];
     const progress = checkProgress(it);
     if (progress) parts.push(`☑${progress}`);
+    const size = sizeText(it, lang);
+    if (size) parts.push(size);
     if (it.waiting_on) parts.push(`⏸${it.waiting_on}`);
     const next = succ.get(it.ref);
     if (next && !withProject) parts.push(`▶${next.join(",")}`);
@@ -1336,6 +1408,14 @@ export function itemsAsText(items, kinds, { withProject = false, lang = "de" } =
     return parts.join(" ");
   });
   return lines.length ? lines.join("\n") + "\n" : T.none + "\n";
+}
+
+// "⏱S·★hoch" – a trailing "?" marks an estimate (set by the AI, not yet confirmed by the human).
+export function sizeText(it, lang = "de") {
+  if (!it.effort && !it.benefit) return "";
+  const T = TEXT[lang] || TEXT.de;
+  const parts = [it.effort ? `⏱${it.effort}` : "", it.benefit ? `★${T.benefits[it.benefit] || it.benefit}` : ""].filter(Boolean);
+  return parts.join("·") + (it.sized_by === "user" ? "" : "?");
 }
 
 export function buildStatusMarkdown(project, items, kinds, origin, lang = "de") {
@@ -1420,6 +1500,30 @@ function normDate(v) {
   if (v === undefined || v === null || v === "") return null;
   if (typeof v !== "string" || !DATE_RE.test(v)) throw new HttpError(400, "invalid_field", "due (YYYY-MM-DD)");
   return v;
+}
+
+function normEffort(v) {
+  if (v === undefined || v === null || v === "") return null;
+  const s = String(v).trim().toUpperCase();
+  if (!EFFORTS.includes(s)) throw new HttpError(400, "invalid_field", `effort (${EFFORTS.join("|")})`);
+  return s;
+}
+
+function normBenefit(v) {
+  if (v === undefined || v === null || v === "") return null;
+  const s = BENEFIT_ALIASES[String(v).trim().toLowerCase()];
+  if (!s) throw new HttpError(400, "invalid_field", `benefit (${BENEFITS.join("|")})`);
+  return s;
+}
+
+// Who stands behind effort and benefit: the actor, or the human when the AI passes `confirmed: true` because the user named or
+// confirmed the values in the conversation (the change log still shows the AI as the one who wrote it).
+const sizer = (input, actor) => (input.confirmed === true ? "user" : actor);
+
+function assertSizable(kind) {
+  if (!SIZED_KINDS.includes(kind)) {
+    throw new HttpError(400, "invalid_field", `effort/benefit only for ${SIZED_KINDS.join(" and ")} (decisions inherit the benefit of what waits for them)`);
+  }
 }
 
 function clampInt(v, min, max, fallback) {

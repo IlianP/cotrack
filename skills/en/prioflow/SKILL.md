@@ -44,13 +44,20 @@ Weigh four criteria against each other:
 
 1. **Unblocks others:** does the item have successors (`▶`)? The more and the more important, the earlier. A decision
    that frees several tasks beats almost everything.
-2. **Quick to do:** estimate the effort from title and description. Items under about five minutes (merge a PR, change a
-   setting, approve a text) go in early so the pile visibly shrinks. If more important items are waiting, at most two
-   quick wins make the top three.
+2. **Quick to do:** take the stored effort (`⏱XS` … `⏱XL` in the list); if it is missing, estimate it from title and
+   description. Items with `XS` (under about five minutes: merge a PR, change a setting, approve a text) go in early so the
+   pile visibly shrinks. If more important items are waiting, at most two quick wins make the top three.
 3. **Deadline and age:** dates and expired trial periods in the text ("after a few days", a date), items that have been
    lying around (low number, old creation date), items "in progress" that have stalled.
-4. **Impact on the project goal:** what visibly moves the project forward (release, users, core feature), what is
-   nice-to-have? Derive the goal from the project name, the README (if the repository is available) and the board.
+4. **Impact on the project goal:** take the stored benefit (`★high`, `★medium`, `★low`); a decision inherits the benefit
+   of the items waiting for it. If it is missing, weigh it yourself: what visibly moves the project forward (release, users,
+   core feature), what is nice-to-have? Derive the goal from the project name, the README (if the repository is available)
+   and the board.
+
+**Fill in effort and benefit:** if an action (A) or idea (I) you propose or show has none, estimate them and save them with
+`cotrack_update` (`effort`, `benefit`), so Next and the statistics know them. Values marked "?" are estimates; values the
+user confirmed (no "?") you don't change. Once per call, ask briefly whether your estimates for the first three fit
+("Effort/benefit right?"). If the user confirms or corrects them, save them right away with `confirmed: true` (only then).
 
 **Warnings as weight:** an A or D that defuses an open warning moves up.
 **Ties:** D before A, older before newer.

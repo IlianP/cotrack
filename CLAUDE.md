@@ -29,6 +29,11 @@
 - Sub-items (decision D16, methodology v2.8): a checklist `- [ ] step` in the body of an action (A) – no table, no refs of
   their own. Parsed in `src/worker.js` (`parseChecks`, `checkProgress`, `PATCH {check|uncheck}`) and in `src/ui.html` (same
   regex) – keep both in sync. Max 8 on the server; the methodology asks for at most 5 and only on the user's request.
+- Effort and benefit (decision D21, methodology v2.10, migration 0009): optional `effort` (XS–XL) and `benefit` (low/medium/high)
+  on actions and ideas only; `sized_by` = who set them (`ai` = estimate, `user` = confirmed; the AI may send `confirmed: true`
+  only when the user named or confirmed them). Decisions inherit benefit via chains (computed in Next, `src/ui.html`). The lists
+  `SIZED_KINDS`/`EFFORTS`/`BENEFITS` exist in `src/worker.js` and `src/ui.html` – keep both in sync. The rule for the AI lives in
+  the MCP instructions (`src/mcp.js`), not in the prompt (ChatGPT length limit).
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.
