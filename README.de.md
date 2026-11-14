@@ -44,6 +44,10 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   Richtungen berechnet.
 - **Teilpunkte** – eine Aufgabe (A) kann eine kurze Checkliste haben (`- [ ] Schritt` in der Beschreibung, höchstens 8). Sie
   bekommen keine eigenen Kennungen; Board, Listen und Fußzeile zeigen den Stand (`A17 Post 2/4`), die KI hakt mit `cotrack_update check` ab.
+- **Aufwand und Nutzen** – optionale, grobe Werte für Aufgaben und Ideen: Aufwand `XS` (≤ 5 Min.) · `S` (≤ 30 Min.) · `M` (≤ 2 Std.) ·
+  `L` (≤ 1 Tag) · `XL`, Nutzen gering · mittel · hoch. Die KI schätzt beides beim Anlegen (gestrichelt bzw. mit „?“, bis du es mit
+  einem Tipp bestätigst oder änderst); Entscheidungen erben den Nutzen der Punkte, die auf sie warten. Next sortiert danach,
+  die Statistiken haben einen eigenen Reiter.
 - **Projekte** – eines pro GitHub-Repository (oder beliebig), dazu eine projektübergreifende Ansicht. Jedes hat einen
   eindeutigen Slug und ein optionales, selbst gewähltes **Kürzel** aus 2–4 Zeichen (z. B. `CT`) für qualifizierte
   Kennungen wie `CT:A14`, wenn eine Unterhaltung mehrere Projekte berührt.
@@ -57,9 +61,10 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **PrioFlow** – ein Skill, mit dem die KI die offenen Punkte bewertet und dich durch die nächsten führt
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
-- **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann was andere
-  Punkte aufhält, Entscheidungen vor Aufgaben, älteste zuerst. *Erledigt* (Entscheidungen mit optionalem Ergebnis), *Später*,
-  Rückgängig im Toast.
+- **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann Nutzen im
+  Verhältnis zum Aufwand (ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet), Entscheidungen vor Aufgaben,
+  älteste zuerst. Ein Zeit-Filter (5 Min. · 30 Min. · 2 Std.) zeigt nur, was hineinpasst. Aufwand und Nutzen setzt oder bestätigst
+  du direkt auf der Karte. *Erledigt* (Entscheidungen mit optionalem Ergebnis), *Später*, Rückgängig im Toast.
 - **Ketten** – die dritte Ansicht (oben umschaltbar: Board · Next · Ketten) zeigt, was worauf wartet: Pfeile von der
   Voraussetzung zum wartenden Punkt, erledigte Voraussetzungen gestrichelt, frei gewordene Punkte hervorgehoben, Kreise und
   unbekannte Kennungen rot; dazu „Auffällig“ (frei geworden, hält am meisten auf, du bist dran). Filter und Suche falten
@@ -69,7 +74,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf.
 - **Statistiken** – ☰ → *Statistiken*, für ein Projekt oder alle: eine Übersicht (Kennzahlen, angelegt und erledigt pro
   Tag, offen nach Kategorie, Durchlaufzeiten, Aktivität nach Wochentag und Uhrzeit), eine Wochenbilanz (mit Serie, Rekorden
-  und dem, was aus Ideen wird; als Text kopierbar) und Fluss & Alter (aufsummierter Fluss, Alter jedes offenen Punkts, Wartezeiten).
+  und dem, was aus Ideen wird; als Text kopierbar), Fluss & Alter (aufsummierter Fluss, Alter jedes offenen Punkts, Wartezeiten)
+  und Aufwand & Nutzen (Matrix Nutzen × Aufwand mit Quick Wins und Zeitfressern, erledigter Nutzen je Woche, Liegezeit je
+  Aufwandsklasse, grobe Prognose).
 - **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
   einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
   *Zum Home-Bildschirm*.
@@ -199,15 +206,15 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | PATCH | `/api/projects/:slug` | ändern `{name?, repo?, code?, archived?}`; `code` lässt sich einmal setzen und danach nie ändern. `:slug` darf auch das Kürzel sein |
 | GET | `/api/code-suggestion?slug=` | erstes freies Kürzel für einen Slug (Initialen, dann die ersten 2–4 Buchstaben) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | Punkte auflisten (`format=text`: eine kompakte Zeile je Punkt, für KI-Assistenten) |
-| POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben |
+| POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, effort?, benefit?, seq?}` – `effort` `XS\|S\|M\|L\|XL`, `benefit` `low\|medium\|high`, nur für A und I; `sized_by` hält fest, wer sie gesetzt hat (`ai` = Schätzung); `confirmed: true` markiert Werte, die der Nutzer im Chat genannt oder bestätigt hat |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben; `PATCH {effort, benefit}` setzt sie – unverändert erneut gesendet, bestätigt das eine Schätzung |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang`: `neu / erledigt` oder `new / done`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
-| GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
+| GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit, Aufwand & Nutzen); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
 | GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (Standard `multi`, `👤`, `🤖`, `de`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |

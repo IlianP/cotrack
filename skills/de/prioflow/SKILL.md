@@ -44,13 +44,20 @@ Wäge vier Kriterien gegeneinander ab:
 
 1. **Macht andere frei:** Hat der Punkt Nachfolger (`▶`)? Je mehr und je wichtiger, desto früher. Eine Entscheidung,
    die mehrere Aufgaben freigibt, schlägt fast alles.
-2. **Schnell erledigt:** Schätze den Aufwand aus Titel und Beschreibung. Punkte unter etwa fünf Minuten (PR mergen,
-   Einstellung setzen, Text freigeben) streust du früh ein, damit der Stapel spürbar schrumpft. Warten wichtigere Punkte,
-   stehen unter den ersten drei höchstens zwei Quick Wins.
+2. **Schnell erledigt:** Nimm den gespeicherten Aufwand (`⏱XS` … `⏱XL` in der Liste); fehlt er, schätze ihn aus Titel und
+   Beschreibung. Punkte mit `XS` (unter etwa fünf Minuten: PR mergen, Einstellung setzen, Text freigeben) streust du früh ein,
+   damit der Stapel spürbar schrumpft. Warten wichtigere Punkte, stehen unter den ersten drei höchstens zwei Quick Wins.
 3. **Frist und Alter:** Termine und abgelaufene Probephasen aus dem Text („nach ein paar Tagen“, ein Datum), lange
    liegende Punkte (niedrige Nummer, altes Anlagedatum), Punkte „in Arbeit“, die stocken.
-4. **Wirkung aufs Projektziel:** Was bringt das Projekt sichtbar voran (Veröffentlichung, Nutzer, Kernfunktion), was ist
-   Nice-to-have? Das Ziel leitest du aus Projektname, README (falls das Repository da ist) und Board ab.
+4. **Wirkung aufs Projektziel:** Nimm den gespeicherten Nutzen (`★hoch`, `★mittel`, `★gering`); eine Entscheidung erbt den
+   Nutzen der Punkte, die auf sie warten. Fehlt er, wäge selbst ab: Was bringt das Projekt sichtbar voran (Veröffentlichung,
+   Nutzer, Kernfunktion), was ist Nice-to-have? Das Ziel leitest du aus Projektname, README (falls das Repository da ist) und Board ab.
+
+**Aufwand und Nutzen ergänzen:** Fehlen sie bei einer Aufgabe (A) oder Idee (I), die du vorschlägst oder zeigst, schätze sie
+und speichere sie mit `cotrack_update` (`effort`, `benefit`), damit Next und die Statistiken sie kennen. Werte mit „?“ sind
+Schätzungen; vom Nutzer bestätigte Werte (ohne „?“) änderst du nicht. Einmal pro Aufruf fragst du knapp, ob deine Schätzungen
+der ersten drei passen („Aufwand/Nutzen so richtig?“). Bestätigt oder korrigiert er sie, speicherst du sie sofort mit
+`confirmed: true` (nur dann).
 
 **Warnungen als Gewicht:** Ein A oder D, das eine offene Warnung entschärft, rückt nach vorn.
 **Gleichstand:** D vor A, älter vor neuer.

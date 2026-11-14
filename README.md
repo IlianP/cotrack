@@ -41,6 +41,10 @@ warnings – a one-glance status that survives across conversations.
 - **Dependencies** – `D1 ▶A2` = D1 first, then A2; `A2 ⏸D1` = A2 waits for D1. Stored one way, computed both ways.
 - **Sub-items** – an action (A) can carry a short checklist (`- [ ] step` in its description, at most 8). No references of
   their own; board, lists and footer show the progress (`A17 Post 2/4`), and the AI ticks a step with `cotrack_update check`.
+- **Effort and benefit** – optional, coarse values for actions and ideas: effort `XS` (≤ 5 min) · `S` (≤ 30 min) · `M` (≤ 2 h) ·
+  `L` (≤ 1 day) · `XL`, benefit low · medium · high. The AI estimates both when it adds an item (shown dashed / with "?" until you
+  confirm or change them with one tap); decisions inherit the benefit of what waits for them. Next sorts by them, and the
+  statistics have a tab of their own.
 - **Projects** – one per GitHub repository (or anything else), plus a cross-project view. Each has a unique slug and an
   optional 2–4 character **code** you choose (e.g. `CT`), used for qualified references like `CT:A14` when one
   conversation spans several projects.
@@ -53,8 +57,10 @@ warnings – a one-glance status that survives across conversations.
   per project when several are in play.
 - **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
   ([details below](#prioflow-what-is-next)).
-- **Next** – a view that shows one of your items at a time: first what you have started, then what holds up other
-  items, decisions before actions, oldest first. *Done* (decisions with an optional outcome), *Later*, undo in the toast.
+- **Next** – a view that shows one of your items at a time: first what you have started, then benefit relative to effort
+  (an item is worth at least as much as what waits for it), decisions before actions, oldest first. A time filter
+  (5 min · 30 min · 2 h) shows only what fits. Set or confirm effort and benefit right on the card. *Done* (decisions with an
+  optional outcome), *Later*, undo in the toast.
 - **Chains** – the third view (switch at the top: Board · Next · Chains) shows what waits for what: arrows from the
   prerequisite to the waiting item, done prerequisites dashed, freed-up items highlighted, cycles and unknown references in
   red; plus "Worth a look" (freed up, holds up the most, your turn). Filters and search only fold items away ("⋯ 2"), the
@@ -64,7 +70,8 @@ warnings – a one-glance status that survives across conversations.
   it, marks what the AI changed since you last looked and counts it on the button.
 - **Statistics** – ☰ → *Statistics*, for one project or all: an overview (key figures, created and done per day,
   open by category, lead times, activity by weekday and hour), a weekly report (with streak, records and what becomes of
-  ideas; copyable as text) and flow & age (cumulative flow, the age of every open item, waiting times).
+  ideas; copyable as text), flow & age (cumulative flow, the age of every open item, waiting times) and effort & benefit
+  (a benefit × effort matrix with quick wins and time sinks, benefit done per week, lead time per effort class, a rough forecast).
 - **Installable as an app** – Chrome/Edge on Android and the desktop: ☰ → *Install as app*; cotrack then runs in its own
   window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
 - Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
@@ -189,15 +196,15 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | PATCH | `/api/projects/:slug` | update `{name?, repo?, code?, archived?}`; `code` can be set once and never changed. `:slug` may also be the code |
 | GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | list items (`format=text`: one compact line per item, for AI assistants) |
-| POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, seq?}` |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body |
+| POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, source?, due?, effort?, benefit?, seq?}` – `effort` `XS\|S\|M\|L\|XL`, `benefit` `low\|medium\|high`, only for A and I; `sized_by` records who set them (`ai` = estimate); `confirmed: true` marks values the user named or confirmed in a chat |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body; `PATCH {effort, benefit}` sets them – sending them again unchanged confirms an estimate |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `new: … · done: …`; `lang`: `new / done` or `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | "Open points" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |
-| GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
+| GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour, effort & benefit); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 | GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (defaults `multi`, `👤`, `🤖`, `de`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |

@@ -36,6 +36,7 @@ import {
   buildFooter,
   itemsAsText,
   checkProgress,
+  sizeText,
 } from "./worker.js";
 import { oauthActor, wwwAuthenticate } from "./oauth.js";
 
@@ -70,7 +71,12 @@ zum Projekt des Repos, an dem du gerade arbeitest; bei Unklarheit frage. Mit nur
 Teilpunkte: Nur Aufgaben (A) können eine Checkliste „- [ ] Schritt“ in der Beschreibung haben; Board und Fußzeile zeigen den Zähler (z. B. „2/4“).
 Lege sie nur an, wenn der Nutzer die Schritte nennt oder deinem Vorschlag zustimmt, höchstens fünf, nie für offensichtliche Arbeitsschritte.
 Braucht ein Schritt eine andere Zuständigkeit, eine eigene Entscheidung oder eine Abhängigkeit, wird er ein eigener Punkt mit waiting_on.
-Erledigte Schritte hakst du mit cotrack_update check ab (Nummer oder Text), statt die Beschreibung neu zu schreiben.`,
+Erledigte Schritte hakst du mit cotrack_update check ab (Nummer oder Text), statt die Beschreibung neu zu schreiben.
+Aufwand und Nutzen (nur A und I): Schätze beim Anlegen beide mit. effort = Zeit des Zuständigen: XS ≤ 5 Min., S ≤ 30 Min., M ≤ 2 Std.,
+L ≤ 1 Tag, XL mehr. benefit = wie sehr es das Projektziel voranbringt: low, medium, high – sei sparsam mit high. Deine Werte gelten als
+geschätzt (in Listen mit „?“, z. B. „⏱S·★hoch?“), bis der Nutzer sie bestätigt oder ändert; bestätigte Werte änderst du nur auf seinen Wunsch.
+Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
+Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.`,
   en: `cotrack keeps the open points of a project, shared by a human and their AI.
 Categories: A Action (owner "user" = you, the human, or "ai" = the AI), D Decision (made by the human), I Idea (💡), W Warning/risk (⚠️).
 References like A4 or D2 are never reused. Dependencies: waiting_on, e.g. "D2". Display: "D2 ▶A4" = D2 comes first,
@@ -93,7 +99,12 @@ to the project of the repository you are working on; if unclear, ask. With only 
 Sub-items: only actions (A) can have a checklist "- [ ] step" in their description; board and footer show the count (e.g. "2/4").
 Add one only when the user names the steps or agrees to your suggestion, at most five, never for obvious steps of work.
 If a step needs a different owner, a decision of its own or a dependency, it becomes an item of its own with waiting_on.
-Tick finished steps with cotrack_update check (number or text) instead of rewriting the description.`,
+Tick finished steps with cotrack_update check (number or text) instead of rewriting the description.
+Effort and benefit (A and I only): estimate both when you add an item. effort = time of whoever is responsible: XS ≤ 5 min, S ≤ 30 min,
+M ≤ 2 h, L ≤ 1 day, XL more. benefit = how much it moves the project goal: low, medium, high – use high sparingly. Your values count as
+estimates (marked "?" in lists, e.g. "⏱S·★high?") until the user confirms or changes them; change confirmed values only when they ask.
+When they name or confirm them in the conversation, send them with confirmed true.
+Decisions and warnings get no values; a decision inherits the benefit of the items waiting for it.`,
 };
 
 const STATUS = ["open", "doing", "blocked", "done", "dropped"];
@@ -116,6 +127,26 @@ function toolList(lang) {
   };
   const refParam = { type: "string", description: t("Kennung, z. B. \"A4\"; mit Kürzel qualifiziert: \"CT:A4\"", "Reference, e.g. \"A4\"; qualified with the code: \"CT:A4\"") };
   const ownerText = t("user oder ai", "user or ai");
+  const effortParam = {
+    type: "string",
+    enum: ["XS", "S", "M", "L", "XL", ""],
+    description: t(
+      "Nur A/I: Aufwand (Zeit des Zuständigen) – XS ≤ 5 Min., S ≤ 30 Min., M ≤ 2 Std., L ≤ 1 Tag, XL mehr; leer löscht",
+      "A/I only: effort (time of whoever is responsible) – XS ≤ 5 min, S ≤ 30 min, M ≤ 2 h, L ≤ 1 day, XL more; empty clears",
+    ),
+  };
+  const benefitParam = {
+    type: "string",
+    enum: ["low", "medium", "high", ""],
+    description: t("Nur A/I: Nutzen fürs Projektziel; leer löscht", "A/I only: benefit for the project goal; empty clears"),
+  };
+  const confirmedParam = {
+    type: "boolean",
+    description: t(
+      "true nur, wenn der Nutzer Aufwand und Nutzen im Gespräch selbst genannt oder ausdrücklich bestätigt hat – dann gelten sie als bestätigt statt geschätzt. Mit effort/benefit senden.",
+      "true only when the user named or explicitly confirmed effort and benefit in the conversation – they then count as confirmed instead of estimated. Send with effort/benefit.",
+    ),
+  };
   return [
     {
       name: "cotrack_projects",
@@ -244,6 +275,9 @@ function toolList(lang) {
           },
           waiting_on: { type: "string", description: t("Kennungen, auf die gewartet wird, z. B. \"D2, A1\"", "References this item waits for, e.g. \"D2, A1\"") },
           source: { type: "string", description: t("Link oder Datei, aus der der Punkt stammt", "Link or file the item comes from") },
+          effort: effortParam,
+          benefit: benefitParam,
+          confirmed: confirmedParam,
         },
         required: ["project", "kind", "title"],
       },
@@ -276,6 +310,9 @@ function toolList(lang) {
             ),
           },
           uncheck: { type: "string", description: t("Häkchen eines Teilpunkts entfernen, wie check", "Untick a sub-item, like check") },
+          effort: effortParam,
+          benefit: benefitParam,
+          confirmed: confirmedParam,
         },
         required: ["ref"],
       },
@@ -285,8 +322,8 @@ function toolList(lang) {
       name: "cotrack_convert",
       title: t("Idee zusagen", "Accept an idea"),
       description: t(
-        "Wandelt eine Idee (I) in eine Aufgabe (A) oder Entscheidung (D) mit neuer Kennung um; die Idee wird geschlossen.",
-        "Converts an idea (I) into an action (A) or decision (D) with a new reference; the idea is closed.",
+        "Wandelt eine Idee (I) in eine Aufgabe (A) oder Entscheidung (D) mit neuer Kennung um; die Idee wird geschlossen. Aufwand und Nutzen wandern in eine Aufgabe mit.",
+        "Converts an idea (I) into an action (A) or decision (D) with a new reference; the idea is closed. Effort and benefit move along into an action.",
       ),
       inputSchema: {
         type: "object",
@@ -387,6 +424,7 @@ const MSG = {
     short: "Kurz",
     body: "Beschreibung",
     checks: (p) => `Teilpunkte: ${p} erledigt (abhaken: cotrack_update check)`,
+    sizing: (it) => `Aufwand: ${it.effort || "–"} · Nutzen: ${({ low: "gering", medium: "mittel", high: "hoch" })[it.benefit] || "–"}${it.sized_by === "user" ? " (vom Nutzer bestätigt)" : " (von der KI geschätzt, nicht bestätigt)"}`,
     followedBy: "Danach folgt",
     source: "Quelle",
     convertedTo: "Umgewandelt in",
@@ -416,6 +454,7 @@ const MSG = {
     short: "Short",
     body: "Description",
     checks: (p) => `Sub-items: ${p} done (tick: cotrack_update check)`,
+    sizing: (it) => `Effort: ${it.effort || "–"} · Benefit: ${it.benefit || "–"}${it.sized_by === "user" ? " (confirmed by the user)" : " (estimated by the AI, not confirmed)"}`,
     followedBy: "Followed by",
     source: "Source",
     convertedTo: "Converted to",
@@ -510,6 +549,7 @@ async function callTool(name, args, db, actor, lang) {
       if (it.body) lines.push(`${M.body}: ${it.body}`);
       const progress = checkProgress(it);
       if (progress) lines.push(M.checks(progress));
+      if (it.effort || it.benefit) lines.push(M.sizing(it));
       const next = await successorsOf(db, it.project_slug, it.ref);
       if (next.length) lines.push(`${M.followedBy}: ▶${next.join(",")}`);
       if (it.source) lines.push(`${M.source}: ${it.source}`);
@@ -519,14 +559,17 @@ async function callTool(name, args, db, actor, lang) {
     }
     case "cotrack_add": {
       const project = await getProject(db, args.project);
-      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "source"]) };
+      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "source", "effort", "benefit"]),
+        ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
-      return `${it.ref} ${M.created}: ${it.title}`;
+      const size = sizeText(it, lang);
+      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}`;
     }
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
       const item = await getItemByRef(db, project.slug, ref);
-      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "source", "check", "uncheck"]);
+      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "source", "check", "uncheck", "effort", "benefit"]);
+      if (args.confirmed === true) fields.confirmed = true;
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);
       return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}`;
@@ -563,7 +606,7 @@ async function callTool(name, args, db, actor, lang) {
 }
 
 // Compact but complete: every changed field of an event, long texts shortened.
-const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "source", "due", "body", "checked", "unchecked", "to", "name", "repo", "code", "archived"];
+const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "source", "due", "effort", "benefit", "sized_by", "body", "checked", "unchecked", "to", "name", "repo", "code", "archived"];
 function describeChange(e) {
   if (!e.data) return "";
   const d = JSON.parse(e.data);

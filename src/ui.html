@@ -239,6 +239,9 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .pill.st-doing { color: var(--accent); }
 .pill.st-blocked { color: var(--danger); }
 .pill a { color: inherit; }
+/* effort · benefit (D21): dashed while it is only the AI's estimate */
+.pill.size { color: var(--text); }
+.pill.size.est { border-style: dashed; color: var(--muted); }
 
 /* footer line */
 .footline {
@@ -410,26 +413,45 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 :root {
   --c-done: #0d9488; --c-made: #b9b9b1; --c-ai: #0d9488; --c-user: #c2410c;
   --heat-0: #eef7f5; --heat-1: #b6e0d9; --heat-2: #6cbdb1; --heat-3: #0d9488; --heat-4: #0b5a54;
+  --b-medium: #6cbdb1; --b-low: #b6e0d9; --q-quick: #dcf2ee; --q-big: #e6e8fb; --q-sink: #fbe7dc;
 }
 :root[data-theme="dark"] {
   --c-done: #0f9f91; --c-made: #5f5f59; --c-ai: #0f9f91; --c-user: #e2611f;
   --heat-0: #232c2a; --heat-1: #1d4f49; --heat-2: #17766f; --heat-3: #22a596; --heat-4: #79dccf;
+  --b-medium: #17766f; --b-low: #1d4f49; --q-quick: #1b3532; --q-big: #262a44; --q-sink: #3d2a20;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --c-done: #0f9f91; --c-made: #5f5f59; --c-ai: #0f9f91; --c-user: #e2611f;
     --heat-0: #232c2a; --heat-1: #1d4f49; --heat-2: #17766f; --heat-3: #22a596; --heat-4: #79dccf;
+    --b-medium: #17766f; --b-low: #1d4f49; --q-quick: #1b3532; --q-big: #262a44; --q-sink: #3d2a20;
   }
 }
 .stats-mode #bar, .stats-mode #board, .stats-mode #next, .stats-mode #deps, .stats-mode #fab, .stats-mode #add { display: none !important; }
 .stats[hidden] { display: none; }
 .stats { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
 .st-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.stats > * { min-width: 0; }
+.st-head .chips { flex: 0 1 auto; min-width: 0; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.st-head .chips button { white-space: nowrap; }
+.st-fc p { margin: 0; }
 .st-head h1 { margin: 0; font-size: 24px; letter-spacing: -.02em; }
 .st-head .scope { color: var(--muted); font-size: 14px; flex: 1 1 auto; }
 .st-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .st-kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 .st-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+/* effort & benefit (D21) */
+.st-matrix { display: grid; grid-template-columns: auto repeat(5, minmax(0, 1fr)); gap: 4px; font-size: 12.5px; }
+.st-matrix .hd { color: var(--muted); text-align: center; font-weight: 600; }
+.st-matrix .rh { color: var(--muted); align-self: center; text-align: right; padding-right: 4px; }
+.st-matrix .cell { min-height: 56px; border-radius: 8px; padding: 5px; display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; background: var(--surface-2); border: 1px solid var(--line); }
+.st-matrix .cell .ref { cursor: pointer; font-size: 12px; }
+.st-matrix .cell .ref.est { outline: 1px dashed currentColor; outline-offset: -1px; font-weight: 600; }
+.st-stackcols { display: flex; align-items: stretch; gap: 6px; height: 150px; border-bottom: 1px solid var(--line); }
+.st-stackcols button { flex: 1; display: flex; flex-direction: column-reverse; align-items: center; border: 0; background: none; padding: 0 2px; border-radius: 6px; cursor: default; }
+.st-stackcols button:hover, .st-stackcols button:focus-visible { background: var(--surface-2); }
+.st-stackcols i { display: block; width: 100%; max-width: 26px; }
+.st-stackcols i:last-child { border-radius: 4px 4px 0 0; }
 .st-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
   padding: 16px; display: grid; gap: 10px; min-width: 0;
@@ -529,7 +551,22 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 /* Next: one item at a time, the rest in order beside it (A53) */
 .next { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; max-width: 1080px; }
 @media (max-width: 860px) { .next { grid-template-columns: minmax(0, 1fr); } }
-.nx-head { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 14px; }
+.nx-head { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nx-time { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+.nx-head .chips button { padding: 4px 10px; font-size: 13px; }
+/* effort and benefit on the Next card (D21) */
+.nx-size { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.nx-size.est { border-style: dashed; }
+.nx-seg { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.nx-seg > span { font-size: 13px; color: var(--muted); margin-right: 4px; min-width: 52px; }
+.nx-seg button {
+  min-width: 40px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--text); font-size: 13px;
+}
+.nx-seg button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: transparent; font-weight: 600; }
+.nx-size.est .nx-seg button[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 55%, var(--surface-2)); }
+.nx-est { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.nx-est .btn { height: 32px; }
 .nx-card {
   background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
   padding: 20px; display: grid; gap: 12px; min-width: 0;
@@ -845,7 +882,19 @@ const STRINGS = {
     nextAge: (d) => (d <= 0 ? "Seit heute offen" : d === 1 ? "Seit gestern offen" : `Seit ${d} Tagen offen`),
     nextEmpty: "Nichts für dich offen 🎉", nextWaiting: (n) => `${n === 1 ? "1 weiterer Punkt wartet" : n + " weitere warten"} noch auf andere.`,
     nextAi: (n) => `Bei der KI: ${n} offen.`, nextHint: "„Später“ schiebt den Punkt ans Ende, ohne ihn zu ändern.",
-    nextOrder: "Reihenfolge: in Arbeit · hält andere auf · Entscheidungen vor Aufgaben · älteste zuerst.",
+    nextOrder: "Reihenfolge: in Arbeit zuerst, dann Nutzen im Verhältnis zum Aufwand. Ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen zählen als S. Bei Gleichstand: Entscheidungen vor Aufgaben, älteste zuerst.",
+    // Aufwand und Nutzen (D21, Methodik v2.10)
+    effort: "Aufwand", benefit: "Nutzen", sizeNone: "– keine Angabe –",
+    effortLabels: { XS: "≤ 5 Min.", S: "≤ 30 Min.", M: "≤ 2 Std.", L: "≤ 1 Tag", XL: "mehr als 1 Tag" },
+    benefitLabels: { low: "gering", medium: "mittel", high: "hoch" },
+    sizeEstimated: "Von der KI geschätzt", sizeConfirm: "Schätzung bestätigen", sizeOk: "✓ Passt",
+    sizeConfirmed: (r) => `${r}: Aufwand und Nutzen bestätigt`, sizeSaved: (r) => `${r}: gespeichert`,
+    sizePill: (est) => (est ? "Aufwand · Nutzen – von der KI geschätzt; zum Bestätigen öffnen" : "Aufwand · Nutzen"),
+    sizeDecision: "Entscheidungen haben keinen eigenen Aufwand und Nutzen: Sie erben den Nutzen der Punkte, die auf sie warten.",
+    nextBenefit: (b) => `Nutzen ${b}`, nextBenefitVia: (b, r) => `Nutzen ${b} über ${r}`,
+    nextTime: "Zeit", nextTimeTitle: "Nur Punkte zeigen, die in diese Zeit passen",
+    nextTimeOpts: { "": "beliebig", 5: "5 Min.", 30: "30 Min.", 120: "2 Std." },
+    nextTimeHidden: (n) => `${n} ${n === 1 ? "Punkt" : "Punkte"} ohne Aufwand ausgeblendet.`, nextTimeEmpty: "Nichts passt in diese Zeit.",
     doneToast: (ref) => `${ref} erledigt`, decidedToast: (ref) => `${ref} entschieden`, undo: "Rückgängig",
     // Ketten (A55)
     modeBoard: "Board", modeDeps: "Ketten", modeDepsTitle: "Ketten: was wartet worauf",
@@ -883,7 +932,24 @@ const STRINGS = {
     // Statistiken (A58)
     menuStats: "📊 Statistiken", stTitle: "Statistiken", stBack: "← Board", stLoading: "Wird gezählt …",
     stEmpty: "Noch keine Punkte – hier gibt es noch nichts zu zählen.",
-    stTabOverview: "Übersicht", stTabWeek: "Wochenbilanz", stTabFlow: "Fluss & Alter",
+    stTabOverview: "Übersicht", stTabWeek: "Wochenbilanz", stTabFlow: "Fluss & Alter", stTabValue: "Aufwand & Nutzen",
+    stMatrixTitle: "Nutzen × Aufwand", stMatrixSub: "offene Aufgaben und Ideen",
+    stQuads: { quick: "Quick Wins", big: "Große Brocken", fill: "Füller", sink: "Zeitfresser" },
+    stMatrixEmpty: "Noch keine offenen Punkte mit Aufwand und Nutzen. Die KI schätzt beides beim Anlegen; bestätigen oder ändern kannst du es in Next oder im Punkt.",
+    stMatrixNote: (u, e) => [u ? `${u} offen ohne vollständige Schätzung` : "", e ? `${e} noch nicht bestätigt (gestrichelt)` : ""].filter(Boolean).join(" · "),
+    stMatrixHover: "Zeig auf eine Kennung; ein Klick öffnet den Punkt.",
+    stMatrixTip: (r, t, est) => `${r} ${t}${est ? " – geschätzt" : ""}`,
+    stBenefitEmpty: "In den letzten acht Wochen wurde noch keine Aufgabe erledigt.", stBenefitTitle: "Erledigter Nutzen je Woche", stBenefitSub: "erledigte Aufgaben nach Nutzen", stNoBenefit: "ohne Angabe",
+    stBenefitTip: (w, hi, me, lo, no) => `${w}: ${hi} hoch · ${me} mittel · ${lo} gering · ${no} ohne Angabe`,
+    stEffortLeadTitle: "Liegezeit je Aufwand", stEffortLeadSub: "Median, erledigte Aufgaben",
+    stEffortLeadNote: "Lange Liegezeit bei kleinem Aufwand heißt: Kleines bleibt liegen – ein Fall für den Zeit-Filter in Next.",
+    stEffortOpen: (n) => `${n} offen`,
+    stForecastTitle: "Prognose", stForecastSub: "grob: offener Aufwand ÷ Tempo der letzten vier Wochen",
+    stForecastLine: (who, hrs, wks) => `${who}: rund ${hrs} offen – beim bisherigen Tempo ${wks}.`,
+    stForecastNoPace: (who, hrs) => `${who}: rund ${hrs} offen – für ein Tempo fehlen noch erledigte Aufgaben mit Aufwand.`,
+    stForecastUnsized: (n) => ` Dazu ${n} ohne Aufwand.`,
+    stWeeks: (n) => (n < 1 ? "unter einer Woche" : n < 1.5 ? "etwa eine Woche" : `etwa ${n} Wochen`),
+    stForecastNote: "Gerechnet mit typischen Werten je Klasse: XS 3 Min. · S 15 Min. · M 1 Std. · L 4 Std. · XL 12 Std.",
     stRange: "Zeitraum", stLast: (n) => `${n} Tage`, stSince: "Seit Beginn", stKpis: "Kennzahlen",
     stOpenNow: "Offen jetzt", stOpenDelta: (d, n) => `${d} in ${n} Tagen`, stDone: "Erledigt",
     stPerDay: (avg, made) => `Ø ${avg} pro Tag · ${made} angelegt`, stLead: "Durchlaufzeit (Median)",
@@ -997,7 +1063,19 @@ const STRINGS = {
     nextAge: (d) => (d <= 0 ? "Open since today" : d === 1 ? "Open since yesterday" : `Open for ${d} days`),
     nextEmpty: "Nothing open for you 🎉", nextWaiting: (n) => `${n === 1 ? "1 more item is" : n + " more are"} still waiting for others.`,
     nextAi: (n) => `With the AI: ${n} open.`, nextHint: "“Later” moves the item to the end without changing it.",
-    nextOrder: "Order: in progress · holds up others · decisions before actions · oldest first.",
+    nextOrder: "Order: in progress first, then benefit relative to effort. An item is worth at least as much as what waits for it; without an estimate it counts as “medium” or M, decisions count as S. On a tie: decisions before actions, oldest first.",
+    // Effort and benefit (D21, methodology v2.10)
+    effort: "Effort", benefit: "Benefit", sizeNone: "– not set –",
+    effortLabels: { XS: "≤ 5 min", S: "≤ 30 min", M: "≤ 2 h", L: "≤ 1 day", XL: "more than a day" },
+    benefitLabels: { low: "low", medium: "medium", high: "high" },
+    sizeEstimated: "Estimated by the AI", sizeConfirm: "Confirm the estimate", sizeOk: "✓ Fits",
+    sizeConfirmed: (r) => `${r}: effort and benefit confirmed`, sizeSaved: (r) => `${r}: saved`,
+    sizePill: (est) => (est ? "Effort · benefit – estimated by the AI; open to confirm" : "Effort · benefit"),
+    sizeDecision: "Decisions have no effort and benefit of their own: they inherit the benefit of the items waiting for them.",
+    nextBenefit: (b) => `Benefit ${b}`, nextBenefitVia: (b, r) => `Benefit ${b} via ${r}`,
+    nextTime: "Time", nextTimeTitle: "Only show items that fit into this time",
+    nextTimeOpts: { "": "any", 5: "5 min", 30: "30 min", 120: "2 h" },
+    nextTimeHidden: (n) => `${n} ${n === 1 ? "item" : "items"} without effort hidden.`, nextTimeEmpty: "Nothing fits into this time.",
     doneToast: (ref) => `${ref} done`, decidedToast: (ref) => `${ref} decided`, undo: "Undo",
     // Chains (A55)
     modeBoard: "Board", modeDeps: "Chains", modeDepsTitle: "Chains: what waits for what",
@@ -1035,7 +1113,24 @@ const STRINGS = {
     // Statistics (A58)
     menuStats: "📊 Statistics", stTitle: "Statistics", stBack: "← Board", stLoading: "Counting …",
     stEmpty: "No items yet – nothing to count here.",
-    stTabOverview: "Overview", stTabWeek: "Weekly report", stTabFlow: "Flow & age",
+    stTabOverview: "Overview", stTabWeek: "Weekly report", stTabFlow: "Flow & age", stTabValue: "Effort & benefit",
+    stMatrixTitle: "Benefit × effort", stMatrixSub: "open actions and ideas",
+    stQuads: { quick: "Quick wins", big: "Big bets", fill: "Fillers", sink: "Time sinks" },
+    stMatrixEmpty: "No open items with effort and benefit yet. The AI estimates both when adding an item; confirm or change them in Next or in the item.",
+    stMatrixNote: (u, e) => [u ? `${u} open without a full estimate` : "", e ? `${e} not confirmed yet (dashed)` : ""].filter(Boolean).join(" · "),
+    stMatrixHover: "Point at a reference; a click opens the item.",
+    stMatrixTip: (r, t, est) => `${r} ${t}${est ? " – estimated" : ""}`,
+    stBenefitEmpty: "No action was finished in the last eight weeks.", stBenefitTitle: "Benefit done per week", stBenefitSub: "finished actions by benefit", stNoBenefit: "not set",
+    stBenefitTip: (w, hi, me, lo, no) => `${w}: ${hi} high · ${me} medium · ${lo} low · ${no} not set`,
+    stEffortLeadTitle: "Lead time per effort", stEffortLeadSub: "median, finished actions",
+    stEffortLeadNote: "A long lead time for small effort means small things get left lying – a case for the time filter in Next.",
+    stEffortOpen: (n) => `${n} open`,
+    stForecastTitle: "Forecast", stForecastSub: "rough: open effort ÷ pace of the last four weeks",
+    stForecastLine: (who, hrs, wks) => `${who}: about ${hrs} open – at the pace so far ${wks}.`,
+    stForecastNoPace: (who, hrs) => `${who}: about ${hrs} open – a pace needs finished actions with effort first.`,
+    stForecastUnsized: (n) => ` Plus ${n} without effort.`,
+    stWeeks: (n) => (n < 1 ? "under a week" : n < 1.5 ? "about a week" : `about ${n} weeks`),
+    stForecastNote: "Calculated with typical values per class: XS 3 min · S 15 min · M 1 h · L 4 h · XL 12 h.",
     stRange: "Range", stLast: (n) => `${n} days`, stSince: "Since the start", stKpis: "Key figures",
     stOpenNow: "Open now", stOpenDelta: (d, n) => `${d} in ${n} days`, stDone: "Done",
     stPerDay: (avg, made) => `Ø ${avg} per day · ${made} created`, stLead: "Lead time (median)",
@@ -1122,6 +1217,7 @@ const state = {
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
   // Next: deferred items ("Später", this page only), the item picked from the list, unsent outcomes per item
   nextLater: [], nextPick: null, nextDraft: {},
+  nextTime: ["5", "30", "120"].includes(store.get("cotrack.nextTime")) ? store.get("cotrack.nextTime") : "", // Next: time filter in minutes
   mode: MODES.includes(store.get("cotrack.mode")) ? store.get("cotrack.mode") : "board",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
@@ -1402,6 +1498,30 @@ const checksHead = (checks) => {
   ];
 };
 
+/* Effort and benefit (D21, methodology v2.10): only actions and ideas; decisions inherit the benefit of what waits for
+   them. Same lists as SIZED_KINDS / EFFORTS / BENEFITS in src/worker.js. */
+const SIZED_KINDS = ["A", "I"], EFFORTS = ["XS", "S", "M", "L", "XL"], BENEFITS = ["low", "medium", "high"];
+const BENEFIT_PTS = { low: 1, medium: 2, high: 3 };
+const EFFORT_COST = { XS: 1, S: 2, M: 3, L: 5, XL: 8 }; // rank weight, not hours: an XS should not outrank everything
+const EFFORT_MIN = { XS: 5, S: 30, M: 120, L: 480, XL: Infinity }; // upper bound, for the time filter in Next
+const isSizable = (it) => SIZED_KINDS.includes(it.kind);
+const isEstimate = (it) => Boolean(it.effort || it.benefit) && it.sized_by !== "user";
+const benefitWord = (b) => tr("benefitLabels." + b);
+function sizePill(it) {
+  if (!it.effort && !it.benefit) return null;
+  const est = isEstimate(it);
+  const text = [it.effort ? "⏱ " + it.effort : "", it.benefit ? "★ " + benefitWord(it.benefit) : ""].filter(Boolean).join(" · ");
+  return h("span", { class: "pill size" + (est ? " est" : ""), title: tr("sizePill", est) }, text + (est ? " ?" : ""));
+}
+// One tap in Next sets a value; sending both values (also unchanged) records the human behind them, i.e. confirms.
+async function saveSize(it, body, confirmOnly) {
+  try {
+    await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
+    toast(tr(confirmOnly ? "sizeConfirmed" : "sizeSaved", refLabel(it)));
+  } catch (err) { toast(tr("error", err.message)); }
+  refresh(false);
+}
+
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
   const meta = [];
@@ -1417,6 +1537,8 @@ function renderItem(it, k, before) {
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
   const checks = itemChecks(it);
   if (checks.length) meta.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
+  const size = sizePill(it);
+  if (size) meta.push(size);
   if (it.due) meta.push(h("span", { class: "pill" }, "📅 " + it.due));
   if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
     ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + tr("source"))
@@ -1445,8 +1567,10 @@ async function renderFooter() {
 
 /* ---------------------------------------------------------- Next (A53) */
 // One item at a time: your open A and D (with the AI token: the AI's), ready to act on – nothing it waits for is still
-// open. Order: in progress · holds up others (most first) · kind order (D before A) · oldest first. "Später" moves
-// an item to the end for this page only; nothing is written.
+// open. Order (D21): in progress first, then benefit ÷ effort, where an item is worth at least as much as what waits for
+// it (a decision has no benefit of its own) plus a little for each item it holds up; then kind order (D before A),
+// oldest first. "Später" moves an item to the end for this page only; nothing is written. The time filter keeps what
+// fits into the chosen minutes (decisions count as S).
 const refList = (s) => String(s || "").split(",").map((r) => r.trim()).filter(Boolean);
 const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const daysAgo = (iso) => Math.round((dayStart(new Date()) - dayStart(new Date(iso))) / 864e5);
@@ -1475,15 +1599,44 @@ function nextQueue() {
     const blocked = i.status === "blocked" || refList(i.waiting_on).some((r) => openKeys.has(i.project_slug + ":" + r));
     (blocked ? waiting : mine).push(i);
   }
-  const rank = (i) => [i.status === "doing" ? 0 : 1, -(waiters.get(itemKey(i)) || []).length, kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
+  // benefit along the chain: [points, ref it comes from, known] – the item's own, or the best of what waits for it. An
+  // action or idea without an estimate counts as medium already here, so a low-benefit item waiting for it cannot pull it
+  // below an unsized item that frees nothing; a decision has no value of its own (0) and only inherits.
+  const byKey = new Map(open.map((i) => [itemKey(i), i]));
+  const memo = new Map();
+  const chainBenefit = (i, seen = new Set()) => {
+    const key = itemKey(i);
+    if (memo.has(key)) return memo.get(key);
+    const known = Boolean(i.benefit && isSizable(i));
+    let best = [known ? BENEFIT_PTS[i.benefit] : isSizable(i) ? BENEFIT_PTS.medium : 0, null, known];
+    if (seen.has(key)) return best; // cycle
+    seen.add(key);
+    for (const r of waiters.get(key) || []) {
+      const w = byKey.get(i.project_slug + ":" + r);
+      const [pts, , k] = w ? chainBenefit(w, seen) : [0, null, false];
+      if (pts > best[0] || (pts === best[0] && k && !best[2])) best = [pts, r, k];
+    }
+    memo.set(key, best);
+    return best;
+  };
+  const cost = (i) => (i.kind === "D" ? EFFORT_COST.S : EFFORT_COST[isSizable(i) && i.effort] || EFFORT_COST.M);
+  const score = (i) => {
+    const holds = Math.min((waiters.get(itemKey(i)) || []).length, 3) * 0.5;
+    return Math.round(((chainBenefit(i)[0] || BENEFIT_PTS.medium) + holds) / cost(i) * 1000) / 1000;
+  };
+  const rank = (i) => [i.status === "doing" ? 0 : 1, -score(i), kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
   mine.sort((a, b) => {
     const x = rank(a), y = rank(b);
     for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] < y[n] ? -1 : 1;
     return 0;
   });
   state.nextLater = state.nextLater.filter((k) => mine.some((i) => itemKey(i) === k));
-  const queue = [...mine.filter((i) => !state.nextLater.includes(itemKey(i))),
-    ...state.nextLater.map((k) => mine.find((i) => itemKey(i) === k))];
+  const limit = Number(state.nextTime) || 0;
+  const minutes = (i) => (i.kind === "D" ? EFFORT_MIN.S : isSizable(i) && i.effort ? EFFORT_MIN[i.effort] : null);
+  const unsized = limit ? mine.filter((i) => minutes(i) == null).length : 0;
+  const fits = (i) => !limit || (minutes(i) != null && minutes(i) <= limit);
+  const queue = [...mine.filter((i) => fits(i) && !state.nextLater.includes(itemKey(i))),
+    ...state.nextLater.map((k) => mine.find((i) => itemKey(i) === k)).filter(fits)];
   const why = (i) => {
     const parts = [];
     if (i.status === "doing") parts.push(tr("nextDoing"));
@@ -1491,30 +1644,48 @@ function nextQueue() {
     if (w?.length) parts.push(tr("nextBlocks", w.join(", ")));
     const freed = refList(i.waiting_on).filter((r) => !openKeys.has(i.project_slug + ":" + r));
     if (freed.length) parts.push(tr("nextFreed", freed.join(", ")));
+    const [pts, via, known] = chainBenefit(i);
+    const effort = isSizable(i) && i.effort ? tr("effortLabels." + i.effort) : "";
+    if (known) { // an assumed "medium" is not shown as if someone had rated it
+      const word = benefitWord(BENEFITS[pts - 1]);
+      parts.push((via ? tr("nextBenefitVia", word, via) : tr("nextBenefit", word)) + (effort ? ", " + effort : ""));
+    } else if (isSizable(i) && i.benefit) parts.push(tr("nextBenefit", benefitWord(i.benefit)) + (effort ? ", " + effort : ""));
+    else if (effort) parts.push(effort);
     if (!parts.length) parts.push(tr("nextAge", daysAgo(i.created_at)));
     return parts.join(" · ");
   };
-  return { queue, waiting, others, why };
+  return { queue, waiting, others, why, unsized, limit, inherits: (i) => chainBenefit(i)[2] };
 }
 
 function renderNext() {
-  const { queue, waiting, others, why } = nextQueue();
+  const { queue, waiting, others, why, unsized, limit, inherits } = nextQueue();
   const box = $("#next");
   const scope = state.project === ALL ? tr("allProjects") : currentProject()?.name || "";
   const cur = queue.find((i) => itemKey(i) === state.nextPick) || queue[0];
   const notes = [
+    unsized ? h("p", { class: "small" }, tr("nextTimeHidden", unsized)) : null,
     waiting.length ? h("p", { class: "small" }, tr("nextWaiting", waiting.length)) : null,
     others && state.actor !== "ai" ? h("p", { class: "small" }, tr("nextAi", others)) : null,
   ];
+  const opts = tr("nextTimeOpts");
+  const head = h("div", { class: "nx-head" },
+    h("span", null, tr("nextFor", queue.length, scope)),
+    h("span", { class: "spacer" }),
+    h("span", { class: "nx-time" },
+      h("span", { id: "nxTimeL" }, tr("nextTime")),
+      h("div", { class: "chips", role: "group", "aria-labelledby": "nxTimeL", title: tr("nextTimeTitle") },
+        ["", "5", "30", "120"].map((v) => h("button", { type: "button", "aria-pressed": String(state.nextTime === v), onclick: () => {
+          state.nextTime = v; store.set("cotrack.nextTime", v); state.nextPick = null; renderNext();
+        } }, opts[v])))));
   if (!cur) {
-    box.replaceChildren(h("p", { class: "nx-head" }, tr("nextFor", 0, scope)),
-      h("section", { class: "nx-card nx-empty" }, h("h2", null, tr("nextEmpty")), notes));
+    box.replaceChildren(head,
+      h("section", { class: "nx-card nx-empty" }, h("h2", null, tr(limit ? "nextTimeEmpty" : "nextEmpty")), notes));
     return;
   }
   const rest = queue.filter((i) => i !== cur);
   box.replaceChildren(
-    h("p", { class: "nx-head" }, tr("nextFor", queue.length, scope)),
-    nextCard(cur, why(cur)),
+    head,
+    nextCard(cur, why(cur), inherits(cur)),
     h("aside", { class: "nx-side" },
       rest.length ? h("section", { class: "col" },
         h("header", { class: "col-head" }, h("h2", null, tr("nextAfter")), h("span", { class: "count" }, rest.length)),
@@ -1527,7 +1698,7 @@ function renderNext() {
       h("p", { class: "small" }, tr("nextHint"))));
 }
 
-function nextCard(it, whyText) {
+function nextCard(it, whyText, inherits) {
   const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
   const key = itemKey(it);
   const decision = it.kind === "D"; // decisions record their outcome (methodology)
@@ -1546,6 +1717,7 @@ function nextCard(it, whyText) {
         ? h("a", { class: "pill", href: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + tr("source")) : null),
     h("h2", { class: "nx-title", id: "nxTitle" }, it.title),
     h("p", { class: "nx-why" }, whyText),
+    sizeControls(it, inherits),
     nxChecks.length ? (nxRest ? h("p", { class: "nx-body" }, nxRest) : null) : it.body ? h("p", { class: "nx-body" }, it.body) : null,
     nxChecks.length ? h("div", { class: "checks" }, checksHead(nxChecks),
       nxChecks.map((c) => h("label", { class: "chk" + (c.done ? " on" : "") },
@@ -1559,6 +1731,22 @@ function nextCard(it, whyText) {
       } }, tr("nextLater")),
       h("span", { class: "spacer" }),
       h("button", { type: "button", class: "btn", onclick: () => openEdit(it) }, tr("nextEdit"))));
+}
+
+// Effort and benefit on the Next card: one tap sets (or, tapped again, clears) a value; "Passt" confirms an estimate.
+function sizeControls(it, inherits) {
+  if (it.kind === "D") return inherits ? null : h("p", { class: "small" }, tr("sizeDecision")); // the why line names the benefit
+  if (!isSizable(it)) return null;
+  const est = isEstimate(it);
+  const seg = (field, values, label) => h("div", { class: "nx-seg", role: "group", "aria-label": tr(field) },
+    h("span", null, tr(field)),
+    values.map((v) => h("button", { type: "button", "aria-pressed": String(it[field] === v), title: label(v),
+      onclick: () => saveSize(it, { [field]: it[field] === v ? "" : v }) }, field === "effort" ? v : label(v))));
+  return h("div", { class: "nx-size" + (est ? " est" : "") },
+    seg("effort", EFFORTS, (v) => `${v}: ${tr("effortLabels." + v)}`),
+    seg("benefit", BENEFITS, benefitWord),
+    est ? h("div", { class: "nx-est" }, h("span", null, tr("sizeEstimated")),
+      h("button", { type: "button", class: "btn", onclick: () => saveSize(it, { effort: it.effort || "", benefit: it.benefit || "" }, true) }, tr("sizeOk"))) : null);
 }
 
 // Tick a sub-item right away (server-side check/uncheck, so nothing else in the description is touched). It is named by its
@@ -1694,6 +1882,9 @@ function histDetails(e) {
   if ("owner" in c) parts.push(`${tr("responsible")}: ${c.owner ? ownerLabel(c.owner) : "–"}`);
   if ("waiting_on" in c) parts.push(`${tr("fWaiting")}: ${c.waiting_on ? c.waiting_on.replace(/,/g, ", ") : "–"}`);
   if ("due" in c) parts.push(`${tr("fDue")}: ${c.due || "–"}`);
+  if ("effort" in c) parts.push(`${tr("effort")}: ${c.effort || "–"}`);
+  if ("benefit" in c) parts.push(`${tr("benefit")}: ${c.benefit ? benefitWord(c.benefit) : "–"}`);
+  if (c.sized_by === "user" && !("effort" in c) && !("benefit" in c)) parts.push(tr("sizeConfirmed", e.item_ref));
   if ("short" in c) parts.push(`${tr("fShort")}: ${c.short || "–"}`);
   if ("title" in c) parts.push(ev.titleChanged);
   if ("body" in c) parts.push(ev.bodyChanged);
@@ -1750,7 +1941,7 @@ document.addEventListener("keydown", (e) => {
 // Hidden in ☰ → Projekte → Statistiken; replaces bar and board while open and follows the live poll.
 const stats = { data: null, req: 0, tip: null };
 state.stats = false;
-state.statsTab = ["overview", "week", "flow"].includes(store.get("cotrack.statsTab")) ? store.get("cotrack.statsTab") : "overview";
+state.statsTab = ["overview", "week", "flow", "value"].includes(store.get("cotrack.statsTab")) ? store.get("cotrack.statsTab") : "overview";
 state.statsRange = ["7", "30", "all"].includes(store.get("cotrack.statsRange")) ? store.get("cotrack.statsRange") : "30";
 const SVG_NS = "http://www.w3.org/2000/svg";
 function svg(tag, attrs, ...kids) {
@@ -1814,7 +2005,7 @@ window.addEventListener("resize", () => { if (state.stats) { clearTimeout(statsR
 function renderStats() {
   const box = $("#stats");
   const scope = state.project === ALL ? tr("allProjects") : currentProject() ? projectLabel(currentProject()).replace(/ \(\d+\)$/, "") : "";
-  const tabs = [["overview", tr("stTabOverview")], ["week", tr("stTabWeek")], ["flow", tr("stTabFlow")]];
+  const tabs = [["overview", tr("stTabOverview")], ["week", tr("stTabWeek")], ["flow", tr("stTabFlow")], ["value", tr("stTabValue")]];
   const head = h("div", { class: "st-head" },
     h("button", { type: "button", class: "btn", onclick: closeStats }, tr("stBack")),
     h("h1", { id: "statsHead" }, tr("stTitle")),
@@ -1826,7 +2017,8 @@ function renderStats() {
   const d = stats.data;
   if (!d) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stLoading")));
   if (!d.items_total) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("stEmpty")));
-  const body = state.statsTab === "week" ? statsWeek(d) : state.statsTab === "flow" ? statsFlow(d) : statsOverview(d);
+  const body = state.statsTab === "week" ? statsWeek(d) : state.statsTab === "flow" ? statsFlow(d)
+    : state.statsTab === "value" ? statsValue(d) : statsOverview(d);
   box.replaceChildren(head, ...body);
 }
 
@@ -2081,6 +2273,90 @@ function ageCard(d) {
     lanes.length ? lanes : h("p", { class: "st-note" }, tr("nothingOpen")),
     lanes.length ? h("div", { class: "st-axis" }, h("span"), h("div", null, h("span", null, tr("today")), h("span", null, tr("stDaysOld", Math.round(maxAge / 2))), h("span", null, tr("stDaysOld", maxAge)))) : null);
 }
+/* effort & benefit (D21): matrix of the open actions and ideas, benefit done per week, lead time per effort, forecast */
+const QUADS = { quick: "var(--q-quick)", big: "var(--q-big)", fill: "var(--surface-2)", sink: "var(--q-sink)" };
+function quadOf(effort, benefit) {
+  const small = effort === "XS" || effort === "S", large = effort === "L" || effort === "XL";
+  if (small) return benefit === "low" ? "fill" : "quick";
+  if (large) return benefit === "high" ? "big" : benefit === "low" ? "sink" : null;
+  return null;
+}
+function statsValue(d) {
+  const z = d.sizing;
+  if (!z) return [h("p", { class: "st-note" }, tr("stLoading"))];
+  return [h("div", { class: "st-grid" }, matrixCard(z), benefitWeeksCard(z), effortLeadCard(z), forecastCard(z))];
+}
+function matrixCard(z) {
+  const tip = h("div", { class: "st-tip" }, tr("stMatrixHover"));
+  const note = tr("stMatrixNote", z.unsized, z.estimated);
+  const cells = [];
+  cells.push(h("span"), ...EFFORTS.map((e) => h("span", { class: "hd", title: tr("effortLabels." + e) }, e)));
+  for (const b of [...BENEFITS].reverse()) {
+    cells.push(h("span", { class: "rh" }, benefitWord(b)));
+    for (const e of EFFORTS) {
+      const q = quadOf(e, b);
+      const here = z.matrix.filter((m) => m.effort === e && m.benefit === b);
+      cells.push(h("div", { class: "cell", style: q ? `background:${QUADS[q]}` : null, title: q ? tr("stQuads." + q) : null },
+        here.map((m) => {
+          const label = tr("stMatrixTip", statRef(m), m.title, m.estimated);
+          return h("button", { type: "button", class: "ref" + (m.estimated ? " est" : ""), style: `--kc:${kindColor(m.kind)}`, "aria-label": label, title: label,
+            onmouseenter: () => { tip.textContent = label; }, onfocus: () => { tip.textContent = label; }, onclick: () => openRef(m) }, statRef(m));
+        })));
+    }
+  }
+  return h("section", { class: "st-card wide" },
+    h("h2", null, tr("stMatrixTitle"), " ", h("span", { class: "sub" }, tr("stMatrixSub"))),
+    z.matrix.length ? [tip,
+      h("div", { class: "st-matrix", role: "group", "aria-label": tr("stMatrixTitle") }, cells),
+      h("div", { class: "st-legend" }, Object.keys(QUADS).map((q) => h("span", null, h("i", { class: "st-sw", style: `background:${QUADS[q]};outline:1px solid var(--line)` }), tr("stQuads." + q))))]
+      : h("p", { class: "st-note" }, tr("stMatrixEmpty")),
+    note ? h("p", { class: "st-note" }, note) : null);
+}
+function benefitWeeksCard(z) {
+  const levels = [["high", "var(--c-done)"], ["medium", "var(--b-medium)"], ["low", "var(--b-low)"], ["none", "var(--c-made)"]];
+  const max = Math.max(1, ...z.weeks.map((w) => w.high + w.medium + w.low + w.none));
+  const tip = h("div", { class: "st-tip" }, tr("stHover"));
+  const text = (w) => tr("stBenefitTip", tr("stWeekOf", dayDate(w.from)), w.high, w.medium, w.low, w.none);
+  const head = h("h2", null, tr("stBenefitTitle"), " ", h("span", { class: "sub" }, tr("stBenefitSub")));
+  if (!z.weeks.some((w) => w.high + w.medium + w.low + w.none)) return h("section", { class: "st-card" }, head, h("p", { class: "st-note" }, tr("stBenefitEmpty")));
+  return h("section", { class: "st-card" },
+    head,
+    tip,
+    h("div", { class: "st-stackcols" }, z.weeks.map((w) => h("button", { type: "button", "aria-label": text(w),
+      onmouseenter: () => { tip.textContent = text(w); }, onfocus: () => { tip.textContent = text(w); } },
+      levels.map(([k, c]) => (w[k] ? h("i", { style: `height:${w[k] / max * 100}%;background:${c}` }) : null))))),
+    h("div", { class: "st-xl", "aria-hidden": "true" }, z.weeks.map((w) => h("span", null, dayDate(w.from, { day: "numeric", month: "numeric" })))),
+    h("div", { class: "st-legend" }, levels.map(([k, c]) => h("span", null, h("i", { class: "st-sw", style: `background:${c}` }),
+      k === "none" ? tr("stNoBenefit") : benefitWord(k)))));
+}
+function effortLeadCard(z) {
+  const max = Math.max(0.01, ...z.by_effort.map((r) => r.median || 0));
+  return h("section", { class: "st-card" },
+    h("h2", null, tr("stEffortLeadTitle"), " ", h("span", { class: "sub" }, tr("stEffortLeadSub"))),
+    h("div", { class: "st-bars" }, z.by_effort.map((r) => h("div", { class: "st-bar" },
+      h("span", { title: tr("effortLabels." + r.effort) }, `${r.effort} · ${tr("stEffortOpen", r.open)}`),
+      h("span", { class: "track" }, r.median != null ? h("i", { style: `width:${r.median / max * 100}%;background:var(--c-done)` }) : null),
+      h("b", { title: r.n ? tr("stLeadN", r.n) : null }, r.median != null ? span(r.median) : "–")))),
+    h("p", { class: "st-note" }, tr("stEffortLeadNote")));
+}
+function forecastCard(z) {
+  const hours = (x) => (x < 1 ? tr("stMin", Math.max(5, Math.round(x * 60 / 5) * 5)) : tr("stHours", num(x, x < 10 ? 1 : 0)));
+  const line = (owner) => {
+    const f = z.forecast[owner];
+    if (!f || (!f.open_sized && !f.open_unsized)) return null;
+    const who = `${owner === "ai" ? "🤖" : "👤"} ${OWNER_LABELS[owner]}`;
+    const main = f.basis >= 3 && f.pace_hours_week > 0
+      ? tr("stForecastLine", who, hours(f.open_hours), tr("stWeeks", Math.round(f.open_hours / f.pace_hours_week)))
+      : tr("stForecastNoPace", who, hours(f.open_hours));
+    return h("p", null, main + (f.open_unsized ? tr("stForecastUnsized", f.open_unsized) : ""));
+  };
+  const lines = ["user", "ai"].map(line).filter(Boolean);
+  return h("section", { class: "st-card st-fc" },
+    h("h2", null, tr("stForecastTitle"), " ", h("span", { class: "sub" }, tr("stForecastSub"))),
+    lines.length ? lines : h("p", { class: "st-note" }, tr("nothingOpen")),
+    h("p", { class: "st-note" }, tr("stForecastNote")));
+}
+
 function waitCard(d) {
   const list = d.waits.list;
   const max = Math.max(1, ...list.map((w) => w.days));
@@ -2832,6 +3108,16 @@ function openEdit(it) {
     source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
+  // Effort and benefit (actions and ideas): an untouched estimate stays an estimate unless "confirm" is ticked.
+  const sizable = isSizable(it), est = isEstimate(it);
+  const sz = sizable ? {
+    effort: h("select", null, h("option", { value: "" }, tr("sizeNone")),
+      EFFORTS.map((v) => h("option", { value: v, selected: it.effort === v }, `${v} – ${tr("effortLabels." + v)}`))),
+    benefit: h("select", null, h("option", { value: "" }, tr("sizeNone")),
+      BENEFITS.map((v) => h("option", { value: v, selected: it.benefit === v }, benefitWord(v)))),
+    confirm: est ? h("input", { type: "checkbox" }) : null,
+  } : null;
+  if (sz?.confirm) for (const el of [sz.effort, sz.benefit]) el.addEventListener("change", () => { sz.confirm.checked = true; });
   const checks = isTask ? parts.checks.map((c) => ({ ...c })) : [];
   const checkBox = isTask ? h("div", { class: "checks" }) : null;
   const addInput = h("input", { class: "check-add", maxlength: 300, placeholder: tr("checkAdd"), "aria-label": tr("checkAdd"),
@@ -2867,6 +3153,9 @@ function openEdit(it) {
       // Untouched: send the description exactly as it was (no reformatting).
       body.body = f.body.value === parts.rest && same(checks) === same(parts.checks) ? it.body || "" : joinBody(f.body.value, checks);
     }
+    if (sz && (sz.effort.value !== (it.effort || "") || sz.benefit.value !== (it.benefit || "") || sz.confirm?.checked)) {
+      body.effort = sz.effort.value; body.benefit = sz.benefit.value;
+    }
     try {
       await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
       closeDialog(); toast(tr("saved", it.ref)); refresh(false);
@@ -2889,6 +3178,8 @@ function openEdit(it) {
     field(tr("fTitle"), f.title),
     field(tr("fBody"), f.body),
     checkBox,
+    sz ? h("div", { class: "row2" }, field(tr("effort"), sz.effort), field(tr("benefit"), sz.benefit)) : null,
+    sz?.confirm ? h("label", { class: "chk size-confirm" }, sz.confirm, h("span", null, `${tr("sizeEstimated")} – ${tr("sizeConfirm")}`)) : null,
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
     h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
