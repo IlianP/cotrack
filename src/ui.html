@@ -1599,19 +1599,22 @@ function nextQueue() {
     const blocked = i.status === "blocked" || refList(i.waiting_on).some((r) => openKeys.has(i.project_slug + ":" + r));
     (blocked ? waiting : mine).push(i);
   }
-  // benefit known along the chain: [points, ref it comes from] – the item's own, or the best of what waits for it
+  // benefit along the chain: [points, ref it comes from, known] – the item's own, or the best of what waits for it. An
+  // action or idea without an estimate counts as medium already here, so a low-benefit item waiting for it cannot pull it
+  // below an unsized item that frees nothing; a decision has no value of its own (0) and only inherits.
   const byKey = new Map(open.map((i) => [itemKey(i), i]));
   const memo = new Map();
   const chainBenefit = (i, seen = new Set()) => {
     const key = itemKey(i);
     if (memo.has(key)) return memo.get(key);
-    let best = [i.benefit && isSizable(i) ? BENEFIT_PTS[i.benefit] : 0, null];
+    const known = Boolean(i.benefit && isSizable(i));
+    let best = [known ? BENEFIT_PTS[i.benefit] : isSizable(i) ? BENEFIT_PTS.medium : 0, null, known];
     if (seen.has(key)) return best; // cycle
     seen.add(key);
     for (const r of waiters.get(key) || []) {
       const w = byKey.get(i.project_slug + ":" + r);
-      const [pts] = w ? chainBenefit(w, seen) : [0];
-      if (pts > best[0]) best = [pts, r];
+      const [pts, , k] = w ? chainBenefit(w, seen) : [0, null, false];
+      if (pts > best[0] || (pts === best[0] && k && !best[2])) best = [pts, r, k];
     }
     memo.set(key, best);
     return best;
@@ -1641,16 +1644,17 @@ function nextQueue() {
     if (w?.length) parts.push(tr("nextBlocks", w.join(", ")));
     const freed = refList(i.waiting_on).filter((r) => !openKeys.has(i.project_slug + ":" + r));
     if (freed.length) parts.push(tr("nextFreed", freed.join(", ")));
-    const [pts, via] = chainBenefit(i);
+    const [pts, via, known] = chainBenefit(i);
     const effort = isSizable(i) && i.effort ? tr("effortLabels." + i.effort) : "";
-    if (pts) {
+    if (known) { // an assumed "medium" is not shown as if someone had rated it
       const word = benefitWord(BENEFITS[pts - 1]);
       parts.push((via ? tr("nextBenefitVia", word, via) : tr("nextBenefit", word)) + (effort ? ", " + effort : ""));
-    } else if (effort) parts.push(effort);
+    } else if (isSizable(i) && i.benefit) parts.push(tr("nextBenefit", benefitWord(i.benefit)) + (effort ? ", " + effort : ""));
+    else if (effort) parts.push(effort);
     if (!parts.length) parts.push(tr("nextAge", daysAgo(i.created_at)));
     return parts.join(" · ");
   };
-  return { queue, waiting, others, why, unsized, limit, inherits: (i) => chainBenefit(i)[0] > 0 };
+  return { queue, waiting, others, why, unsized, limit, inherits: (i) => chainBenefit(i)[2] };
 }
 
 function renderNext() {
