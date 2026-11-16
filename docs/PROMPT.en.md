@@ -1,4 +1,4 @@
-# Custom prompt (Claude & ChatGPT) – Methodology v2.10 (prompt text unchanged since v2.9)
+# Custom prompt (Claude & ChatGPT) – Methodology v2.11 (prompt text unchanged since v2.9)
 
 **English** · [Deutsch](PROMPT.md)
 
@@ -45,6 +45,8 @@ Replace the personal settings of both programs with these parts (part 1 followed
 T is dropped; actions (A) belong to you or the AI, visible from "👤:"/"🤖:"; decisions (D) are a category of their own;
 ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
 v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
+v2.11: **Short titles** (at most 80 characters, details in the description) – no change to the prompt, nothing to reinstall.
+The rule lives in the MCP server's instructions and the tool descriptions.
 v2.10: **Effort and benefit** – no change to the prompt, nothing to reinstall. The rule (the AI estimates both for actions
 and ideas) lives in the MCP server's instructions and the tool descriptions.
 v2.9: **Shorter** – same rules, worded more tightly (about 3,900 instead of 5,000 characters), so the prompt plus your own

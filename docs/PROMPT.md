@@ -1,4 +1,4 @@
-# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.10 (Prompt-Text unverändert seit v2.9)
+# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.11 (Prompt-Text unverändert seit v2.9)
 
 [English](PROMPT.en.md) · **Deutsch**
 
@@ -46,6 +46,8 @@ Diese Teile in den persönlichen Einstellungen beider Programme ersetzen (Teil 1
 T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤:“/„🤖:“; Entscheidungen (D) sind eine eigene Kategorie;
 Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
 v2.3: Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben.
+v2.11: **Kurze Titel** (höchstens 80 Zeichen, Details in die Beschreibung) – keine Änderung am Prompt, nichts neu einzuspielen.
+Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
 v2.10: **Aufwand und Nutzen** – keine Änderung am Prompt, nichts neu einzuspielen. Die Regel (die KI schätzt beides bei
 Aufgaben und Ideen mit) steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
 v2.9: **Kürzer** – gleiche Regeln, knapper formuliert (rund 4.100 statt 5.400 Zeichen), damit der Prompt samt eigener Regeln

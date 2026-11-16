@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.10 (as of 14 November 2026)
+## Current: Methodology v2.11 (as of 16 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -77,6 +77,16 @@
     class and a rough forecast.
   - Footer and prompt stay unchanged: the rule lives in the MCP server's instructions (no room left in the ChatGPT prompt).
     PrioFlow uses the stored values and fills in missing ones.
+- **Short titles (v2.11, decision D23):** The title says in **at most 80 characters** what to do, decide or watch out for.
+  Everything else goes into the description: for D the options with a recommendation, for A steps or instructions, for W impact
+  and countermeasure, plus reasons, figures, deadlines and progress – progress is never appended to the title. Reason: an
+  analysis on 15 November found titles over 100 characters in 169 of 231 open items, with the details in the title instead of
+  the description.
+  - No hard limit: from 100 characters on, the MCP server answers with a note (the item is saved anyway), and the web app counts
+    along in the edit dialog from 80 characters on.
+  - In item lists (`cotrack_status`, `cotrack_list`, `format=text`) **📝** shows that an item has a description; the AI fetches
+    it with `cotrack_get` when needed. So nothing has to go into the title just so the next session sees it.
+  - Like the footer, the prompt stays unchanged; the rule lives in the server's instructions and tool descriptions.
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
@@ -84,6 +94,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.11 does not change the prompt (the title rule lives in the server's instructions).
   v2.10 does not change the prompt (effort and benefit are covered by the server's instructions).
   v2.9 adds no new rule: the prompt text is just shorter (about 3,900 characters, so together with your own rules it fits
   under ChatGPT's 5,000-character limit).

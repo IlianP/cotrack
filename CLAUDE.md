@@ -34,6 +34,11 @@
   only when the user named or confirmed them). Decisions inherit benefit via chains (computed in Next, `src/ui.html`). The lists
   `SIZED_KINDS`/`EFFORTS`/`BENEFITS` exist in `src/worker.js` and `src/ui.html` – keep both in sync. The rule for the AI lives in
   the MCP instructions (`src/mcp.js`), not in the prompt (ChatGPT length limit).
+- Short titles (decision D23, methodology v2.11): at most 80 characters (`TITLE_TARGET`), details in the body. No hard limit:
+  the MCP answer of `cotrack_add`/`cotrack_update` carries a note from `TITLE_HINT_AT` (100) on (`titleHint` in `src/mcp.js`),
+  the edit dialog counts from 80 on, and text lists mark items with a description with 📝 (`hasDetails` in `src/worker.js`).
+  `TITLE_TARGET` exists in `src/mcp.js` and `src/ui.html` – keep both in sync. Never export plain numbers or strings from
+  `src/worker.js`: as the Worker's main module, its named exports must be handlers (functions) or objects.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.

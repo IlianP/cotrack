@@ -42,6 +42,13 @@ import { oauthActor, wwwAuthenticate } from "./oauth.js";
 
 const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 
+// Short titles (decision D23, methodology v2.11): a title says what to do, decide or watch out for, in at most
+// TITLE_TARGET characters; options, steps, reasons, figures, deadlines and progress belong in the body. No hard limit
+// (beyond 500): from TITLE_HINT_AT on, cotrack_add/cotrack_update answer with a note. The web app counts from TITLE_TARGET on
+// (same constant in src/ui.html). Not in src/worker.js: the main module of a Worker may only export handlers and objects.
+const TITLE_TARGET = 80;
+const TITLE_HINT_AT = 100;
+
 /*
  * Language: everything this server says – instructions, tool descriptions, answers, errors – exists in German and
  * English. MCP carries no locale, so the instance setting `language` decides (web app ☰ → Sprache – the same
@@ -51,6 +58,8 @@ const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 const INSTRUCTIONS = {
   de: `cotrack führt die offenen Punkte eines Projekts, gemeinsam für Mensch und KI.
 Kategorien: A Aufgabe (owner "user" = Du oder "ai" = KI), D Entscheidung (trifft der Mensch), I Idee (💡), W Warnung/Risiko (⚠️).
+Titel kurz (höchstens 80 Zeichen): was zu tun, zu entscheiden oder zu beachten ist. Alles Weitere – Optionen mit Empfehlung, Schritte,
+Begründung, Zahlen, Fristen, Zwischenstände – gehört in die Beschreibung (body), nicht in den Titel; 📝 in Listen zeigt, dass es eine gibt (cotrack_get).
 Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2". Anzeige: "D2 ▶A4" = D2 kommt zuerst,
 A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nur wenn D2 nicht in der Zeile steht).
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
@@ -79,6 +88,8 @@ Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
 Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.`,
   en: `cotrack keeps the open points of a project, shared by a human and their AI.
 Categories: A Action (owner "user" = you, the human, or "ai" = the AI), D Decision (made by the human), I Idea (💡), W Warning/risk (⚠️).
+Keep titles short (at most 80 characters): what to do, decide or watch out for. Everything else – options with a recommendation, steps,
+reasons, figures, deadlines, progress – belongs in the description (body), not in the title; 📝 in lists shows that there is one (cotrack_get).
 References like A4 or D2 are never reused. Dependencies: waiting_on, e.g. "D2". Display: "D2 ▶A4" = D2 comes first,
 A4 follows (for pairs in the footer, only this way); "A4 ⏸D2" = A4 waits for D2 (only when D2 is not in the same line).
 How to work: call cotrack_status at the start of a session. Add new items right away with cotrack_add, close finished ones with
@@ -221,8 +232,8 @@ function toolList(lang) {
       name: "cotrack_status",
       title: t("Stand eines Projekts", "Project status"),
       description: t(
-        "Kompakter Stand für den Session-Start: Fußzeile, alle offenen Punkte (eine Zeile pro Punkt) und die aktuelle Stand-Nummer für cotrack_changes.",
-        "Compact status for the start of a session: footer, all open items (one line each) and the current version number for cotrack_changes.",
+        "Kompakter Stand für den Session-Start: Fußzeile, alle offenen Punkte (eine Zeile pro Punkt; 📝 = hat eine Beschreibung, siehe cotrack_get) und die aktuelle Stand-Nummer für cotrack_changes.",
+        "Compact status for the start of a session: footer, all open items (one line each; 📝 = has a description, see cotrack_get) and the current version number for cotrack_changes.",
       ),
       inputSchema: { type: "object", properties: { project: projectParam }, required: ["project"] },
       annotations: { readOnlyHint: true },
@@ -231,8 +242,8 @@ function toolList(lang) {
       name: "cotrack_list",
       title: t("Punkte filtern", "Filter items"),
       description: t(
-        "Listet Punkte eines Projekts gefiltert, eine Zeile pro Punkt (ohne Beschreibungen).",
-        "Lists a project's items, filtered, one line per item (without descriptions).",
+        "Listet Punkte eines Projekts gefiltert, eine Zeile pro Punkt (ohne Beschreibungen; 📝 = hat eine, siehe cotrack_get).",
+        "Lists a project's items, filtered, one line per item (without descriptions; 📝 = has one, see cotrack_get).",
       ),
       inputSchema: {
         type: "object",
@@ -263,14 +274,20 @@ function toolList(lang) {
         properties: {
           project: projectParam,
           kind: { type: "string", enum: ["A", "D", "I", "W"] },
-          title: { type: "string", description: t("Klarer Titel, ein Satz", "Clear title, one sentence") },
+          title: {
+            type: "string",
+            description: t(
+              "Kurzer Titel, höchstens 80 Zeichen: was zu tun, zu entscheiden oder zu beachten ist. Optionen, Schritte, Begründung, Zahlen, Fristen → body",
+              "Short title, at most 80 characters: what to do, decide or watch out for. Options, steps, reasons, figures, deadlines → body",
+            ),
+          },
           short: { type: "string", description: t("1–3 Wörter für die Fußzeile", "1–3 words for the footer") },
           owner: { type: "string", enum: ["user", "ai"], description: t("Nur für A/D: wer zuständig ist", "Only for A/D: who is responsible") },
           body: {
             type: "string",
             description: t(
-              "Optionale Beschreibung. Nur bei A: Teilpunkte als Zeilen „- [ ] Schritt“ (höchstens 5, nur wenn der Nutzer die Schritte nennt oder zustimmt)",
-              "Optional description. Only for A: sub-items as lines \"- [ ] step\" (at most 5, only when the user names the steps or agrees)",
+              "Beschreibung mit allen Details, die nicht in den kurzen Titel passen: bei D die Optionen mit Empfehlung, bei A Schritte oder Anleitung, bei W Auswirkung und Gegenmaßnahme; dazu Begründung, Zahlen, Fristen. Nur bei A: Teilpunkte als Zeilen „- [ ] Schritt“ (höchstens 5, nur wenn der Nutzer die Schritte nennt oder zustimmt)",
+              "Description with every detail that does not fit the short title: for D the options with a recommendation, for A steps or instructions, for W impact and countermeasure; plus reasons, figures, deadlines. Only for A: sub-items as lines \"- [ ] step\" (at most 5, only when the user names the steps or agrees)",
             ),
           },
           waiting_on: { type: "string", description: t("Kennungen, auf die gewartet wird, z. B. \"D2, A1\"", "References this item waits for, e.g. \"D2, A1\"") },
@@ -296,10 +313,22 @@ function toolList(lang) {
           project: optionalProjectParam,
           ref: refParam,
           status: { type: "string", enum: STATUS },
-          title: { type: "string" },
+          title: {
+            type: "string",
+            description: t(
+              "Kurzer Titel, höchstens 80 Zeichen. Zwischenstände und neue Details nicht an den Titel hängen – sie gehören in body",
+              "Short title, at most 80 characters. Do not append progress or new details to the title – they belong in body",
+            ),
+          },
           short: { type: "string" },
           owner: { type: "string", description: ownerText },
-          body: { type: "string" },
+          body: {
+            type: "string",
+            description: t(
+              "Ersetzt die ganze Beschreibung: zum Ergänzen (z. B. Zwischenstand) erst mit cotrack_get lesen und den bisherigen Text übernehmen",
+              "Replaces the whole description: to add to it (e.g. progress), read it with cotrack_get first and keep the existing text",
+            ),
+          },
           waiting_on: { type: "string" },
           source: { type: "string" },
           check: {
@@ -431,6 +460,8 @@ const MSG = {
     history: (it) => `Angelegt ${it.created_at} (${it.created_by}), geändert ${it.updated_at} (${it.updated_by})`,
     created: "angelegt",
     updated: "aktualisiert",
+    titleHint: (n) =>
+      `Hinweis: Der Titel hat ${n} Zeichen. Bitte auf höchstens ${TITLE_TARGET} kürzen (cotrack_update title) und die Details – Optionen, Schritte, Begründung, Zahlen, Zwischenstände – in die Beschreibung (body) verschieben, ohne etwas wegzulassen.`,
     missingProject: "project (oder qualifizierte Kennung wie CT:A4)",
     refMismatch: (ref, project) => `${ref} gehört nicht zu ${project}`,
     error: "Fehler",
@@ -461,6 +492,8 @@ const MSG = {
     history: (it) => `Created ${it.created_at} (${it.created_by}), changed ${it.updated_at} (${it.updated_by})`,
     created: "created",
     updated: "updated",
+    titleHint: (n) =>
+      `Note: the title has ${n} characters. Please shorten it to at most ${TITLE_TARGET} (cotrack_update title) and move the details – options, steps, reasons, figures, progress – into the description (body) without dropping anything.`,
     missingProject: "project (or a qualified reference like CT:A4)",
     refMismatch: (ref, project) => `${ref} does not belong to ${project}`,
     error: "Error",
@@ -489,6 +522,8 @@ async function projectAndRef(db, args, M) {
   return { project, ref };
 }
 
+// Decision D23: no hard limit, but a nudge in the answer when a title is long (the item is saved anyway).
+const titleHint = (it, M) => ([...it.title].length >= TITLE_HINT_AT ? "\n" + M.titleHint([...it.title].length) : "");
 const projectTitle = (p) => `${p.slug}${p.code ? ` [${p.code}]` : ""} – ${p.name}${p.repo ? ` (${p.repo})` : ""}`;
 
 async function callTool(name, args, db, actor, lang) {
@@ -563,7 +598,7 @@ async function callTool(name, args, db, actor, lang) {
         ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
       const size = sizeText(it, lang);
-      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}`;
+      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}${titleHint(it, M)}`;
     }
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
@@ -572,7 +607,8 @@ async function callTool(name, args, db, actor, lang) {
       if (args.confirmed === true) fields.confirmed = true;
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);
-      return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}`;
+      // The hint only when the title was sent now – closing an item with an old long title needs no lecture.
+      return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}${"title" in fields ? titleHint(it, M) : ""}`;
     }
     case "cotrack_convert": {
       const { project, ref } = await projectAndRef(db, args, M);
