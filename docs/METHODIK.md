@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.12 (Stand 17. November 2026)
+## Gültig: Methodik v2.13 (Stand 17. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -70,6 +70,17 @@
     Nötige – und löscht nichts, was nirgends sonst steht. Anlass: Am 17.11. lag der Median bei rund 200 Zeichen, nur 14 von 183
     Beschreibungen hatten über 500.
   - Der Prompt bleibt unverändert; die Regel steht in der Server-Anweisung und den Werkzeugbeschreibungen.
+- **Punkte, die mehrere Projekte betreffen (v2.13, Entscheidung D26):** Jeder Punkt hat **genau ein Heimatprojekt** und
+  behält dort seine Kennung. Betrifft er ein weiteres Projekt, trägt die KI es unter **„Auch angezeigt in“** (`also_in`) ein:
+  Dann erscheint der Punkt auch dort – in Status, Listen, Fußzeile und Web-App – mit Kürzel („FIN:W3“). Es gibt ihn nur
+  einmal, also nur einen Status; nichts wird doppelt angelegt oder umgezogen. Anlass: Überschneidungen zwischen Finanzen und
+  Immobilien; bewertet wurden sechs Wege (u. a. ein Punkt mit eigener Nummer je Projekt – verworfen, weil dasselbe Ding dann
+  zwei Kennungen hätte).
+  - **Abhängigkeiten über Projekte:** „wartet auf“ darf auf Punkte anderer Projekte zeigen (`IMM:A2`). ⏸ und ▶ erscheinen
+    in beiden Projekten; Kennungen anderer Projekte stehen immer mit Kürzel da.
+  - Im Heimatprojekt zeigt **⇄ IMM**, wo ein Punkt noch angezeigt wird. In der Fußzeile über mehrere Projekte steht ein
+    Punkt nur einmal, im Block seines Heimatprojekts.
+  - Das Feld „Auch angezeigt in“ pflegt die KI; im Bearbeiten-Dialog erscheint es nur, wenn es befüllt ist.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
@@ -105,6 +116,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.13 ändert den Prompt nicht (die Mitanzeige steht in der Server-Anweisung).
   v2.12 ändert den Prompt nicht (die Regel für knappe Beschreibungen steht in der Server-Anweisung).
   v2.11 ändert den Prompt nicht (die Titelregel steht in der Server-Anweisung).
   v2.10 ändert den Prompt nicht (Aufwand und Nutzen regelt die Server-Anweisung).

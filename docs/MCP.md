@@ -25,20 +25,25 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_projects` | Projekte (Slug, Kürzel, Repository) mit Anzahl offener Punkte; mit `repo` nur das Projekt zu diesem Repository, mit `archived` auch archivierte | liest |
 | `cotrack_project_create` | Projekt anlegen, mit deinem Slug und Kürzel (nur auf deinen Wunsch) | schreibt |
 | `cotrack_project_update` | Projekt umbenennen, Repository setzen, Kürzel nachtragen, archivieren oder zurückholen (`archived`) | schreibt |
-| `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer; 📝 = Punkt hat eine Beschreibung | liest |
+| `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer; 📝 = Punkt hat eine Beschreibung; Punkte anderer Projekte, die hier mit angezeigt werden, stehen mit Kürzel da („FIN:W3“) | liest |
 | `cotrack_list` | gefilterte Liste (Status, Kategorie, Zuständigkeit, Suche) | liest |
 | `cotrack_get` | ein Punkt mit Beschreibung | liest |
 | `cotrack_add` | neuen Punkt anlegen – kurzer Titel (höchstens 80 Zeichen), knappe Beschreibung (etwa fünf Zeilen, Details per Link in `source`); ab 100 Zeichen Titel bzw. 600 Zeichen Beschreibung antwortet der Server mit einem Hinweis; bei A und I mit geschätztem Aufwand (`effort` XS–XL) und Nutzen (`benefit` low/medium/high) | schreibt |
-| `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`); `check`/`uncheck` hakt Teilpunkte einer Aufgabe ab; `effort`/`benefit` ändern | schreibt |
+| `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`); `check`/`uncheck` hakt Teilpunkte einer Aufgabe ab; `effort`/`benefit` ändern; `also_in` = weitere Projekte, in denen der Punkt mit angezeigt wird (auch bei `cotrack_add`) | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D (Aufwand und Nutzen wandern in eine Aufgabe mit) | schreibt |
 | `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Chat-Fußzeile → Anpassen); `lang` = `de` oder `en` | liest |
-| `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions) | liest |
+| `cotrack_changes` | nur Änderungen seit einer Stand-Nummer (spart Tokens in Folge-Sessions); mit denen der Punkte, die hier mit angezeigt werden oder über Projekte hinweg verknüpft sind | liest |
 
 Bewusst **kein Löschen** per KI – Punkte werden mit `status: "dropped"` verworfen, Projekte archiviert, damit nichts verloren geht.
 Slug und Kürzel eines Projekts sind fest: Kennungen wie „CT:A4“ in Chats und Dokumenten bleiben so gültig.
 
 Überall, wo `project` verlangt wird, geht der **Slug oder das Kürzel** (`cotrack` oder `CT`). `cotrack_get`, `cotrack_update`
 und `cotrack_convert` nehmen auch eine **qualifizierte Kennung** (`ref: "CT:A4"`); `project` darf dann fehlen.
+
+**Über Projekte hinweg (Entscheidung D26):** Ein Punkt gehört genau einem Projekt. Mit `also_in` (z. B. `"IMM"`) erscheint er
+zusätzlich in weiteren Projekten – in `cotrack_status`, `cotrack_list` und der Fußzeile, dort mit Kürzel („FIN:W3“); in
+seinem eigenen Projekt zeigt `⇄IMM` die Mitanzeige. `waiting_on` nimmt Kennungen anderer Projekte (`"IMM:A2"`). Arbeitet
+die KI gerade in IMM, darf sie bei `cotrack_update` für FIN:W3 `project: "IMM"` mitschicken, solange der Punkt dort angezeigt wird.
 
 ## Sprache
 

@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.12 (as of 17 November 2026)
+## Current: Methodology v2.13 (as of 17 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -99,6 +99,16 @@
     needed – and never deletes anything that exists nowhere else. Reason: on 17 November the median was about 200 characters;
     only 14 of 183 descriptions had more than 500.
   - The prompt stays unchanged; the rule lives in the server's instructions and tool descriptions.
+- **Items that concern several projects (v2.13, decision D26):** Every item has **exactly one home project** and keeps its
+  reference there. If it concerns another project as well, the AI enters it under **"Also shown in"** (`also_in`): the item
+  then also appears there – in status, lists, footer and web app – with the code ("FIN:W3"). It exists only once, so it has one
+  status; nothing is added twice or moved. Reason: overlaps between finances and real estate; six ways were rated (among them
+  one item with its own number per project – rejected, because the same thing would then have two references).
+  - **Dependencies across projects:** "waiting for" may point to items of other projects (`IMM:A2`). ⏸ and ▶ appear in both
+    projects; references of other projects always carry the code.
+  - In its home project, **⇄ IMM** shows where an item is shown as well. In a footer for several projects an item appears
+    once, in the block of its home project.
+  - The AI keeps the "Also shown in" field; in the edit dialog it only appears when it is set.
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
@@ -106,6 +116,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.13 does not change the prompt (sharing items lives in the server's instructions).
   v2.12 does not change the prompt (the rule for brief descriptions lives in the server's instructions).
   v2.11 does not change the prompt (the title rule lives in the server's instructions).
   v2.10 does not change the prompt (effort and benefit are covered by the server's instructions).
