@@ -39,6 +39,10 @@
   the edit dialog counts from 80 on, and text lists mark items with a description with 📝 (`hasDetails` in `src/worker.js`).
   `TITLE_TARGET` exists in `src/mcp.js` and `src/ui.html` – keep both in sync. Never export plain numbers or strings from
   `src/worker.js`: as the Worker's main module, its named exports must be handlers (functions) or objects.
+- Brief descriptions (decision D25, methodology v2.12): cotrack is tracking, not a knowledge base – a body holds what is needed
+  to act (about five lines), details live in the linked `source`, progress is one replaced "Stand:" line. No hard limit: a note in
+  the MCP answer from `BODY_HINT_AT` (600) on (`bodyHint` in `src/mcp.js`), a counter in the edit dialog. `BODY_HINT_AT` exists
+  in `src/mcp.js` and `src/ui.html` – keep both in sync.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.

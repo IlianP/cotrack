@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.11 (as of 16 November 2026)
+## Current: Methodology v2.12 (as of 17 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -87,6 +87,18 @@
   - In item lists (`cotrack_status`, `cotrack_list`, `format=text`) **📝** shows that an item has a description; the AI fetches
     it with `cotrack_get` when needed. So nothing has to go into the title just so the next session sees it.
   - Like the footer, the prompt stays unchanged; the rule lives in the server's instructions and tool descriptions.
+- **Brief descriptions (v2.12, decision D25):** cotrack is **tracking, not a knowledge base** – it records what is open, who is
+  on it, in which order and where the details are. The description holds only what is needed to act, **about five lines**: for D
+  the options with a recommendation (then the result), for A the goal or steps, for W impact and countermeasure. Details,
+  measurements, research and history belong in the repository, PRs or documents; `source` points there. Progress is **one**
+  line "Status: …" that is replaced on the next update instead of appended.
+  - Why not drop descriptions altogether: the AIs (Claude Code, claude.ai, ChatGPT) cannot see each other's conversations;
+    cotrack is the shared place. Your own actions need their steps where you read them on your phone.
+  - No hard limit: from 600 characters on, the MCP server answers with a note, and the web app counts along in the edit dialog.
+  - Existing items: no big clean-up. When the AI changes an item with a long description anyway, it condenses it to what is
+    needed – and never deletes anything that exists nowhere else. Reason: on 17 November the median was about 200 characters;
+    only 14 of 183 descriptions had more than 500.
+  - The prompt stays unchanged; the rule lives in the server's instructions and tool descriptions.
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
@@ -94,6 +106,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.12 does not change the prompt (the rule for brief descriptions lives in the server's instructions).
   v2.11 does not change the prompt (the title rule lives in the server's instructions).
   v2.10 does not change the prompt (effort and benefit are covered by the server's instructions).
   v2.9 adds no new rule: the prompt text is just shorter (about 3,900 characters, so together with your own rules it fits

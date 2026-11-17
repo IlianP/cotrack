@@ -28,7 +28,7 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer; 📝 = Punkt hat eine Beschreibung | liest |
 | `cotrack_list` | gefilterte Liste (Status, Kategorie, Zuständigkeit, Suche) | liest |
 | `cotrack_get` | ein Punkt mit Beschreibung | liest |
-| `cotrack_add` | neuen Punkt anlegen – kurzer Titel (höchstens 80 Zeichen), Details in die Beschreibung; ab 100 Zeichen antwortet der Server mit einem Hinweis; bei A und I mit geschätztem Aufwand (`effort` XS–XL) und Nutzen (`benefit` low/medium/high) | schreibt |
+| `cotrack_add` | neuen Punkt anlegen – kurzer Titel (höchstens 80 Zeichen), knappe Beschreibung (etwa fünf Zeilen, Details per Link in `source`); ab 100 Zeichen Titel bzw. 600 Zeichen Beschreibung antwortet der Server mit einem Hinweis; bei A und I mit geschätztem Aufwand (`effort` XS–XL) und Nutzen (`benefit` low/medium/high) | schreibt |
 | `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`); `check`/`uncheck` hakt Teilpunkte einer Aufgabe ab; `effort`/`benefit` ändern | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D (Aufwand und Nutzen wandern in eine Aufgabe mit) | schreibt |
 | `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Chat-Fußzeile → Anpassen); `lang` = `de` oder `en` | liest |

@@ -48,6 +48,10 @@ const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"];
 // (same constant in src/ui.html). Not in src/worker.js: the main module of a Worker may only export handlers and objects.
 const TITLE_TARGET = 80;
 const TITLE_HINT_AT = 100;
+// Short descriptions (decision D25, methodology v2.12): cotrack tracks status and next steps, it is no knowledge base. A body
+// holds what is needed to act (about five lines); details, measurements, research and history live in the linked source.
+// No hard limit: from BODY_HINT_AT characters on, cotrack_add/cotrack_update answer with a note (same constant in src/ui.html).
+const BODY_HINT_AT = 600;
 
 /*
  * Language: everything this server says – instructions, tool descriptions, answers, errors – exists in German and
@@ -58,8 +62,12 @@ const TITLE_HINT_AT = 100;
 const INSTRUCTIONS = {
   de: `cotrack führt die offenen Punkte eines Projekts, gemeinsam für Mensch und KI.
 Kategorien: A Aufgabe (owner "user" = Du oder "ai" = KI), D Entscheidung (trifft der Mensch), I Idee (💡), W Warnung/Risiko (⚠️).
-Titel kurz (höchstens 80 Zeichen): was zu tun, zu entscheiden oder zu beachten ist. Alles Weitere – Optionen mit Empfehlung, Schritte,
-Begründung, Zahlen, Fristen, Zwischenstände – gehört in die Beschreibung (body), nicht in den Titel; 📝 in Listen zeigt, dass es eine gibt (cotrack_get).
+Titel kurz (höchstens 80 Zeichen): was zu tun, zu entscheiden oder zu beachten ist. Optionen, Schritte, Begründung, Fristen und Stand
+gehören in die Beschreibung (body), nicht in den Titel; 📝 in Listen zeigt, dass es eine gibt (cotrack_get).
+Beschreibung knapp (etwa fünf Zeilen): nur was man zum Handeln braucht – bei D Optionen mit Empfehlung, bei A Ziel oder Schritte, bei W Folge
+und Gegenmaßnahme. cotrack ist Tracking, keine Wissensablage: Details, Messwerte, Recherche und Verlauf gehören ins Repo, in PRs oder Dokumente;
+verweise mit source darauf. Zwischenstand als eine „Stand:“-Zeile, die du beim nächsten Update ersetzt statt Neues anzuhängen. Änderst du ohnehin
+einen Punkt mit langer Beschreibung, verdichte sie auf das Nötige – lösche aber nichts, was nirgends sonst steht.
 Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2". Anzeige: "D2 ▶A4" = D2 kommt zuerst,
 A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nur wenn D2 nicht in der Zeile steht).
 Arbeitsweise: Zu Beginn einer Session cotrack_status aufrufen. Neue Punkte sofort mit cotrack_add anlegen, Erledigtes mit
@@ -88,8 +96,12 @@ Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
 Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.`,
   en: `cotrack keeps the open points of a project, shared by a human and their AI.
 Categories: A Action (owner "user" = you, the human, or "ai" = the AI), D Decision (made by the human), I Idea (💡), W Warning/risk (⚠️).
-Keep titles short (at most 80 characters): what to do, decide or watch out for. Everything else – options with a recommendation, steps,
-reasons, figures, deadlines, progress – belongs in the description (body), not in the title; 📝 in lists shows that there is one (cotrack_get).
+Keep titles short (at most 80 characters): what to do, decide or watch out for. Options, steps, reasons, deadlines and status belong in
+the description (body), not in the title; 📝 in lists shows that there is one (cotrack_get).
+Keep descriptions brief (about five lines): only what is needed to act – for D the options with a recommendation, for A the goal or steps,
+for W impact and countermeasure. cotrack is tracking, not a knowledge base: details, measurements, research and history belong in the repository,
+PRs or documents; point to them with source. Progress goes into one "Status:" line that you replace on the next update instead of appending.
+When you change an item with a long description anyway, condense it to what is needed – but never delete anything that exists nowhere else.
 References like A4 or D2 are never reused. Dependencies: waiting_on, e.g. "D2". Display: "D2 ▶A4" = D2 comes first,
 A4 follows (for pairs in the footer, only this way); "A4 ⏸D2" = A4 waits for D2 (only when D2 is not in the same line).
 How to work: call cotrack_status at the start of a session. Add new items right away with cotrack_add, close finished ones with
@@ -138,6 +150,10 @@ function toolList(lang) {
   };
   const refParam = { type: "string", description: t("Kennung, z. B. \"A4\"; mit Kürzel qualifiziert: \"CT:A4\"", "Reference, e.g. \"A4\"; qualified with the code: \"CT:A4\"") };
   const ownerText = t("user oder ai", "user or ai");
+  const sourceText = t(
+    "Link oder Datei mit den Details (Dokument, PR, Recherche), aus der der Punkt stammt",
+    "Link or file with the details (document, PR, research) the item comes from",
+  );
   const effortParam = {
     type: "string",
     enum: ["XS", "S", "M", "L", "XL", ""],
@@ -286,12 +302,12 @@ function toolList(lang) {
           body: {
             type: "string",
             description: t(
-              "Beschreibung mit allen Details, die nicht in den kurzen Titel passen: bei D die Optionen mit Empfehlung, bei A Schritte oder Anleitung, bei W Auswirkung und Gegenmaßnahme; dazu Begründung, Zahlen, Fristen. Nur bei A: Teilpunkte als Zeilen „- [ ] Schritt“ (höchstens 5, nur wenn der Nutzer die Schritte nennt oder zustimmt)",
-              "Description with every detail that does not fit the short title: for D the options with a recommendation, for A steps or instructions, for W impact and countermeasure; plus reasons, figures, deadlines. Only for A: sub-items as lines \"- [ ] step\" (at most 5, only when the user names the steps or agrees)",
+              "Knapp, etwa fünf Zeilen: was man zum Handeln braucht – bei D die Optionen mit Empfehlung, bei A Ziel oder Schritte, bei W Folge und Gegenmaßnahme. Details, Messwerte, Recherche und Verlauf gehören in die verlinkte Quelle (source). Nur bei A: Teilpunkte als Zeilen „- [ ] Schritt“ (höchstens 5, nur wenn der Nutzer die Schritte nennt oder zustimmt)",
+              "Brief, about five lines: what is needed to act – for D the options with a recommendation, for A the goal or steps, for W impact and countermeasure. Details, measurements, research and history belong in the linked source. Only for A: sub-items as lines \"- [ ] step\" (at most 5, only when the user names the steps or agrees)",
             ),
           },
           waiting_on: { type: "string", description: t("Kennungen, auf die gewartet wird, z. B. \"D2, A1\"", "References this item waits for, e.g. \"D2, A1\"") },
-          source: { type: "string", description: t("Link oder Datei, aus der der Punkt stammt", "Link or file the item comes from") },
+          source: { type: "string", description: sourceText },
           effort: effortParam,
           benefit: benefitParam,
           confirmed: confirmedParam,
@@ -325,12 +341,12 @@ function toolList(lang) {
           body: {
             type: "string",
             description: t(
-              "Ersetzt die ganze Beschreibung: zum Ergänzen (z. B. Zwischenstand) erst mit cotrack_get lesen und den bisherigen Text übernehmen",
-              "Replaces the whole description: to add to it (e.g. progress), read it with cotrack_get first and keep the existing text",
+              "Ersetzt die ganze Beschreibung – erst mit cotrack_get lesen. Zwischenstand als eine „Stand:“-Zeile, die die alte ersetzt; nichts anhängen. Lange Beschreibungen dabei auf das Nötige verdichten, Details per source verlinken; nichts löschen, was nirgends sonst steht",
+              "Replaces the whole description – read it with cotrack_get first. Progress as one \"Status:\" line that replaces the old one; do not append. Condense a long description to what is needed while you are at it and link details via source; never delete what exists nowhere else",
             ),
           },
           waiting_on: { type: "string" },
-          source: { type: "string" },
+          source: { type: "string", description: sourceText },
           check: {
             type: "string",
             description: t(
@@ -461,7 +477,9 @@ const MSG = {
     created: "angelegt",
     updated: "aktualisiert",
     titleHint: (n) =>
-      `Hinweis: Der Titel hat ${n} Zeichen. Bitte auf höchstens ${TITLE_TARGET} kürzen (cotrack_update title) und die Details – Optionen, Schritte, Begründung, Zahlen, Zwischenstände – in die Beschreibung (body) verschieben, ohne etwas wegzulassen.`,
+      `Hinweis: Der Titel hat ${n} Zeichen. Bitte auf höchstens ${TITLE_TARGET} kürzen (cotrack_update title): Optionen, Schritte, Fristen und Stand knapp in die Beschreibung (body), Ausführliches in die verlinkte Quelle (source).`,
+    bodyHint: (n) =>
+      `Hinweis: Die Beschreibung hat ${n} Zeichen. cotrack braucht nur, was zum Handeln nötig ist (etwa fünf Zeilen): Details, Messwerte und Verlauf gehören in die verlinkte Quelle (source). Bitte verdichten (cotrack_update body) – nichts löschen, was nirgends sonst steht.`,
     missingProject: "project (oder qualifizierte Kennung wie CT:A4)",
     refMismatch: (ref, project) => `${ref} gehört nicht zu ${project}`,
     error: "Fehler",
@@ -493,7 +511,9 @@ const MSG = {
     created: "created",
     updated: "updated",
     titleHint: (n) =>
-      `Note: the title has ${n} characters. Please shorten it to at most ${TITLE_TARGET} (cotrack_update title) and move the details – options, steps, reasons, figures, progress – into the description (body) without dropping anything.`,
+      `Note: the title has ${n} characters. Please shorten it to at most ${TITLE_TARGET} (cotrack_update title): options, steps, deadlines and status go briefly into the description (body), anything longer into the linked source.`,
+    bodyHint: (n) =>
+      `Note: the description has ${n} characters. cotrack only needs what is required to act (about five lines): details, measurements and history belong in the linked source. Please condense it (cotrack_update body) – never delete what exists nowhere else.`,
     missingProject: "project (or a qualified reference like CT:A4)",
     refMismatch: (ref, project) => `${ref} does not belong to ${project}`,
     error: "Error",
@@ -524,6 +544,8 @@ async function projectAndRef(db, args, M) {
 
 // Decision D23: no hard limit, but a nudge in the answer when a title is long (the item is saved anyway).
 const titleHint = (it, M) => ([...it.title].length >= TITLE_HINT_AT ? "\n" + M.titleHint([...it.title].length) : "");
+// Decision D25: the same kind of nudge for a long description, only when a body was sent (ticking a checkbox does not count).
+const bodyHint = (it, M) => ([...(it.body || "")].length >= BODY_HINT_AT ? "\n" + M.bodyHint([...it.body].length) : "");
 const projectTitle = (p) => `${p.slug}${p.code ? ` [${p.code}]` : ""} – ${p.name}${p.repo ? ` (${p.repo})` : ""}`;
 
 async function callTool(name, args, db, actor, lang) {
@@ -598,7 +620,7 @@ async function callTool(name, args, db, actor, lang) {
         ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
       const size = sizeText(it, lang);
-      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}${titleHint(it, M)}`;
+      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}${titleHint(it, M)}${bodyHint(it, M)}`;
     }
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
@@ -608,7 +630,7 @@ async function callTool(name, args, db, actor, lang) {
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);
       // The hint only when the title was sent now – closing an item with an old long title needs no lecture.
-      return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}${"title" in fields ? titleHint(it, M) : ""}`;
+      return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}${"title" in fields ? titleHint(it, M) : ""}${"body" in fields ? bodyHint(it, M) : ""}`;
     }
     case "cotrack_convert": {
       const { project, ref } = await projectAndRef(db, args, M);
