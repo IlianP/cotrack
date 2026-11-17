@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.10 (Stand 14. November 2026)
+## Gültig: Methodik v2.11 (Stand 16. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -48,6 +48,16 @@
     erledigten Nutzen je Woche, Liegezeit je Aufwandsklasse und eine grobe Prognose.
   - Fußzeile und Prompt bleiben unverändert: Die Regel steht in der Server-Anweisung des MCP-Servers (kein Platz mehr im
     ChatGPT-Prompt). PrioFlow nutzt die gespeicherten Werte und ergänzt fehlende.
+- **Kurze Titel (v2.11, Entscheidung D23):** Der Titel sagt in **höchstens 80 Zeichen**, was zu tun, zu entscheiden oder zu
+  beachten ist. Alles Weitere steht in der Beschreibung: bei D die Optionen mit Empfehlung, bei A Schritte oder Anleitung, bei W
+  Auswirkung und Gegenmaßnahme, dazu Begründung, Zahlen, Fristen und Zwischenstände – Zwischenstände werden nie an den Titel
+  gehängt. Anlass: Eine Auswertung am 15.11. fand bei 169 von 231 offenen Punkten Titel über 100 Zeichen, die Details standen im
+  Titel statt in der Beschreibung.
+  - Keine harte Grenze: Ab 100 Zeichen antwortet der MCP-Server mit einem Hinweis (der Punkt wird trotzdem gespeichert), die
+    Web-App zählt im Bearbeiten-Dialog ab 80 Zeichen mit.
+  - In den Punktlisten (`cotrack_status`, `cotrack_list`, `format=text`) zeigt **📝**, dass ein Punkt eine Beschreibung hat;
+    die KI holt sie bei Bedarf mit `cotrack_get`. So muss nichts in den Titel, nur damit die nächste Session es sieht.
+  - Wie die Fußzeile bleibt der Prompt unverändert; die Regel steht in der Server-Anweisung und den Werkzeugbeschreibungen.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
@@ -83,6 +93,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.11 ändert den Prompt nicht (die Titelregel steht in der Server-Anweisung).
   v2.10 ändert den Prompt nicht (Aufwand und Nutzen regelt die Server-Anweisung).
   v2.9 hat keine neue Regel: Der Prompt-Text ist nur kürzer (rund 4.100 Zeichen, passt mit eigenen Regeln unter das
   ChatGPT-Limit von 5.000 Zeichen).

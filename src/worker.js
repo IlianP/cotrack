@@ -1058,6 +1058,11 @@ function shortLabel(item) {
   return words.slice(0, 3).join(" ") + (words.length > 3 ? " …" : "");
 }
 
+// True when a body holds more than its checklist – shown as 📝 in the text lists, so an AI knows to fetch the details.
+export function hasDetails(body) {
+  return !!body && body.split("\n").some((l) => l.trim() && !CHECK_LINE_RE.test(l));
+}
+
 // Checklist lines of a body: [{ line, done, text }] (line = index in body.split("\n")).
 export function parseChecks(body) {
   if (!body) return [];
@@ -1384,8 +1389,8 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
 
 /**
  * Compact one-line-per-item listing for AI assistants (few tokens), e.g.
- * "A2 MCP-Server bauen ⏸D1 [in Arbeit] @Maria" or "D1 Lizenz wählen ▶A2,A4" (▶ = items waiting for it).
- * Bodies are left out; fetch a single item for details.
+ * "A2 MCP-Server bauen ⏸D1 [in Arbeit] @Maria" or "D1 Lizenz wählen 📝 ▶A2,A4" (▶ = items waiting for it).
+ * Bodies are left out; 📝 marks an item with a description (beyond its checklist) – fetch the item for details.
  */
 export function itemsAsText(items, kinds, { withProject = false, lang = "de" } = {}) {
   const T = TEXT[lang] || TEXT.de;
@@ -1394,6 +1399,7 @@ export function itemsAsText(items, kinds, { withProject = false, lang = "de" } =
   const lines = items.map((it) => {
     const k = kindBy.get(it.kind);
     const parts = [withProject ? `${it.project_slug}/${it.ref}` : it.ref, it.title];
+    if (hasDetails(it.body)) parts.push("📝");
     const progress = checkProgress(it);
     if (progress) parts.push(`☑${progress}`);
     const size = sizeText(it, lang);

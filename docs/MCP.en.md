@@ -25,10 +25,10 @@ The whole server is in [`src/mcp.js`](../src/mcp.js) (no library, easy to read).
 | `cotrack_projects` | projects (slug, code, repository) with the number of open items; with `repo` only the project for that repository, with `archived` archived ones too | reads |
 | `cotrack_project_create` | create a project, with your slug and code (only when you ask for it) | writes |
 | `cotrack_project_update` | rename a project, set its repository, add a code, archive or restore it (`archived`) | writes |
-| `cotrack_status` | session start: footer + open items + version number | reads |
+| `cotrack_status` | session start: footer + open items + version number; 📝 = the item has a description | reads |
 | `cotrack_list` | filtered list (status, category, owner, search) | reads |
 | `cotrack_get` | one item with its description | reads |
-| `cotrack_add` | add a new item; for A and I with estimated effort (`effort` XS–XL) and benefit (`benefit` low/medium/high) | writes |
+| `cotrack_add` | add a new item – short title (at most 80 characters), details in the description; from 100 characters on the server answers with a note; for A and I with estimated effort (`effort` XS–XL) and benefit (`benefit` low/medium/high) | writes |
 | `cotrack_update` | change, close (`done`), drop (`dropped`); `check`/`uncheck` ticks sub-items of an action; change `effort`/`benefit` | writes |
 | `cotrack_convert` | accept an idea → A or D (effort and benefit move along into an action) | writes |
 | `cotrack_footer` | only the footer; several projects (comma) = one block per project, `delta` = only "new/done", `layout` = `multi` (one line per group) or `single`; without `layout` the web app setting applies (☰ → Chat footer → Customize); `lang` = `de` or `en` | reads |

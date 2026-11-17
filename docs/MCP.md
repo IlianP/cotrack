@@ -25,10 +25,10 @@ Der ganze Server steht in [`src/mcp.js`](../src/mcp.js) (ohne Bibliothek, gut le
 | `cotrack_projects` | Projekte (Slug, Kürzel, Repository) mit Anzahl offener Punkte; mit `repo` nur das Projekt zu diesem Repository, mit `archived` auch archivierte | liest |
 | `cotrack_project_create` | Projekt anlegen, mit deinem Slug und Kürzel (nur auf deinen Wunsch) | schreibt |
 | `cotrack_project_update` | Projekt umbenennen, Repository setzen, Kürzel nachtragen, archivieren oder zurückholen (`archived`) | schreibt |
-| `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer | liest |
+| `cotrack_status` | Session-Start: Fußzeile + offene Punkte + Stand-Nummer; 📝 = Punkt hat eine Beschreibung | liest |
 | `cotrack_list` | gefilterte Liste (Status, Kategorie, Zuständigkeit, Suche) | liest |
 | `cotrack_get` | ein Punkt mit Beschreibung | liest |
-| `cotrack_add` | neuen Punkt anlegen; bei A und I mit geschätztem Aufwand (`effort` XS–XL) und Nutzen (`benefit` low/medium/high) | schreibt |
+| `cotrack_add` | neuen Punkt anlegen – kurzer Titel (höchstens 80 Zeichen), Details in die Beschreibung; ab 100 Zeichen antwortet der Server mit einem Hinweis; bei A und I mit geschätztem Aufwand (`effort` XS–XL) und Nutzen (`benefit` low/medium/high) | schreibt |
 | `cotrack_update` | ändern, abschließen (`done`), verwerfen (`dropped`); `check`/`uncheck` hakt Teilpunkte einer Aufgabe ab; `effort`/`benefit` ändern | schreibt |
 | `cotrack_convert` | Idee zusagen → A oder D (Aufwand und Nutzen wandern in eine Aufgabe mit) | schreibt |
 | `cotrack_footer` | nur die Fußzeile; mehrere Projekte (Komma) = ein Block je Projekt, `delta` = nur „neu/erledigt“, `layout` = `multi` (je Gruppe eine Zeile) oder `single`; ohne `layout` gilt die Einstellung in der Web-App (☰ → Chat-Fußzeile → Anpassen); `lang` = `de` oder `en` | liest |
