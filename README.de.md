@@ -56,6 +56,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **MCP-Server** – funktioniert mit Claude (claude.ai, Claude Code) und ChatGPT; die Antworten sind kompakter Text, um
   Tokens zu sparen.
 - **Live** – die Web-App übernimmt Änderungen von dir oder einer KI innerhalb weniger Sekunden.
+- **Sortierung** – das Symbol neben der Suche sortiert das Board nach Nummer (Standard), nach letzter Änderung oder nach
+  Anlage. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip), und was in den letzten 24 Stunden
+  geändert wurde, ist leicht hinterlegt. Gespeichert pro Gerät.
 - **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
   Web-App ein (☰ → Chat-Fußzeile → Anpassen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
