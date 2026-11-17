@@ -2991,6 +2991,13 @@ $("#sortPop").addEventListener("keydown", (e) => {
   else if (e.key === "Escape") { e.preventDefault(); setSortOpen(false, true); }
   else if (e.key === "Tab") setSortOpen(false);
 });
+// Sorted by time, "vor 5 Min." and the 24-hour tint depend on the clock, not only on data: poll() re-renders only when
+// something changed, so a quiet board is redrawn every minute while visible, and right away when it comes back.
+function tickAges() {
+  if (state.sort !== "num" && (state.project ? state.mode : "board") === "board" && document.visibilityState === "visible") render();
+}
+setInterval(tickAges, 60000);
+document.addEventListener("visibilitychange", tickAges);
 // A tap or click anywhere else closes the menu (Safari does not focus buttons, so focusout alone is not enough).
 document.addEventListener("pointerdown", (e) => { if (!$("#sortPop").hidden && !$("#sortBox").contains(e.target)) setSortOpen(false); });
 
