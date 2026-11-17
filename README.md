@@ -52,6 +52,9 @@ warnings – a one-glance status that survives across conversations.
   ([details below](#linking-a-repository)).
 - **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
+- **Sort** – the icon next to the search sorts the board by number (default), by last change or by date added. Sorted by
+  time, each card shows how long ago it was (who: in the tooltip), and what changed in the last 24 hours is tinted.
+  Remembered on each device.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
   (☰ → Chat footer → Customize), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
   per project when several are in play.

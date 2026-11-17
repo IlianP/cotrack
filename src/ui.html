@@ -177,6 +177,33 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .search.open { flex: 0 1 240px; min-width: 130px; }
 .search.open input { display: block; }
 .search.open .x { display: grid; }
+/* sort (A81): an icon next to the search opens a short menu; tinted while the board is not in number order */
+.sortw { position: relative; flex: none; }
+.sortw[hidden] { display: none; }
+.sort-btn {
+  width: 34px; height: 34px; padding: 0; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted);
+}
+.sort-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.sort-btn[aria-expanded="true"] { border-color: var(--accent); }
+.sort-btn.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.sort-pop {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(300px, calc(100vw - 32px)); padding: 6px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--lift-lg);
+}
+.sort-pop[hidden] { display: none; }
+.sort-head { padding: 6px 10px 4px; font-size: 12.5px; font-weight: 650; color: var(--muted); }
+.sort-pop [role="menu"] { display: grid; gap: 2px; }
+.sort-pop [role="menuitemradio"] {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 16px; gap: 0 10px; align-items: center; width: 100%;
+  min-height: 48px; padding: 7px 10px; border: 0; border-radius: 8px; background: none; text-align: left;
+}
+.sort-pop [role="menuitemradio"]:hover, .sort-pop [role="menuitemradio"]:focus-visible { background: var(--surface-2); outline: none; }
+.sort-pop [aria-checked="true"] .sl { font-weight: 650; }
+.sort-pop .sy { color: var(--muted); text-align: center; font-size: 16px; }
+.sort-pop .sh { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.sort-pop .ok { color: var(--accent); font-weight: 700; }
+.sort-note { margin: 4px 4px 2px; padding: 8px 6px 2px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 @media (max-width: 699px) {
   .bar { display: contents; }
   .bar-view { margin: 0 0 8px; }
@@ -214,6 +241,9 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .item { display: flex; gap: 10px; padding: 9px 12px; align-items: flex-start; border-radius: 8px; margin: 0 4px; }
 .item:hover { background: var(--surface-2); }
 .item.flash { animation: flash 1.2s ease-out; }
+/* sorted by time: changed (or added) within the last 24 hours */
+.item.recent { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.item.recent:hover { background: var(--surface-2); }
 @keyframes flash { from { background: color-mix(in srgb, var(--kc) 22%, transparent); } }
 .check {
   flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 50%;
@@ -241,6 +271,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .pill a { color: inherit; }
 /* effort · benefit (D21): dashed while it is only the AI's estimate */
 .pill.size { color: var(--text); }
+.pill.age { color: var(--text); }
 .pill.size.est { border-style: dashed; color: var(--muted); }
 
 /* footer line */
@@ -733,6 +764,13 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
           data-t-attr="aria-label:searchClose;title:searchClose"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
           stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
       </div>
+      <!-- sort (A81): the board's order within each column; label and title are set by syncSortBtn() -->
+      <div class="sortw" id="sortBox">
+        <button type="button" id="sortBtn" class="sort-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="sortPop"><svg
+          viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9"/><path d="M4 12h6"/><path d="M4 18h3"/><path d="M17 5v14"/><path
+          d="M13.5 15.5L17 19l3.5-3.5"/></svg></button>
+        <div id="sortPop" class="sort-pop" hidden></div>
+      </div>
     </div>
     <div class="bar-filter" id="filterBar">
       <div class="tgs" id="kindChips" role="group" aria-label="Nach Kategorie filtern" data-t-attr="aria-label:kindsGroup"></div>
@@ -822,6 +860,12 @@ const STRINGS = {
     liveTitle: "Live-Verbindung", liveOn: "Live: verbunden", liveOff: "Keine Verbindung", menu: "Menü",
     view: "Ansicht", viewOpen: "Offen", viewClosed: "Erledigt", viewAll: "Alle",
     search: "Suchen", searchTitle: "Suchen (Taste /)", searchPh: "Suchen …", searchClose: "Suche schließen",
+    sort: "Sortieren", sortBy: (name) => `Sortierung: ${name}`, sortNote: "Gilt fürs Board · auf diesem Gerät gespeichert",
+    sortNames: { num: "Nummer", changed: "Zuletzt geändert", created: "Zuletzt angelegt" },
+    sortHints: { num: "D1, D2 … in der Reihenfolge der Anlage", changed: "Jüngste Änderung oben – wie im Verlauf", created: "Neue Punkte oben" },
+    ageNow: "gerade eben", ageMin: (n) => `vor ${n} Min.`, ageHours: (n) => `vor ${n} Std.`, ageYesterday: "gestern",
+    ageDays: (n) => `vor ${n} Tagen`, ageOn: (d) => `am ${d}`,
+    ageTitle: { changed: (at, who) => `Zuletzt geändert: ${at} von ${who}`, created: (at, who) => `Angelegt: ${at} von ${who}` },
     kindsGroup: "Nach Kategorie filtern", ownersGroup: "Nach Zuständigkeit filtern",
     onlyKind: (name) => `${name} – nur diese Kategorie (nochmal tippen: alle)`,
     onlyUser: "Nur deine Punkte (nochmal tippen: alle)", onlyAi: "Nur Punkte der KI (nochmal tippen: alle)",
@@ -1004,6 +1048,12 @@ const STRINGS = {
     liveTitle: "Live connection", liveOn: "Live: connected", liveOff: "No connection", menu: "Menu",
     view: "View", viewOpen: "Open", viewClosed: "Done", viewAll: "All",
     search: "Search", searchTitle: "Search (key /)", searchPh: "Search …", searchClose: "Close search",
+    sort: "Sort", sortBy: (name) => `Sort: ${name}`, sortNote: "Applies to the board · saved on this device",
+    sortNames: { num: "Number", changed: "Recently changed", created: "Recently added" },
+    sortHints: { num: "D1, D2 … in the order they were added", changed: "Latest change on top – like the history", created: "New items on top" },
+    ageNow: "just now", ageMin: (n) => `${n} min ago`, ageHours: (n) => `${n} h ago`, ageYesterday: "yesterday",
+    ageDays: (n) => `${n} days ago`, ageOn: (d) => `on ${d}`,
+    ageTitle: { changed: (at, who) => `Last changed: ${at} by ${who}`, created: (at, who) => `Added: ${at} by ${who}` },
     kindsGroup: "Filter by category", ownersGroup: "Filter by owner",
     onlyKind: (name) => `${name} – only this category (tap again: all)`,
     onlyUser: "Only your items (tap again: all)", onlyAi: "Only the AI's items (tap again: all)",
@@ -1215,6 +1265,10 @@ const ALL = "*";
 
 const VIEWS = ["open", "closed", "all"];
 const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · Next (A53) · Ketten (A55)
+// Board order within a column (A81): "num" = by number (the server's order), otherwise newest first by that time.
+const SORTS = ["num", "changed", "created"];
+const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
+const SORT_SYM = { num: "#", changed: "↻", created: "+" };
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
@@ -1222,6 +1276,7 @@ const state = {
   nextLater: [], nextPick: null, nextDraft: {},
   nextTime: ["5", "30", "120"].includes(store.get("cotrack.nextTime")) ? store.get("cotrack.nextTime") : "", // Next: time filter in minutes
   mode: MODES.includes(store.get("cotrack.mode")) ? store.get("cotrack.mode") : "board",
+  sort: SORTS.includes(store.get("cotrack.sort")) ? store.get("cotrack.sort") : "num",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
 };
@@ -1399,6 +1454,8 @@ function render(before) {
   const mode = state.project ? state.mode : "board";
   board.hidden = mode !== "board"; $("#next").hidden = mode !== "next"; $("#deps").hidden = mode !== "deps";
   $("#bar").hidden = mode === "next"; // Next has neither filters nor Offen/Erledigt/Alle
+  $("#sortBox").hidden = mode !== "board"; // Next and Ketten have an order of their own
+  if (mode !== "board") setSortOpen(false);
   if (mode !== "deps") deps.chains = [];
   if (!state.project) {
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, tr("noProjectYet"))));
@@ -1436,7 +1493,7 @@ function render(before) {
       h("header", { class: "col-head" },
         h("span", { class: "kbadge" }, k.code), h("h2", null, k.name), h("span", { class: "count" }, list.length)),
       list.length
-        ? h("ul", { class: "items" }, list.map((it) => renderItem(it, k, before)))
+        ? h("ul", { class: "items" }, sortItems(list).map((it) => renderItem(it, k, before)))
         : h("p", { class: "empty" }, state.view === "open" ? tr("nothingOpen") : tr("noItems")))));
 }
 
@@ -1551,7 +1608,12 @@ function renderItem(it, k, before) {
   const preview = checks.length ? splitBody(it.body).rest : it.body; // the checklist itself shows as the ☑ counter
   const key = it.project_slug + ":" + it.ref + ":" + it.updated_at;
   const changed = before && !before.has(key);
-  return h("li", { class: `item${closed ? " is-done" : ""}${changed ? " flash" : ""}` },
+  // Sorted by time, each card says when (who: in the tooltip) – the order alone would not tell.
+  const [at, by] = SORT_FIELD[state.sort] || [];
+  const recent = at && it[at] && Date.now() - new Date(it[at]) < 864e5;
+  if (at && it[at]) meta.unshift(h("span", { class: "pill age", title: tr("ageTitle." + state.sort, fmt(it[at]), actorLabel(it[by])) },
+    SORT_SYM[state.sort] + " " + ageText(it[at])));
+  return h("li", { class: `item${closed ? " is-done" : ""}${changed ? " flash" : ""}${recent ? " recent" : ""}` },
     h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
       onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : ""),
     h("div", { class: "main", onclick: () => openEdit(it) },
@@ -1560,6 +1622,21 @@ function renderItem(it, k, before) {
         h("span", { class: "title" }, it.title)),
       preview ? h("p", { class: "desc" }, preview.length > 160 ? preview.slice(0, 160) + " …" : preview) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
+}
+
+// Newest first by the chosen time; Array.prototype.sort is stable, so equal times keep the number order.
+function sortItems(list) {
+  const [at] = SORT_FIELD[state.sort] || [];
+  return at ? list.slice().sort((a, b) => String(b[at] || "").localeCompare(String(a[at] || ""))) : list;
+}
+function ageText(iso) {
+  const min = Math.floor((Date.now() - new Date(iso)) / 6e4);
+  if (min < 1) return tr("ageNow");
+  if (min < 60) return tr("ageMin", min);
+  const days = daysAgo(iso);
+  if (days <= 0) return tr("ageHours", Math.floor(min / 60));
+  if (days === 1) return tr("ageYesterday");
+  return days < 30 ? tr("ageDays", days) : tr("ageOn", shortDate(iso));
 }
 
 async function renderFooter() {
@@ -2869,6 +2946,53 @@ $("#modeSwitch").addEventListener("click", (e) => {
   refresh(true);
 });
 $("#ownerChips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) toggleOwner(b.dataset.owner); });
+
+/* sort (A81): icon → short menu (Nummer · Zuletzt geändert · Zuletzt angelegt); remembered on this device */
+function syncSortBtn() {
+  const b = $("#sortBtn"), label = tr("sortBy", tr("sortNames." + state.sort));
+  b.title = label; b.setAttribute("aria-label", label);
+  b.classList.toggle("on", state.sort !== "num");
+}
+syncSortBtn();
+const sortOptions = () => [...$("#sortPop").querySelectorAll('[role="menuitemradio"]')];
+function setSortOpen(open, refocus = false) {
+  const pop = $("#sortPop");
+  if (open === !pop.hidden) return;
+  if (open) {
+    pop.replaceChildren(
+      h("div", { class: "sort-head", id: "sortHead" }, tr("sort")),
+      h("div", { role: "menu", "aria-labelledby": "sortHead" }, SORTS.map((s) => h("button", {
+        type: "button", role: "menuitemradio", "aria-checked": String(state.sort === s), tabindex: "-1", onclick: () => setSort(s),
+      }, h("span", { class: "sy", "aria-hidden": "true" }, SORT_SYM[s]),
+        h("span", null, h("span", { class: "sl" }, tr("sortNames." + s)), h("span", { class: "sh" }, tr("sortHints." + s))),
+        h("span", { class: "ok", "aria-hidden": "true" }, state.sort === s ? "✓" : "")))),
+      h("p", { class: "sort-note" }, tr("sortNote")));
+  }
+  pop.hidden = !open;
+  $("#sortBtn").setAttribute("aria-expanded", String(open));
+  if (open) sortOptions()[SORTS.indexOf(state.sort)]?.focus();
+  else if (refocus) $("#sortBtn").focus();
+}
+function setSort(s) {
+  setSortOpen(false, true);
+  if (s === state.sort) return;
+  state.sort = s;
+  store.set("cotrack.sort", s);
+  syncSortBtn();
+  render(); toBoardTop();
+}
+$("#sortBtn").addEventListener("click", () => setSortOpen($("#sortPop").hidden));
+$("#sortPop").addEventListener("keydown", (e) => {
+  const opts = sortOptions(), i = opts.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    opts[(i + (e.key === "ArrowDown" ? 1 : opts.length - 1)) % opts.length]?.focus();
+  } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); opts[e.key === "Home" ? 0 : opts.length - 1]?.focus(); }
+  else if (e.key === "Escape") { e.preventDefault(); setSortOpen(false, true); }
+  else if (e.key === "Tab") setSortOpen(false);
+});
+// A tap or click anywhere else closes the menu (Safari does not focus buttons, so focusout alone is not enough).
+document.addEventListener("pointerdown", (e) => { if (!$("#sortPop").hidden && !$("#sortBox").contains(e.target)) setSortOpen(false); });
 
 /* search: the magnifier opens a narrow field with the cursor in it; Escape or × clears and closes it */
 let searchT;
