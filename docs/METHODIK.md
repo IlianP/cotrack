@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.11 (Stand 16. November 2026)
+## Gültig: Methodik v2.12 (Stand 17. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -58,6 +58,18 @@
   - In den Punktlisten (`cotrack_status`, `cotrack_list`, `format=text`) zeigt **📝**, dass ein Punkt eine Beschreibung hat;
     die KI holt sie bei Bedarf mit `cotrack_get`. So muss nichts in den Titel, nur damit die nächste Session es sieht.
   - Wie die Fußzeile bleibt der Prompt unverändert; die Regel steht in der Server-Anweisung und den Werkzeugbeschreibungen.
+- **Knappe Beschreibungen (v2.12, Entscheidung D25):** cotrack ist **Tracking, keine Wissensablage** – es hält fest, was offen
+  ist, wer dran ist, in welcher Reihenfolge und wo die Details stehen. Die Beschreibung enthält nur, was man zum Handeln braucht,
+  **etwa fünf Zeilen**: bei D die Optionen mit Empfehlung (danach das Ergebnis), bei A Ziel oder Schritte, bei W Folge und
+  Gegenmaßnahme. Details, Messwerte, Recherche und Verlauf gehören ins Repository, in PRs oder Dokumente; `source` verweist
+  darauf. Ein Zwischenstand ist **eine** Zeile „Stand: …“, die beim nächsten Update ersetzt wird, statt angehängt zu werden.
+  - Warum nicht ganz ohne Beschreibung: Die KIs (Claude Code, claude.ai, ChatGPT) sehen die Unterhaltungen der anderen nicht;
+    cotrack ist die gemeinsame Stelle. Deine eigenen Aufgaben brauchen die Schritte dort, wo du sie auf dem Handy liest.
+  - Keine harte Grenze: Ab 600 Zeichen antwortet der MCP-Server mit einem Hinweis, die Web-App zählt im Bearbeiten-Dialog mit.
+  - Bestand: Kein großes Aufräumen. Ändert die KI ohnehin einen Punkt mit langer Beschreibung, verdichtet sie diese auf das
+    Nötige – und löscht nichts, was nirgends sonst steht. Anlass: Am 17.11. lag der Median bei rund 200 Zeichen, nur 14 von 183
+    Beschreibungen hatten über 500.
+  - Der Prompt bleibt unverändert; die Regel steht in der Server-Anweisung und den Werkzeugbeschreibungen.
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
@@ -93,6 +105,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.12 ändert den Prompt nicht (die Regel für knappe Beschreibungen steht in der Server-Anweisung).
   v2.11 ändert den Prompt nicht (die Titelregel steht in der Server-Anweisung).
   v2.10 ändert den Prompt nicht (Aufwand und Nutzen regelt die Server-Anweisung).
   v2.9 hat keine neue Regel: Der Prompt-Text ist nur kürzer (rund 4.100 Zeichen, passt mit eigenen Regeln unter das
