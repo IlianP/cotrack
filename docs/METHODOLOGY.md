@@ -39,8 +39,8 @@
 - **Group markers (v2.6):** The footer shows `👤:` for your items and `🤖:` for the AI's (instead of "Du:" and "🤖KI:") –
   language-independent and shorter. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
   markers can be changed in the web app (☰ → Chat footer → Customize, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
-- **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤:`, `🤖:`, `💡`, `⚠️`),
-  followed if needed by the line "neu: … · erledigt: …". This is the default for now, to try out the overview;
+- **Multi-line footer (v2.5, confirmed after the trial phase on 17 November, decision D9):** The full footer has one line per
+  group (`👤:`, `🤖:`, `💡`, `⚠️`), followed if needed by the line "neu: … · erledigt: …". This is the default;
   single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
   default yourself in the web app (☰ → Chat footer → Customize, stored in cotrack); a `layout` in a single request wins.
   A new installation starts multi-line.
