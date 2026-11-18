@@ -27,7 +27,6 @@ import {
   normLayout,
   optLang,
   listKinds,
-  listItems,
   successorsOf,
   getItemByRef,
   createItem,
@@ -37,6 +36,12 @@ import {
   itemsAsText,
   checkProgress,
   sizeText,
+  projectItems,
+  projectCodes,
+  keyLabel,
+  waitKeys,
+  refList,
+  linkedScope,
 } from "./worker.js";
 import { oauthActor, wwwAuthenticate } from "./oauth.js";
 
@@ -93,7 +98,11 @@ Aufwand und Nutzen (nur A und I): Schätze beim Anlegen beide mit. effort = Zeit
 L ≤ 1 Tag, XL mehr. benefit = wie sehr es das Projektziel voranbringt: low, medium, high – sei sparsam mit high. Deine Werte gelten als
 geschätzt (in Listen mit „?“, z. B. „⏱S·★hoch?“), bis der Nutzer sie bestätigt oder ändert; bestätigte Werte änderst du nur auf seinen Wunsch.
 Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
-Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.`,
+Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.
+Punkte, die mehrere Projekte betreffen: Jeder Punkt hat genau ein Heimatprojekt und behält dort seine Kennung. Betrifft er ein weiteres
+Projekt, setze also_in (z. B. "IMM"): Dann erscheint er auch dort in Status, Listen und Fußzeile, mit Kürzel („FIN:W3“). Nicht doppelt
+anlegen und nicht umziehen. waiting_on darf auf Punkte anderer Projekte zeigen ("IMM:A2"). In Antworten schreibe Kennungen anderer
+Projekte immer mit Kürzel; ⇄IMM in Listen heißt: wird auch in IMM angezeigt.`,
   en: `cotrack keeps the open points of a project, shared by a human and their AI.
 Categories: A Action (owner "user" = you, the human, or "ai" = the AI), D Decision (made by the human), I Idea (💡), W Warning/risk (⚠️).
 Keep titles short (at most 80 characters): what to do, decide or watch out for. Options, steps, reasons, deadlines and status belong in
@@ -127,7 +136,11 @@ Effort and benefit (A and I only): estimate both when you add an item. effort = 
 M ≤ 2 h, L ≤ 1 day, XL more. benefit = how much it moves the project goal: low, medium, high – use high sparingly. Your values count as
 estimates (marked "?" in lists, e.g. "⏱S·★high?") until the user confirms or changes them; change confirmed values only when they ask.
 When they name or confirm them in the conversation, send them with confirmed true.
-Decisions and warnings get no values; a decision inherits the benefit of the items waiting for it.`,
+Decisions and warnings get no values; a decision inherits the benefit of the items waiting for it.
+Items that concern several projects: every item has exactly one home project and keeps its reference there. If it concerns another
+project as well, set also_in (e.g. "IMM"): it then also appears there in status, lists and footer, with the code ("FIN:W3"). Do not
+add it twice and do not move it. waiting_on may point to items of other projects ("IMM:A2"). In answers, always write references of
+other projects with their code; ⇄IMM in lists means: also shown in IMM.`,
 };
 
 const STATUS = ["open", "doing", "blocked", "done", "dropped"];
@@ -166,6 +179,20 @@ function toolList(lang) {
     type: "string",
     enum: ["low", "medium", "high", ""],
     description: t("Nur A/I: Nutzen fürs Projektziel; leer löscht", "A/I only: benefit for the project goal; empty clears"),
+  };
+  const alsoInParam = {
+    type: "string",
+    description: t(
+      "Weitere Projekte (Kürzel oder Slug, durch Komma), in denen der Punkt mit angezeigt wird, z. B. \"IMM\"; der Punkt bleibt in seinem Projekt. Leer löscht",
+      "Further projects (code or slug, comma separated) where the item is shown as well, e.g. \"IMM\"; the item stays in its project. Empty clears",
+    ),
+  };
+  const waitingParam = {
+    type: "string",
+    description: t(
+      "Kennungen, auf die gewartet wird, z. B. \"D2, A1\"; aus anderen Projekten mit Kürzel: \"IMM:A2\"",
+      "References this item waits for, e.g. \"D2, A1\"; from other projects with the code: \"IMM:A2\"",
+    ),
   };
   const confirmedParam = {
     type: "boolean",
@@ -248,8 +275,8 @@ function toolList(lang) {
       name: "cotrack_status",
       title: t("Stand eines Projekts", "Project status"),
       description: t(
-        "Kompakter Stand für den Session-Start: Fußzeile, alle offenen Punkte (eine Zeile pro Punkt; 📝 = hat eine Beschreibung, siehe cotrack_get) und die aktuelle Stand-Nummer für cotrack_changes.",
-        "Compact status for the start of a session: footer, all open items (one line each; 📝 = has a description, see cotrack_get) and the current version number for cotrack_changes.",
+        "Kompakter Stand für den Session-Start: Fußzeile, alle offenen Punkte (eine Zeile pro Punkt; 📝 = hat eine Beschreibung, siehe cotrack_get; mit Kürzel wie „FIN:W3“ = aus einem anderen Projekt mit angezeigt) und die aktuelle Stand-Nummer für cotrack_changes.",
+        "Compact status for the start of a session: footer, all open items (one line each; 📝 = has a description, see cotrack_get; with a code like \"FIN:W3\" = shown here from another project) and the current version number for cotrack_changes.",
       ),
       inputSchema: { type: "object", properties: { project: projectParam }, required: ["project"] },
       annotations: { readOnlyHint: true },
@@ -306,7 +333,8 @@ function toolList(lang) {
               "Brief, about five lines: what is needed to act – for D the options with a recommendation, for A the goal or steps, for W impact and countermeasure. Details, measurements, research and history belong in the linked source. Only for A: sub-items as lines \"- [ ] step\" (at most 5, only when the user names the steps or agrees)",
             ),
           },
-          waiting_on: { type: "string", description: t("Kennungen, auf die gewartet wird, z. B. \"D2, A1\"", "References this item waits for, e.g. \"D2, A1\"") },
+          waiting_on: waitingParam,
+          also_in: alsoInParam,
           source: { type: "string", description: sourceText },
           effort: effortParam,
           benefit: benefitParam,
@@ -345,7 +373,8 @@ function toolList(lang) {
               "Replaces the whole description – read it with cotrack_get first. Progress as one \"Status:\" line that replaces the old one; do not append. Condense a long description to what is needed while you are at it and link details via source; never delete what exists nowhere else",
             ),
           },
-          waiting_on: { type: "string" },
+          waiting_on: waitingParam,
+          also_in: alsoInParam,
           source: { type: "string", description: sourceText },
           check: {
             type: "string",
@@ -471,6 +500,7 @@ const MSG = {
     checks: (p) => `Teilpunkte: ${p} erledigt (abhaken: cotrack_update check)`,
     sizing: (it) => `Aufwand: ${it.effort || "–"} · Nutzen: ${({ low: "gering", medium: "mittel", high: "hoch" })[it.benefit] || "–"}${it.sized_by === "user" ? " (vom Nutzer bestätigt)" : " (von der KI geschätzt, nicht bestätigt)"}`,
     followedBy: "Danach folgt",
+    alsoIn: "Auch angezeigt in",
     source: "Quelle",
     convertedTo: "Umgewandelt in",
     history: (it) => `Angelegt ${it.created_at} (${it.created_by}), geändert ${it.updated_at} (${it.updated_by})`,
@@ -505,6 +535,7 @@ const MSG = {
     checks: (p) => `Sub-items: ${p} done (tick: cotrack_update check)`,
     sizing: (it) => `Effort: ${it.effort || "–"} · Benefit: ${it.benefit || "–"}${it.sized_by === "user" ? " (confirmed by the user)" : " (estimated by the AI, not confirmed)"}`,
     followedBy: "Followed by",
+    alsoIn: "Also shown in",
     source: "Source",
     convertedTo: "Converted to",
     history: (it) => `Created ${it.created_at} (${it.created_by}), changed ${it.updated_at} (${it.updated_by})`,
@@ -525,8 +556,10 @@ const MSG = {
 const optional = (args, keys) =>
   Object.fromEntries(keys.filter((k) => args[k] !== undefined).map((k) => [k, args[k] === "" ? null : args[k]]));
 
+// Same scope as cotrack_changes and the web app's polling: the project and what it shows or is linked to (D26).
 async function latestEvent(db, slug) {
-  const row = await db.prepare("SELECT COALESCE(MAX(id), 0) AS v FROM events WHERE project_slug = ?").bind(slug).first();
+  const { where, args } = await linkedScope(db, slug);
+  const row = await db.prepare(`SELECT COALESCE(MAX(id), 0) AS v FROM events WHERE ${where}`).bind(...args).first();
   return row.v;
 }
 
@@ -536,8 +569,12 @@ async function projectAndRef(db, args, M) {
   const key = qualifier || args.project;
   if (!key) throw httpError(400, "missing_field", M.missingProject);
   const project = await getProject(db, key);
-  if (qualifier && args.project && (await getProject(db, args.project)).slug !== project.slug) {
-    throw httpError(400, "ref_project_mismatch", M.refMismatch(args.ref, args.project));
+  if (qualifier && args.project) {
+    const asked = await getProject(db, args.project);
+    // Fine when the item is shown in the asked project (also_in, D26): "FIN:W3" while working in IMM.
+    if (asked.slug !== project.slug && !refList((await getItemByRef(db, project.slug, ref)).also_in).includes(asked.slug)) {
+      throw httpError(400, "ref_project_mismatch", M.refMismatch(args.ref, args.project));
+    }
   }
   return { project, ref };
 }
@@ -575,40 +612,50 @@ async function callTool(name, args, db, actor, lang) {
       // cotrack_changes instead of being skipped.
       const stand = await latestEvent(db, project.slug);
       // The footer gets all items (like cotrack_footer), so it knows which blockers are closed and drops their ⏸.
-      const [all, kinds, settings] = await Promise.all([
-        listItems(db, { project: project.slug, status: "all" }),
+      // Items of other projects shown here (also_in, D26) come along with their qualified reference.
+      const [all, kinds, settings, codes] = await Promise.all([
+        projectItems(db, project, { status: "all" }),
         listKinds(db, true),
         getSettings(db),
+        projectCodes(db),
       ]);
       const items = all.filter((i) => ["open", "doing", "blocked"].includes(i.status));
-      const footer = buildFooter(all, kinds, { lang, ...footerStyle(settings) }) || M.nothingOpen;
-      return `${M.project}: ${projectTitle(project)}\n${M.footer}:${footer.includes("\n") ? "\n" : " "}${footer}\n${M.version}: ${stand}\n\n${itemsAsText(items, kinds, { lang })}`;
+      const view = { viewSlug: project.slug, codes };
+      const footer = buildFooter(all, kinds, { lang, ...footerStyle(settings), ...view }) || M.nothingOpen;
+      return `${M.project}: ${projectTitle(project)}\n${M.footer}:${footer.includes("\n") ? "\n" : " "}${footer}\n${M.version}: ${stand}\n\n${itemsAsText(items, kinds, { lang, ...view })}`;
     }
     case "cotrack_list": {
       const project = await getProject(db, args.project);
-      const items = await listItems(db, {
-        project: project.slug,
-        status: args.status || "open",
-        kind: args.kind ? String(args.kind).toUpperCase() : null,
-        owner: args.owner || null,
-        q: args.q || null,
-      });
-      return itemsAsText(items, await listKinds(db, true), { lang });
+      const [items, kinds, codes] = await Promise.all([
+        projectItems(db, project, {
+          status: args.status || "open",
+          kind: args.kind ? String(args.kind).toUpperCase() : null,
+          owner: args.owner || null,
+          q: args.q || null,
+        }),
+        listKinds(db, true),
+        projectCodes(db),
+      ]);
+      return itemsAsText(items, kinds, { lang, viewSlug: project.slug, codes });
     }
     case "cotrack_get": {
       const { project, ref } = await projectAndRef(db, args, M);
       const it = await getItemByRef(db, project.slug, ref);
+      // References relative to the item's home project; others with their code ("IMM:A2").
+      const codes = await projectCodes(db);
+      const lbl = (k) => keyLabel(k, it.project_slug, codes);
       const lines = [
-        `${it.ref} ${it.title}`,
-        `Status: ${it.status}${it.waiting_on ? ` · ${M.waitsFor} ${it.waiting_on}` : ""}${it.owner ? ` · ${M.owners[it.owner] || it.owner}` : ""}`,
+        `${args.ref && String(args.ref).includes(":") ? `${codes.get(it.project_slug)}:` : ""}${it.ref} ${it.title}`,
+        `Status: ${it.status}${it.waiting_on ? ` · ${M.waitsFor} ${waitKeys(it).map(lbl).join(",")}` : ""}${it.owner ? ` · ${M.owners[it.owner] || it.owner}` : ""}`,
       ];
+      if (it.also_in) lines.push(`${M.alsoIn}: ${refList(it.also_in).map((s) => codes.get(s) || s).join(", ")}`);
       if (it.short) lines.push(`${M.short}: ${it.short}`);
       if (it.body) lines.push(`${M.body}: ${it.body}`);
       const progress = checkProgress(it);
       if (progress) lines.push(M.checks(progress));
       if (it.effort || it.benefit) lines.push(M.sizing(it));
       const next = await successorsOf(db, it.project_slug, it.ref);
-      if (next.length) lines.push(`${M.followedBy}: ▶${next.join(",")}`);
+      if (next.length) lines.push(`${M.followedBy}: ▶${next.map(lbl).join(",")}`);
       if (it.source) lines.push(`${M.source}: ${it.source}`);
       if (it.converted_to) lines.push(`${M.convertedTo}: ${it.converted_to}`);
       lines.push(M.history(it));
@@ -616,7 +663,7 @@ async function callTool(name, args, db, actor, lang) {
     }
     case "cotrack_add": {
       const project = await getProject(db, args.project);
-      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "source", "effort", "benefit"]),
+      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "effort", "benefit"]),
         ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
       const size = sizeText(it, lang);
@@ -625,7 +672,7 @@ async function callTool(name, args, db, actor, lang) {
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
       const item = await getItemByRef(db, project.slug, ref);
-      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "source", "check", "uncheck", "effort", "benefit"]);
+      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "check", "uncheck", "effort", "benefit"]);
       if (args.confirmed === true) fields.confirmed = true;
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);
@@ -648,13 +695,16 @@ async function callTool(name, args, db, actor, lang) {
     case "cotrack_changes": {
       const project = await getProject(db, args.project);
       const after = Number(args.after) || 0;
+      // Also changes of what this project shows or is linked to (D26), written with the other project's code.
+      const [{ where, args: scopeArgs }, codes] = await Promise.all([linkedScope(db, project.slug), projectCodes(db)]);
       const { results } = await db
-        .prepare("SELECT id, item_ref, action, actor, data FROM events WHERE project_slug = ? AND id > ? ORDER BY id LIMIT 200")
-        .bind(project.slug, after)
+        .prepare(`SELECT id, project_slug, item_ref, action, actor, data FROM events WHERE id > ? AND (${where}) ORDER BY id LIMIT 200`)
+        .bind(after, ...scopeArgs)
         .all();
       if (!results.length) return M.noChangesSince(after);
       const lines = results.map((e) => {
-        return `${e.item_ref || M.project} ${e.action} (${M.owners[e.actor] || e.actor})${describeChange(e)}`;
+        const ref = e.item_ref ? keyLabel(`${e.project_slug}:${e.item_ref}`, project.slug, codes) : e.project_slug === project.slug ? M.project : codes.get(e.project_slug);
+        return `${ref} ${e.action} (${M.owners[e.actor] || e.actor})${describeChange(e)}`;
       });
       return `${lines.join("\n")}\n${M.version}: ${results[results.length - 1].id}`;
     }
@@ -664,7 +714,7 @@ async function callTool(name, args, db, actor, lang) {
 }
 
 // Compact but complete: every changed field of an event, long texts shortened.
-const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "source", "due", "effort", "benefit", "sized_by", "body", "checked", "unchecked", "to", "name", "repo", "code", "archived"];
+const CHANGE_FIELDS = ["title", "status", "owner", "short", "waiting_on", "also_in", "source", "due", "effort", "benefit", "sized_by", "body", "checked", "unchecked", "to", "name", "repo", "code", "archived"];
 function describeChange(e) {
   if (!e.data) return "";
   const d = JSON.parse(e.data);

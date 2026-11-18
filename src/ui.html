@@ -406,6 +406,7 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dg-node.is-free .dg-sub { color: var(--accent); font-weight: 600; }
 .dg-node.is-cycle { border: 2px solid var(--danger); padding: 9px 11px; }
 .dg-node.is-cycle .dg-sub { color: var(--danger); font-weight: 600; }
+.dg-node.is-ext { background: transparent; box-shadow: none; border: 1.5px dashed var(--line); }
 .dg-node.is-missing { background: transparent; box-shadow: none; border: 1.5px dashed color-mix(in srgb, var(--danger) 55%, var(--line)); }
 .dg-pill {
   display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 99px; font-size: 13px; white-space: nowrap;
@@ -877,12 +878,13 @@ const STRINGS = {
     allProjects: "Alle Projekte", noProject: "Kein Projekt", projectAria: (label) => "Projekt: " + label,
     noProjectYet: "Noch kein Projekt. Lege über ☰ ein neues an.", nothingOpen: "Nichts offen 🎉", noItems: "Keine Einträge",
     footerEmpty: "Nichts offen.", waitingFor: "wartet auf", followedBy: "danach folgt", source: "Quelle",
+    fAlsoIn: "Auch angezeigt in", alsoInTitle: "Wird auch in diesen Projekten angezeigt", sharedFrom: (p) => `Aus dem Projekt ${p}, hier mit angezeigt`,
     reopen: "Wieder öffnen", markDone: "Erledigt", reopenAria: (ref) => `${ref} wieder öffnen`, doneAria: (ref) => `${ref} erledigt`,
     copyRef: "Kennung + Titel kopieren", created: (ref) => `${ref} angelegt`, saved: (ref) => `${ref} gespeichert`,
     deleted: (ref) => `${ref} gelöscht`, openItems: "offene Punkte", noProjectFound: "Kein Projekt gefunden",
     askSave: "Änderungen speichern?", askSaveText: "Du hast in diesem Fenster etwas geändert.", discard: "Verwerfen",
     keepEditing: "Weiter bearbeiten", save: "Speichern", cancel: "Abbrechen", close: "Schließen", del: "Löschen",
-    shortPh: "1–3 Wörter für die Fußzeile", nobody: "– niemand –", waitingPh: "z. B. D2, A1", sourcePh: "Link oder Datei",
+    shortPh: "1–3 Wörter für die Fußzeile", nobody: "– niemand –", waitingPh: "z. B. D2, A1, IMM:A2", sourcePh: "Link oder Datei",
     confirmDelete: (ref) => `${ref} endgültig löschen? Die Kennung wird nicht neu vergeben.`,
     fTitle: "Titel", fBody: "Beschreibung", fShort: "Kurzlabel", fStatus: "Status", fWaiting: "Wartet auf", fSource: "Quelle", fDue: "Fällig",
     history: (c, by, u, uby) => `Angelegt ${c} von ${by} · geändert ${u} von ${uby}`,
@@ -951,7 +953,7 @@ const STRINGS = {
     depsPartly: (d, n) => `${d} von ${n} erledigt`, depsWaitsFor: (refs) => `wartet auf ${refs}`,
     depsBlocks: (n) => (n === 1 ? "1 wartet darauf" : `${n} warten darauf`),
     depsDoneOn: (d) => `erledigt am ${d}`, depsDroppedOn: (d) => `verworfen am ${d}`, depsInCycle: "im Kreis",
-    depsMissingCard: "gibt es in diesem Projekt nicht",
+    depsMissingCard: "gibt es in diesem Projekt nicht", depsExternalCard: "aus einem anderen Projekt",
     depsHidden: (refs) => `Ausgeblendet: ${refs} – antippen zum Zeigen`,
     depsLegend: "Pfeil = Reihenfolge (in der Fußzeile „D9 ▶A4“). Gestrichelt = Voraussetzung erledigt. Rot = Kreis oder unbekannte Kennung. Punkte ohne „Wartet auf“ bleiben im Board.",
     depsNotable: "Auffällig", depsCycles: "Kreise", depsCycleWhy: "Warten aufeinander – eine Abhängigkeit entfernen.",
@@ -1066,12 +1068,13 @@ const STRINGS = {
     allProjects: "All projects", noProject: "No project", projectAria: (label) => "Project: " + label,
     noProjectYet: "No project yet. Create one via ☰.", nothingOpen: "Nothing open 🎉", noItems: "No items",
     footerEmpty: "Nothing open.", waitingFor: "waiting for", followedBy: "followed by", source: "Source",
+    fAlsoIn: "Also shown in", alsoInTitle: "Also shown in these projects", sharedFrom: (p) => `From the project ${p}, shown here as well`,
     reopen: "Reopen", markDone: "Mark as done", reopenAria: (ref) => `Reopen ${ref}`, doneAria: (ref) => `Mark ${ref} as done`,
     copyRef: "Copy reference + title", created: (ref) => `${ref} created`, saved: (ref) => `${ref} saved`,
     deleted: (ref) => `${ref} deleted`, openItems: "open items", noProjectFound: "No project found",
     askSave: "Save changes?", askSaveText: "You changed something in this window.", discard: "Discard",
     keepEditing: "Keep editing", save: "Save", cancel: "Cancel", close: "Close", del: "Delete",
-    shortPh: "1–3 words for the footer", nobody: "– nobody –", waitingPh: "e.g. D2, A1", sourcePh: "Link or file",
+    shortPh: "1–3 words for the footer", nobody: "– nobody –", waitingPh: "e.g. D2, A1, IMM:A2", sourcePh: "Link or file",
     confirmDelete: (ref) => `Delete ${ref} permanently? The reference will not be reused.`,
     fTitle: "Title", fBody: "Description", fShort: "Short label", fStatus: "Status", fWaiting: "Waiting for", fSource: "Source", fDue: "Due",
     history: (c, by, u, uby) => `Created ${c} by ${by} · changed ${u} by ${uby}`,
@@ -1140,7 +1143,7 @@ const STRINGS = {
     depsPartly: (d, n) => `${d} of ${n} done`, depsWaitsFor: (refs) => `waits for ${refs}`,
     depsBlocks: (n) => (n === 1 ? "1 waits for it" : `${n} wait for it`),
     depsDoneOn: (d) => `done on ${d}`, depsDroppedOn: (d) => `dropped on ${d}`, depsInCycle: "in a cycle",
-    depsMissingCard: "does not exist in this project",
+    depsMissingCard: "does not exist in this project", depsExternalCard: "from another project",
     depsHidden: (refs) => `Hidden: ${refs} – tap to show`,
     depsLegend: "Arrow = order (“D9 ▶A4” in the footer). Dashed = prerequisite done. Red = cycle or unknown reference. Items without “Waiting for” stay on the board.",
     depsNotable: "Worth a look", depsCycles: "Cycles", depsCycleWhy: "They wait for each other – remove one dependency.",
@@ -1447,10 +1450,11 @@ function render(before) {
   successors = new Map();
   for (const i of state.items) {
     if (i.status === "done" || i.status === "dropped") continue;
-    for (const r of (i.waiting_on || "").split(",").filter(Boolean)) {
-      const key = i.project_slug + ":" + r;
-      successors.set(key, [...(successors.get(key) || []), i.ref]);
-    }
+    for (const key of waitKeys(i)) successors.set(key, [...(successors.get(key) || []), itemKey(i)]);
+  }
+  for (const i of state.items) for (const w of i.ext_next || []) {
+    const key = itemKey(i);
+    if (!(successors.get(key) || []).includes(w)) successors.set(key, [...(successors.get(key) || []), w]);
   }
   const board = $("#board");
   const mode = state.project ? state.mode : "board";
@@ -1591,13 +1595,15 @@ async function saveSize(it, body, confirmOnly) {
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
   const meta = [];
-  if (state.project === ALL) {
-    const pr = state.projects.find((p) => p.slug === it.project_slug);
-    meta.push(h("span", { class: "pill", title: it.project_slug }, pr?.code || it.project_slug));
-  }
-  for (const r of (it.waiting_on || "").split(",").filter(Boolean)) meta.push(h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + r));
-  const next = successors.get(it.project_slug + ":" + it.ref);
-  if (next) meta.push(h("span", { class: "pill next", title: tr("followedBy") }, "▶ " + next.join(", ")));
+  const pr = state.projects.find((p) => p.slug === it.project_slug);
+  if (state.project === ALL) meta.push(h("span", { class: "pill", title: it.project_slug }, pr?.code || it.project_slug));
+  else if (it.project_slug !== state.project) meta.push(h("span", { class: "pill shared", title: tr("sharedFrom", pr?.name || it.project_slug) }, "⇄ " + codeOf(it.project_slug)));
+  // On its home board: where else it is shown (only then – nothing is added for items that are not shared).
+  const alsoIn = refList(it.also_in).filter((slug) => slug !== state.project);
+  if (alsoIn.length && it.project_slug === state.project) meta.push(h("span", { class: "pill shared", title: tr("alsoInTitle") }, "⇄ " + alsoIn.map(codeOf).join(", ")));
+  for (const k of waitKeys(it)) meta.push(h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + keyRef(k)));
+  const next = successors.get(itemKey(it));
+  if (next) meta.push(h("span", { class: "pill next", title: tr("followedBy") }, "▶ " + next.map((k) => keyRef(k)).join(", ")));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
   if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
@@ -1622,7 +1628,7 @@ function renderItem(it, k, before) {
       onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : ""),
     h("div", { class: "main", onclick: () => openEdit(it) },
       h("div", { class: "l1" },
-        h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${it.ref} ${it.title}`); } }, it.ref),
+        h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${refLabel(it)} ${it.title}`); } }, refLabel(it)),
         h("span", { class: "title" }, it.title)),
       preview ? h("p", { class: "desc" }, preview.length > 160 ? preview.slice(0, 160) + " …" : preview) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
@@ -1661,20 +1667,27 @@ const refList = (s) => String(s || "").split(",").map((r) => r.trim()).filter(Bo
 const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const daysAgo = (iso) => Math.round((dayStart(new Date()) - dayStart(new Date(iso))) / 864e5);
 const itemKey = (i) => i.project_slug + ":" + i.ref;
-function refLabel(i) {
-  if (state.project !== ALL) return i.ref;
-  return `${state.projects.find((p) => p.slug === i.project_slug)?.code || i.project_slug}:${i.ref}`;
+// Across projects (D26): waiting_on holds "A2" (same project as the item) or "immobilien:A2"; keys are "slug:ref".
+// The server adds ext_open (blockers outside the loaded list that are still open) and ext_next (waiting items outside it).
+const waitKey = (i, r) => (r.includes(":") ? r : i.project_slug + ":" + r);
+const waitKeys = (i) => refList(i.waiting_on).map((r) => waitKey(i, r));
+const codeOf = (slug) => state.projects.find((p) => p.slug === slug)?.code || slug;
+// How a key reads, seen from a project: its own items plain ("A2"), others with their code ("IMM:A2").
+function keyRef(key, from = state.project) {
+  const n = key.indexOf(":"), slug = key.slice(0, n), ref = key.slice(n + 1);
+  return from !== ALL && slug === from ? ref : `${codeOf(slug)}:${ref}`;
 }
+const refLabel = (i) => keyRef(itemKey(i));
 
 function nextQueue() {
   const me = state.actor === "ai" ? "ai" : "user";
   const open = state.items.filter((i) => i.status !== "done" && i.status !== "dropped");
   const openKeys = new Set(open.map(itemKey));
-  const waiters = new Map(); // key -> refs of open items waiting for it
-  for (const i of open) for (const r of refList(i.waiting_on)) {
-    const k = i.project_slug + ":" + r;
-    waiters.set(k, [...(waiters.get(k) || []), i.ref]);
-  }
+  const waiters = new Map(); // key -> keys of open items waiting for it (also from other projects, ext_next)
+  for (const i of open) for (const k of waitKeys(i)) waiters.set(k, [...(waiters.get(k) || []), itemKey(i)]);
+  for (const i of open) for (const w of i.ext_next || []) waiters.set(itemKey(i), [...(waiters.get(itemKey(i)) || []), w]);
+  // a prerequisite is still open: in the list, or outside it according to the server (ext_open)
+  const blocks = (i, k) => openKeys.has(k) || (i.ext_open || []).includes(k);
   const mine = [], waiting = [];
   let others = 0;
   for (const i of open) {
@@ -1682,7 +1695,7 @@ function nextQueue() {
     if (!k?.actionable) continue;
     const owner = i.owner || k.default_owner || "";
     if (owner !== me) { if (owner) others++; continue; }
-    const blocked = i.status === "blocked" || refList(i.waiting_on).some((r) => openKeys.has(i.project_slug + ":" + r));
+    const blocked = i.status === "blocked" || waitKeys(i).some((k) => blocks(i, k));
     (blocked ? waiting : mine).push(i);
   }
   // benefit along the chain: [points, ref it comes from, known] – the item's own, or the best of what waits for it. An
@@ -1698,7 +1711,7 @@ function nextQueue() {
     if (seen.has(key)) return best; // cycle
     seen.add(key);
     for (const r of waiters.get(key) || []) {
-      const w = byKey.get(i.project_slug + ":" + r);
+      const w = byKey.get(r);
       const [pts, , k] = w ? chainBenefit(w, seen) : [0, null, false];
       if (pts > best[0] || (pts === best[0] && k && !best[2])) best = [pts, r, k];
     }
@@ -1727,14 +1740,14 @@ function nextQueue() {
     const parts = [];
     if (i.status === "doing") parts.push(tr("nextDoing"));
     const w = waiters.get(itemKey(i));
-    if (w?.length) parts.push(tr("nextBlocks", w.join(", ")));
-    const freed = refList(i.waiting_on).filter((r) => !openKeys.has(i.project_slug + ":" + r));
-    if (freed.length) parts.push(tr("nextFreed", freed.join(", ")));
+    if (w?.length) parts.push(tr("nextBlocks", w.map((k) => keyRef(k)).join(", ")));
+    const freed = waitKeys(i).filter((k) => !blocks(i, k));
+    if (freed.length) parts.push(tr("nextFreed", freed.map((k) => keyRef(k)).join(", ")));
     const [pts, via, known] = chainBenefit(i);
     const effort = isSizable(i) && i.effort ? tr("effortLabels." + i.effort) : "";
     if (known) { // an assumed "medium" is not shown as if someone had rated it
       const word = benefitWord(BENEFITS[pts - 1]);
-      parts.push((via ? tr("nextBenefitVia", word, via) : tr("nextBenefit", word)) + (effort ? ", " + effort : ""));
+      parts.push((via ? tr("nextBenefitVia", word, keyRef(via)) : tr("nextBenefit", word)) + (effort ? ", " + effort : ""));
     } else if (isSizable(i) && i.benefit) parts.push(tr("nextBenefit", benefitWord(i.benefit)) + (effort ? ", " + effort : ""));
     else if (effort) parts.push(effort);
     if (!parts.length) parts.push(tr("nextAge", daysAgo(i.created_at)));
@@ -1966,7 +1979,8 @@ function histDetails(e) {
   }
   if ("status" in c && e.action === "updated") parts.push(`${tr("fStatus")}: ${STATUS_LABELS[c.status] || c.status}`);
   if ("owner" in c) parts.push(`${tr("responsible")}: ${c.owner ? ownerLabel(c.owner) : "–"}`);
-  if ("waiting_on" in c) parts.push(`${tr("fWaiting")}: ${c.waiting_on ? c.waiting_on.replace(/,/g, ", ") : "–"}`);
+  if ("waiting_on" in c) parts.push(`${tr("fWaiting")}: ${c.waiting_on ? waitKeys({ project_slug: e.project_slug, waiting_on: c.waiting_on }).map((k) => keyRef(k, e.project_slug)).join(", ") : "–"}`);
+  if ("also_in" in c) parts.push(`${tr("fAlsoIn")}: ${c.also_in ? refList(c.also_in).map(codeOf).join(", ") : "–"}`);
   if ("due" in c) parts.push(`${tr("fDue")}: ${c.due || "–"}`);
   if ("effort" in c) parts.push(`${tr("effort")}: ${c.effort || "–"}`);
   if ("benefit" in c) parts.push(`${tr("benefit")}: ${c.benefit ? benefitWord(c.benefit) : "–"}`);
@@ -2450,7 +2464,7 @@ function waitCard(d) {
     h("h2", null, tr("stWaitTitle")),
     list.length ? list.map((w) => h("div", { class: "st-wait" },
       h("span", null, h("b", { style: `color:${kindColor(w.kind)}` }, statRef(w)), " ", tr(w.still ? "stWaitsFor" : "stWaitedFor"), " ",
-        h("b", { style: `color:${kindColor(w.on_kind)}` }, state.project === ALL ? `${statRef(w).split(":")[0]}:${w.on}` : w.on)),
+        h("b", { style: `color:${kindColor(w.on_kind)}` }, keyRef(waitKey(w, w.on)))),
       h("span", { class: "track" }, h("i", { style: `width:${Math.max(3, w.days / max * 100)}%;background:${w.still ? "var(--c-user)" : "var(--c-made)"}` })),
       h("span", { class: "st-note" }, w.still ? tr("stWaitStill", span(w.days)) : tr("stWaitFreed", span(w.days), dayDate(w.freed.slice(0, 10)))))) : h("p", { class: "st-note" }, tr("stWaitNone")),
     d.waits.avg_days != null ? h("p", { class: "st-note" }, tr("stWaitAvg", span(d.waits.avg_days))) : null);
@@ -2468,7 +2482,7 @@ const NARROW = matchMedia("(max-width: 699px)");
 const SVGNS = "http://www.w3.org/2000/svg";
 const isClosed = (i) => i.status === "done" || i.status === "dropped";
 const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true });
-const qref = (slug, ref) => (state.project === ALL ? `${state.projects.find((p) => p.slug === slug)?.code || slug}:${ref}` : ref);
+const qref = (slug, ref) => keyRef(slug + ":" + ref);
 const shortDate = (iso) => (iso ? new Date(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "numeric" }) : "–");
 const closedMark = (it) => (it.status === "dropped" ? "✕" : "✓");
 const closedText = (it) => tr(it.status === "dropped" ? "depsDroppedOn" : "depsDoneOn", shortDate(it.closed_at || it.updated_at));
@@ -2489,8 +2503,9 @@ function depsModel(items) {
     if (!nodes.has(key)) nodes.set(key, { key, slug, ref, item: byKey.get(key) || null, pre: [], post: [] });
     return nodes.get(key);
   };
-  for (const i of items) for (const r of refList(i.waiting_on)) {
-    const a = node(i.project_slug, r), b = node(i.project_slug, i.ref);
+  for (const i of items) for (const k of waitKeys(i)) {
+    const n = k.indexOf(":"); // other projects too (D26): "immobilien:A2"
+    const a = node(k.slice(0, n), k.slice(n + 1)), b = node(i.project_slug, i.ref);
     if (!a.post.includes(b)) { a.post.push(b); b.pre.push(a); }
   }
   const sorted = [...nodes.values()].sort((a, b) => natural(a.key, b.key));
@@ -2511,9 +2526,15 @@ function depsModel(items) {
   for (const v of sorted) if (!idx.has(v)) visit(v);
   for (const part of cycles) { const set = new Set(part); for (const v of part) v.cycle = set; }
   for (const v of nodes.values()) v.open = !!v.item && !isClosed(v.item);
+  // Prerequisites in another project (D26) are not on this board: the server says whether they are still open (ext_open).
+  const extOpen = new Set(items.flatMap((i) => i.ext_open || []));
+  for (const v of nodes.values()) {
+    v.external = !v.item && state.project !== ALL && v.slug !== state.project;
+    v.extDone = v.external && !extOpen.has(v.key);
+  }
   for (const v of nodes.values()) {
     v.openPost = v.post.filter((w) => w.open);
-    v.resolved = v.pre.filter((p) => p.item && isClosed(p.item));
+    v.resolved = v.pre.filter((p) => (p.item && isClosed(p.item)) || p.extDone);
     // frei: everything it waited for is closed (unknown references never count as closed)
     v.free = v.open && v.item.status !== "blocked" && v.pre.length > 0 && v.resolved.length === v.pre.length;
   }
@@ -2553,7 +2574,7 @@ function renderDeps(cols, before) {
   const match = new Set(cols.filter((c) => c.shown).flatMap((c) => c.list.map(itemKey)));
   const compact = state.view === "open";
   const chains = m.shown.filter((c) => !filtered || deps.expanded.has(c.key) || c.nodes.some((v) => match.has(v.key)));
-  const rank = (c) => [c.nodes.some((v) => v.cycle) ? 0 : 1, c.nodes.some((v) => !v.item) ? 0 : 1,
+  const rank = (c) => [c.nodes.some((v) => v.cycle) ? 0 : 1, c.nodes.some((v) => !v.item && !v.external) ? 0 : 1,
     c.nodes.some((v) => v.free) ? 0 : 1, -Math.max(0, ...c.nodes.map((v) => v.openPost.length)), c.key];
   chains.sort((a, b) => cmpRank(rank(a), rank(b)));
   deps.chains = [];
@@ -2621,7 +2642,7 @@ function depsChain(c, filtered, match, compact, before) {
   for (const v of c.nodes) for (const w of v.post) {
     const a = rep.get(v), b = rep.get(w);
     if (a === b && v !== w) continue; // inside one "⋯"
-    const key = a.key + ">" + b.key, cycle = !!v.cycle?.has(w), done = !!v.item && isClosed(v.item);
+    const key = a.key + ">" + b.key, cycle = !!v.cycle?.has(w), done = (!!v.item && isClosed(v.item)) || !!v.extDone;
     const e = edges.get(key);
     if (e) { e.cycle ||= cycle; e.done &&= done; } else edges.set(key, { a, b, cycle, done });
     a.post.add(b); b.pre.add(a);
@@ -2694,17 +2715,24 @@ function depsChain(c, filtered, match, compact, before) {
   return h("section", { class: "dg-chain" }, graph);
 }
 
+// On a project's chains, items of other projects (D26) carry their code; "Alle Projekte" keeps the plain number.
+const nodeRef = (v) => (state.project === ALL ? v.ref : qref(v.slug, v.ref));
 function depsNode(x, c, compact, before) {
   if (x.hidden) {
-    const label = tr("depsHidden", x.hidden.map((v) => v.ref).join(", "));
+    const label = tr("depsHidden", x.hidden.map(nodeRef).join(", "));
     return h("button", { type: "button", class: "dg-pill hid", title: label, "aria-label": label,
       onclick: () => { deps.expanded.add(c.key); render(); } }, "⋯ " + x.hidden.length);
   }
   const v = x.v, it = v.item;
+  if (!it && v.external) {
+    return h("div", { class: "dg-node is-ext" + (v.extDone ? " is-done" : ""), "data-key": v.key, style: "--kc:#6b7280", title: tr("depsExternalCard") },
+      h("span", { class: "kbadge" }, v.extDone ? "✓" : "⇄"),
+      h("span", { class: "tx" }, h("span", { class: "dg-t" }, h("b", null, nodeRef(v))), h("span", { class: "dg-sub" }, tr("depsExternalCard"))));
+  }
   if (!it) {
     return h("div", { class: "dg-node is-missing", "data-key": v.key, style: "--kc:var(--danger)" },
       h("span", { class: "kbadge" }, "?"),
-      h("span", { class: "tx" }, h("span", { class: "dg-t" }, h("b", null, v.ref)), h("span", { class: "dg-sub" }, tr("depsMissingCard"))));
+      h("span", { class: "tx" }, h("span", { class: "dg-t" }, h("b", null, nodeRef(v))), h("span", { class: "dg-sub" }, tr("depsMissingCard"))));
   }
   const k = kindBy(it.kind);
   const kc = `--kc:${k?.color || "#6b7280"}`;
@@ -2712,13 +2740,13 @@ function depsNode(x, c, compact, before) {
   const flash = before && !before.has(itemKey(it) + ":" + it.updated_at) ? " flash" : "";
   if (closed && compact) {
     return h("button", { type: "button", class: "dg-pill is-done" + flash, style: kc, "data-key": v.key,
-      title: `${it.ref} ${it.title} – ${closedText(it)}`, onclick: () => openEdit(it) }, closedMark(it) + " " + it.ref);
+      title: `${nodeRef(v)} ${it.title} – ${closedText(it)}`, onclick: () => openEdit(it) }, closedMark(it) + " " + nodeRef(v));
   }
   const cls = "dg-node" + (closed ? " is-done" : "") + (v.free ? " is-free" : "") + (v.cycle ? " is-cycle" : "") + flash;
   return h("button", { type: "button", class: cls, style: kc, "data-key": v.key, onclick: () => openEdit(it) },
     h("span", { class: "kbadge" }, closed ? closedMark(it) : it.kind),
     h("span", { class: "tx" },
-      h("span", { class: "dg-t" }, h("b", null, it.ref), " ", h("span", null, it.title)),
+      h("span", { class: "dg-t" }, h("b", null, nodeRef(v)), " ", h("span", null, it.title)),
       h("span", { class: "dg-sub" }, depsSub(v))));
 }
 
@@ -2732,7 +2760,7 @@ function depsSub(v) {
   const owner = k?.actionable ? it.owner || k.default_owner : null;
   if (owner) parts.push(ownerLabel(owner));
   if (it.status === "doing" || it.status === "blocked") parts.push(STATUS_LABELS[it.status]);
-  const waits = v.pre.filter((p) => !v.resolved.includes(p)).map((p) => p.ref);
+  const waits = v.pre.filter((p) => !v.resolved.includes(p)).map(nodeRef);
   if (v.resolved.length && waits.length) parts.push(tr("depsPartly", v.resolved.length, v.pre.length));
   if (waits.length) parts.push(tr("depsWaitsFor", waits.join(", ")));
   if (v.openPost.length) parts.push(tr("depsBlocks", v.openPost.length));
@@ -2752,7 +2780,7 @@ function depsNotes(m) {
     const path = cyclePath(part);
     return row(path[0], tr("depsCycleWhy"), path.map(label).join(" → "));
   }) });
-  const missing = shown.filter((v) => !v.item);
+  const missing = shown.filter((v) => !v.item && !v.external);
   if (missing.length) notes.push({ bad: true, title: tr("depsMissing"), rows: missing.map((v) => row(v, tr("depsMissingWhy", v.post.map(label).join(", ")), null)) });
   const freed = shown.filter((v) => v.free);
   if (freed.length) notes.push({ title: tr("depsFreed"), rows: freed.map((v) => row(v, tr("depsFreedWhy", v.resolved.map(label).join(", ")))) });
@@ -3244,10 +3272,13 @@ function openEdit(it) {
       it.owner && !OWNER_LABELS[it.owner] ? h("option", { value: it.owner, selected: true }, it.owner) : null,
       h("option", { value: "" , selected: !it.owner }, tr("nobody"))),
     status: h("select", null, Object.entries(STATUS_LABELS).map(([v, l]) => h("option", { value: v, selected: it.status === v }, l))),
-    waiting_on: h("input", { value: (it.waiting_on || "").replace(/,/g, ", "), placeholder: tr("waitingPh") }),
+    // relative to the item's own project, which is also how the server reads what is typed here
+    waiting_on: h("input", { value: waitKeys(it).map((k) => keyRef(k, it.project_slug)).join(", "), placeholder: tr("waitingPh") }),
     source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
+  // Also shown in (D26): kept up by the AI, so the field only appears when it is set.
+  if (it.also_in) f.also_in = h("input", { value: refList(it.also_in).map(codeOf).join(", ") });
   // Effort and benefit (actions and ideas): an untouched estimate stays an estimate unless "confirm" is ticked.
   const sizable = isSizable(it), est = isEstimate(it);
   const sz = sizable ? {
@@ -3332,7 +3363,7 @@ function openEdit(it) {
     } catch (err) { toast(tr("error", err.message)); }
   };
   const d = openDialogQuiet(
-    h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, it.ref), k.name),
+    h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, refLabel(it)), k.name),
     h("label", null, tr("fTitle"), f.title, titleCount),
     h("label", null, tr("fBody"), f.body, bodyCount),
     checkBox,
@@ -3341,13 +3372,14 @@ function openEdit(it) {
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
     h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
+    f.also_in ? field(tr("fAlsoIn"), f.also_in) : null,
     h("p", { class: "small" }, tr("history", fmt(it.created_at), actorLabel(it.created_by), fmt(it.updated_at), actorLabel(it.updated_by))),
     !it.converted_to && convertTargets.length ? h("div", { class: "actions", style: "justify-content:flex-start" },
       h("span", { class: "small", style: "align-self:center" }, tr("accept")),
       convertTargets.map((x) => h("button", { type: "button", class: "btn", onclick: () => convert(x.code) }, tr("asKind", x.code, x.name)))) : null,
     h("div", { class: "actions" },
       h("button", { type: "button", class: "btn danger", onclick: del }, tr("del")),
-      h("button", { type: "button", class: "btn", onclick: () => copy(`${it.ref} ${it.title}`) }, tr("copy")),
+      h("button", { type: "button", class: "btn", onclick: () => copy(`${refLabel(it)} ${it.title}`) }, tr("copy")),
       h("span", { class: "spacer" }),
       h("button", { type: "button", class: "btn", onclick: dismissDialog }, tr("cancel")),
       h("button", { type: "submit", class: "primary" }, tr("save"))),

@@ -25,20 +25,25 @@ The whole server is in [`src/mcp.js`](../src/mcp.js) (no library, easy to read).
 | `cotrack_projects` | projects (slug, code, repository) with the number of open items; with `repo` only the project for that repository, with `archived` archived ones too | reads |
 | `cotrack_project_create` | create a project, with your slug and code (only when you ask for it) | writes |
 | `cotrack_project_update` | rename a project, set its repository, add a code, archive or restore it (`archived`) | writes |
-| `cotrack_status` | session start: footer + open items + version number; 📝 = the item has a description | reads |
+| `cotrack_status` | session start: footer + open items + version number; 📝 = the item has a description; items of other projects shown here carry their code ("FIN:W3") | reads |
 | `cotrack_list` | filtered list (status, category, owner, search) | reads |
 | `cotrack_get` | one item with its description | reads |
 | `cotrack_add` | add a new item – short title (at most 80 characters), brief description (about five lines, details via a link in `source`); from 100 characters of title or 600 of description the server answers with a note; for A and I with estimated effort (`effort` XS–XL) and benefit (`benefit` low/medium/high) | writes |
-| `cotrack_update` | change, close (`done`), drop (`dropped`); `check`/`uncheck` ticks sub-items of an action; change `effort`/`benefit` | writes |
+| `cotrack_update` | change, close (`done`), drop (`dropped`); `check`/`uncheck` ticks sub-items of an action; change `effort`/`benefit`; `also_in` = further projects where the item is shown as well (also on `cotrack_add`) | writes |
 | `cotrack_convert` | accept an idea → A or D (effort and benefit move along into an action) | writes |
 | `cotrack_footer` | only the footer; several projects (comma) = one block per project, `delta` = only "new/done", `layout` = `multi` (one line per group) or `single`; without `layout` the web app setting applies (☰ → Chat footer → Customize); `lang` = `de` or `en` | reads |
-| `cotrack_changes` | only the changes since a version number (saves tokens in follow-up sessions) | reads |
+| `cotrack_changes` | only the changes since a version number (saves tokens in follow-up sessions); including those of items shown here or linked across projects | reads |
 
 Deliberately **no deleting** by the AI – items are dropped with `status: "dropped"`, projects archived, so nothing is lost.
 A project's slug and code are fixed: references like "CT:A4" in chats and documents stay valid.
 
 Wherever `project` is required, the **slug or the code** works (`cotrack` or `CT`). `cotrack_get`, `cotrack_update`
 and `cotrack_convert` also take a **qualified reference** (`ref: "CT:A4"`); `project` may then be omitted.
+
+**Across projects (decision D26):** an item belongs to exactly one project. With `also_in` (e.g. `"IMM"`) it appears in further
+projects as well – in `cotrack_status`, `cotrack_list` and the footer, there with its code ("FIN:W3"); in its own project
+`⇄IMM` shows that it is shared. `waiting_on` takes references of other projects (`"IMM:A2"`). While working in IMM, the AI may
+send `project: "IMM"` with `cotrack_update` for FIN:W3, as long as the item is shown there.
 
 ## Language
 

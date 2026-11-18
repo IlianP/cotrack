@@ -43,6 +43,12 @@
   to act (about five lines), details live in the linked `source`, progress is one replaced "Stand:" line. No hard limit: a note in
   the MCP answer from `BODY_HINT_AT` (600) on (`bodyHint` in `src/mcp.js`), a counter in the edit dialog. `BODY_HINT_AT` exists
   in `src/mcp.js` and `src/ui.html` – keep both in sync.
+- Items across projects (decision D26, methodology v2.13, migration 0010): an item has one home project; `also_in` (slugs)
+  shows it in further projects under its qualified reference ("FIN:W3"). `waiting_on` stores plain refs for the same project
+  and `slug:REF` for others (input may use the code). Keys are `slug:REF` everywhere (`itemKey`, `waitKeys`, `keyLabel` in
+  `src/worker.js`; `waitKey`, `keyRef` in `src/ui.html` – keep both in sync). `projectItems` loads a project's view (own +
+  shared items) and adds `ext_open`/`ext_next` for links to items outside it; `linkedScope` widens versions and
+  `cotrack_changes` to what a project shows or is linked to. The edit dialog shows "Auch angezeigt in" only when it is set.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.

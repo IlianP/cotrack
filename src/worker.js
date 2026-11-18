@@ -226,7 +226,7 @@ async function route(req, db, url, actor) {
   if (seg[0] === "items" && seg.length === 1 && method === "GET") {
     const items = await listItems(db, filtersFrom(q));
     if (q.get("format") === "text") {
-      return plain(itemsAsText(items, await listKinds(db, true), { withProject: true, lang: await langFor(db, q) }));
+      return plain(itemsAsText(items, await listKinds(db, true), { withProject: true, lang: await langFor(db, q), codes: await projectCodes(db) }));
     }
     return json({ items });
   }
@@ -245,8 +245,14 @@ async function route(req, db, url, actor) {
     if (sub === "items") {
       if (seg.length === 3) {
         if (method === "GET") {
-          const items = await listItems(db, { ...filtersFrom(q), project: project.slug });
-          if (q.get("format") === "text") return plain(itemsAsText(items, await listKinds(db, true), { lang: await langFor(db, q) }));
+          // With the items of other projects shown here (also_in, D26); ?shared=0 for the project's own items only.
+          const items = q.get("shared") === "0"
+            ? await listItems(db, { ...filtersFrom(q), project: project.slug })
+            : await projectItems(db, project, filtersFrom(q));
+          if (q.get("format") === "text") {
+            const [kinds, lang, codes] = await Promise.all([listKinds(db, true), langFor(db, q), projectCodes(db)]);
+            return plain(itemsAsText(items, kinds, { lang, viewSlug: project.slug, codes }));
+          }
           return json({ items });
         }
         if (method === "POST") return json({ item: await createItem(db, project, await readJson(req), actor) }, 201);
@@ -264,13 +270,11 @@ async function route(req, db, url, actor) {
     if (seg.length === 3 && method === "GET") {
       if (sub === "version") {
         // global: newest event of any project, so the web app notices new or archived projects too.
-        const row = await db
-          .prepare(
-            "SELECT COALESCE((SELECT MAX(id) FROM events WHERE project_slug = ?), 0) AS v, COALESCE((SELECT MAX(id) FROM events), 0) AS g",
-          )
-          .bind(project.slug)
-          .first();
-        return json({ version: row.v, global: row.g });
+        const [v, row] = await Promise.all([
+          linkedVersion(db, project.slug),
+          db.prepare("SELECT COALESCE(MAX(id), 0) AS g FROM events").first(),
+        ]);
+        return json({ version: v, global: row.g });
       }
       if (sub === "events") return json({ events: await listEvents(db, { project: project.slug, ...eventRange(q) }) });
       if (sub === "footer") {
@@ -285,12 +289,13 @@ async function route(req, db, url, actor) {
         return json({ footer: textLine });
       }
       if (sub === "status.md") {
-        const [items, kinds, lang] = await Promise.all([
+        const [items, kinds, lang, codes] = await Promise.all([
           listItems(db, { project: project.slug, status: "all" }),
           listKinds(db, true),
           langFor(db, q),
+          projectCodes(db),
         ]);
-        return plain(buildStatusMarkdown(project, items, kinds, url.origin, lang), "text/markdown; charset=utf-8");
+        return plain(buildStatusMarkdown(project, items, kinds, url.origin, lang, codes), "text/markdown; charset=utf-8");
       }
     }
   }
@@ -298,6 +303,51 @@ async function route(req, db, url, actor) {
 }
 
 /* --------------------------------------------------------------- events */
+
+/**
+ * Version of a project for polling (web app) and for cotrack_status / cotrack_changes: its newest event – and, since
+ * D26, the newest event of what it shows or is linked to: items of other projects shown in it (also_in), items it
+ * waits for or that wait for it across projects, and changes of also_in that add or remove it.
+ */
+export async function linkedVersion(db, slug) {
+  const { where, args } = await linkedScope(db, slug);
+  const row = await db.prepare(`SELECT COALESCE(MAX(id), 0) AS v FROM events WHERE ${where}`).bind(...args).first();
+  return row.v;
+}
+
+// SQL condition on events for a project and everything shown in or linked to it (see linkedVersion).
+export async function linkedScope(db, slug) {
+  let rows = [];
+  try {
+    ({ results: rows } = await db
+      .prepare(
+        `SELECT project_slug, kind || seq AS ref, waiting_on, also_in FROM items
+         WHERE (also_in IS NOT NULL AND ',' || also_in || ',' LIKE ?) OR waiting_on LIKE '%:%'`,
+      )
+      .bind(`%,${slug},%`)
+      .all());
+  } catch (err) {
+    if (!missingAlsoIn(err)) throw err;
+    return { where: "project_slug = ?", args: [slug] };
+  }
+  const keys = new Set();
+  const shownHere = new Set(rows.filter((r) => refList(r.also_in).includes(slug)).map(itemKey));
+  for (const r of rows) {
+    if (shownHere.has(itemKey(r))) keys.add(itemKey(r));
+    const waits = waitKeys(r);
+    // another project waits for one of ours: its changes move our ▶
+    if (r.project_slug !== slug && waits.some((k) => k.startsWith(slug + ":"))) keys.add(itemKey(r));
+    // we (or an item shown here) wait for an item elsewhere: its changes move our ⏸
+    if (r.project_slug === slug || shownHere.has(itemKey(r))) for (const k of waits) if (!k.startsWith(slug + ":")) keys.add(k);
+  }
+  const list = [...keys].slice(0, 200);
+  const where = [
+    "project_slug = ?",
+    "(data LIKE '%\"also_in%' AND data LIKE ?)",
+    ...(list.length ? [`project_slug || ':' || item_ref IN (${list.map(() => "?").join(",")})`] : []),
+  ].join(" OR ");
+  return { where, args: [slug, `%${slug}%`, ...list] };
+}
 
 // ?after= (newer than, for catching up) and ?before= (older than, for paging back); newest first, at most 500.
 function eventRange(q) {
@@ -500,7 +550,7 @@ export async function buildStats(db, { project = null, tz = 0 } = {}) {
   const waits = [];
   for (const i of items) {
     for (const r of String(i.waiting_on || "").split(",").filter(Boolean)) {
-      const blocker = byKey.get(key(i.project_slug, r));
+      const blocker = byKey.get(r.includes(":") ? r : key(i.project_slug, r));
       if (!blocker) continue;
       const from = waitStart.get(key(i.project_slug, i.ref) + ">" + r) || i.created_at;
       const until = [blocker.closed_at, i.closed_at, nowIso].filter(Boolean).sort()[0];
@@ -603,6 +653,26 @@ export function splitRef(ref) {
   const m = s.match(QREF_RE);
   return m ? { qualifier: m[1], ref: m[2] } : { qualifier: null, ref: s };
 }
+
+/*
+ * Across projects (decision D26): internally an item is addressed by its key "slug:A4". waiting_on stores plain refs
+ * for the same project ("A2") and keys for other projects ("immobilien:A2"); also_in stores slugs. What people and
+ * the AI read is relative to the project in view: "A2" for its own items, "IMM:A2" (code, else slug) for others.
+ */
+export const refList = (s) => String(s || "").split(",").map((r) => r.trim()).filter(Boolean);
+export const itemKey = (it) => `${it.project_slug}:${it.ref}`;
+export const waitKeys = (it) => refList(it.waiting_on).map((r) => (r.includes(":") ? r : `${it.project_slug}:${r}`));
+export function keyLabel(key, viewSlug, codes) {
+  const i = key.indexOf(":");
+  const slug = key.slice(0, i), ref = key.slice(i + 1);
+  return slug === viewSlug ? ref : `${codes?.get(slug) || slug}:${ref}`;
+}
+// slug -> what references show for it (the code, else the slug)
+export async function projectCodes(db) {
+  const { results } = await db.prepare("SELECT slug, code FROM projects").all();
+  return new Map(results.map((p) => [p.slug, p.code || p.slug]));
+}
+const missingAlsoIn = (err) => /(no such column:?\s*(\w+\.)?|has no column named )also_in/i.test(String(err?.message ?? err));
 
 // Codes and slugs share one namespace for lookups, so a code must not equal another project's slug
 // (and vice versa); otherwise "CO" could mean two projects.
@@ -761,10 +831,25 @@ function filtersFrom(q) {
 
 const ITEM_SELECT = `SELECT i.*, i.kind || i.seq AS ref FROM items i LEFT JOIN kinds k ON k.code = i.kind`;
 
+// f.shared (with f.project): also the items of other projects that are shown in this one (also_in, decision D26).
 export async function listItems(db, f) {
+  if (f.project && f.shared) {
+    try {
+      return await queryItems(db, f);
+    } catch (err) {
+      if (!missingAlsoIn(err)) throw err; // migration 0010 not applied yet: home items only
+    }
+  }
+  return queryItems(db, { ...f, shared: false });
+}
+
+async function queryItems(db, f) {
   const where = [];
   const args = [];
-  if (f.project) {
+  if (f.project && f.shared) {
+    where.push("(i.project_slug = ? OR ',' || COALESCE(i.also_in, '') || ',' LIKE ?)");
+    args.push(f.project, `%,${f.project},%`);
+  } else if (f.project) {
     where.push("i.project_slug = ?");
     args.push(f.project);
   }
@@ -787,22 +872,76 @@ export async function listItems(db, f) {
     const like = `%${f.q}%`;
     args.push(like, like, like);
   }
+  // Within a kind, a project's own items come before those shown from other projects.
+  const homeFirst = f.project && f.shared ? "i.project_slug != ?, " : "";
+  if (homeFirst) args.push(f.project);
   const sql = `${ITEM_SELECT} ${where.length ? "WHERE " + where.join(" AND ") : ""}
-    ORDER BY COALESCE(k.sort_order, 999), i.kind, i.project_slug, i.seq LIMIT 2000`;
+    ORDER BY COALESCE(k.sort_order, 999), i.kind, ${homeFirst}i.project_slug, i.seq LIMIT 2000`;
   const { results } = await db.prepare(sql).bind(...args).all();
   return results;
 }
 
+// Keys ("slug:A4") of the open items that wait for slug:ref – in its own project and in others ("slug:ref" in waiting_on).
 export async function successorsOf(db, slug, ref) {
   const { results } = await db
     .prepare(
-      `SELECT kind || seq AS ref FROM items
-       WHERE project_slug = ? AND status IN ('open','doing','blocked') AND ',' || waiting_on || ',' LIKE ?
-       ORDER BY kind, seq`,
+      `SELECT project_slug, kind || seq AS ref FROM items
+       WHERE status IN ('open','doing','blocked')
+         AND ((project_slug = ? AND ',' || waiting_on || ',' LIKE ?) OR ',' || waiting_on || ',' LIKE ?)
+       ORDER BY project_slug != ?, project_slug, kind, seq`,
     )
-    .bind(slug, `%,${ref},%`)
+    .bind(slug, `%,${ref},%`, `%,${slug}:${ref},%`, slug)
     .all();
-  return results.map((r) => r.ref);
+  return results.map(itemKey);
+}
+
+/**
+ * The items of a project as it is seen (decision D26): its own plus those shown in it via also_in. Each item gets
+ *   ext_open – keys of blockers outside the list that are still open (or unknown), so ⏸ stays right for them;
+ *   ext_next – keys of open items outside the list that wait for it, so ▶ shows them too.
+ * The footer, the text lists and the web app read both next to what they work out from the list itself.
+ */
+export async function projectItems(db, project, filters = {}) {
+  const items = await listItems(db, { ...filters, project: project.slug, shared: true });
+  await annotateLinks(db, items);
+  return items;
+}
+
+export async function annotateLinks(db, items) {
+  const inList = new Set(items.map(itemKey));
+  const outside = [...new Set(items.flatMap(waitKeys).filter((k) => !inList.has(k)))];
+  const status = new Map();
+  for (let n = 0; n < outside.length; n += 50) {
+    const part = outside.slice(n, n + 50);
+    const { results } = await db
+      .prepare(`SELECT project_slug, kind || seq AS ref, status FROM items WHERE project_slug || ':' || kind || seq IN (${part.map(() => "?").join(",")})`)
+      .bind(...part)
+      .all();
+    for (const r of results) status.set(itemKey(r), r.status);
+  }
+  // Open items anywhere that wait for something: the few with a qualified reference, plus all of the projects in the list.
+  const slugs = [...new Set(items.map((i) => i.project_slug))];
+  const { results: waiting } = slugs.length
+    ? await db
+        .prepare(
+          `SELECT project_slug, kind || seq AS ref, waiting_on FROM items
+           WHERE status IN ('open','doing','blocked') AND waiting_on IS NOT NULL
+             AND (waiting_on LIKE '%:%' OR project_slug IN (${slugs.map(() => "?").join(",")}))`,
+        )
+        .bind(...slugs)
+        .all()
+    : { results: [] };
+  const next = new Map();
+  for (const w of waiting) {
+    const wk = itemKey(w);
+    if (inList.has(wk)) continue; // the list itself already shows it
+    for (const k of waitKeys(w)) if (inList.has(k)) next.set(k, [...(next.get(k) || []), wk]);
+  }
+  for (const it of items) {
+    it.ext_open = waitKeys(it).filter((k) => !inList.has(k) && (!status.has(k) || OPEN.includes(status.get(k))));
+    it.ext_next = next.get(itemKey(it)) || [];
+  }
+  return items;
 }
 
 function parseRef(ref) {
@@ -845,7 +984,7 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
     // Without an explicit owner, actionable items belong to whoever creates them.
     owner: "owner" in input ? normOwner(input.owner) : (kind.default_owner ?? (kind.actionable ? actor : null)),
     status: normStatus(input.status ?? "open"),
-    waiting_on: normRefs(input.waiting_on),
+    waiting_on: await normWaiting(db, input.waiting_on, project.slug),
     source: text(input.source, "source", 1000),
     due: normDate(input.due),
     created_by: actor,
@@ -861,6 +1000,9 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
     assertSizable(kind.code);
     Object.assign(row, { effort, benefit, sized_by: sizedBy || sizer(input, actor) });
   }
+  // Likewise only when given (migration 0010).
+  const alsoIn = await normAlsoIn(db, input.also_in, project.slug);
+  if (alsoIn) row.also_in = alsoIn;
 
   const stmts = [];
   let seqSql;
@@ -909,10 +1051,11 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
          SELECT ?, kind || seq, 'created', ?, ?, ? FROM items WHERE id = ?`,
       )
       .bind(project.slug, actor, JSON.stringify({ title: row.title, owner: row.owner, status: row.status,
-        ...(row.sized_by ? { effort: row.effort, benefit: row.benefit, sized_by: row.sized_by } : {}) }), t, row.id),
+        ...(row.sized_by ? { effort: row.effort, benefit: row.benefit, sized_by: row.sized_by } : {}),
+        ...(row.also_in ? { also_in: row.also_in } : {}) }), t, row.id),
   );
   stmts.push(touchProject(db, project.slug, t));
-  await db.batch(stmts);
+  await batchSharing(db, stmts);
   return db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(row.id).first();
 }
 
@@ -937,7 +1080,11 @@ export async function updateItem(db, project, item, input, actor) {
     if ("short" in input) set("short", text(input.short, "short", 40));
     if ("body" in input) set("body", text(input.body, "body", 20000));
     if ("owner" in input) set("owner", normOwner(input.owner));
-    if ("waiting_on" in input) set("waiting_on", normRefs(input.waiting_on));
+    if ("waiting_on" in input) set("waiting_on", await normWaiting(db, input.waiting_on, item.project_slug));
+    if ("also_in" in input) {
+      const alsoIn = await normAlsoIn(db, input.also_in, item.project_slug);
+      if (alsoIn !== (item.also_in ?? null)) changes.also_in = alsoIn; // undefined before migration 0010
+    }
     if ("source" in input) set("source", text(input.source, "source", 1000));
     if ("due" in input) set("due", normDate(input.due));
     if ("effort" in input || "benefit" in input) {
@@ -971,6 +1118,8 @@ export async function updateItem(db, project, item, input, actor) {
       data = { ...rest, ...(ticks.checked.length ? { checked: ticks.checked } : {}), ...(ticks.unchecked.length ? { unchecked: ticks.unchecked } : {}) };
       if (cols.length === 1) action = "checked";
     }
+    // Where it was shown before, so the projects it leaves notice the change as well (see linkedVersion).
+    if ("also_in" in changes) data = { ...data, also_in_was: item.also_in ?? null };
 
     const update = db
       .prepare(
@@ -984,13 +1133,23 @@ export async function updateItem(db, project, item, input, actor) {
         "INSERT INTO events (project_slug, item_ref, action, actor, data, at) SELECT ?, ?, ?, ?, ?, ? WHERE changes() > 0",
       )
       .bind(project.slug, item.ref, action, actor, JSON.stringify(data), t);
-    const [res] = await db.batch([update, event, touchProject(db, project.slug, t)]);
+    const [res] = await batchSharing(db, [update, event, touchProject(db, project.slug, t)]);
     const fresh = await db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(item.id).first();
     if (res.meta.changes || !ticks) return fresh;
     if (attempt >= 2 || !fresh || layout(fresh) !== firstLayout) {
       throw new HttpError(409, "conflict", "the checklist changed meanwhile, read it again and retry");
     }
     item = fresh;
+  }
+}
+
+// also_in needs migration 0010; without it, say so instead of failing with an internal error.
+async function batchSharing(db, stmts) {
+  try {
+    return await db.batch(stmts);
+  } catch (err) {
+    if (missingAlsoIn(err)) throw new HttpError(503, "also_in_unavailable", "apply migration 0010 first (npm run db:migrate)");
+    throw err;
   }
 }
 
@@ -1044,6 +1203,7 @@ function conversionInput(item, input) {
     body: input.body ?? item.body,
     source: item.source,
     waiting_on: item.waiting_on,
+    also_in: item.also_in ?? null,
     // Effort and benefit travel to an action; a decision inherits its benefit instead.
     ...(SIZED_KINDS.includes(String(input.kind || "").toUpperCase()) ? { effort: item.effort, benefit: item.benefit } : {}),
     ...("owner" in input ? { owner: input.owner } : {}),
@@ -1135,24 +1295,31 @@ function applyChecks(item, input) {
  * "👤: D1 ▶A3 Lizenz · 🤖: A3 Konzept (+2) · 💡 I1 MCP · ⚠️ W1 Auth · neu: A3 · erledigt: A1"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
-// ref -> refs of OPEN items that wait for it (the reverse of waiting_on; nothing extra is stored).
+// key ("slug:A4") -> keys of OPEN items that wait for it (the reverse of waiting_on; nothing extra is stored), plus
+// ext_next: waiting items from outside the list (projectItems).
 export function successorMap(items) {
   const map = new Map();
+  const add = (k, w) => {
+    if (!map.has(k)) map.set(k, []);
+    if (!map.get(k).includes(w)) map.get(k).push(w);
+  };
   for (const it of items) {
-    if (!OPEN.includes(it.status) || !it.waiting_on) continue;
-    for (const r of it.waiting_on.split(",")) {
-      if (!map.has(r)) map.set(r, []);
-      map.get(r).push(it.ref);
-    }
+    if (OPEN.includes(it.status)) for (const k of waitKeys(it)) add(k, itemKey(it));
   }
+  for (const it of items) for (const w of it.ext_next || []) add(itemKey(it), w);
   return map;
 }
 
 export function buildFooter(
   items,
   kinds,
-  { max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de", labels = FOOTER_OWNER_LABELS } = {},
+  {
+    max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de", labels = FOOTER_OWNER_LABELS,
+    viewSlug = items[0]?.project_slug, codes = null,
+  } = {},
 ) {
+  // References are relative to the project in view: "A2" for its own items, "IMM:A2" for items of other projects (D26).
+  const lbl = (key) => keyLabel(key, viewSlug, codes);
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const groups = new Map();
   for (const it of items) {
@@ -1190,20 +1357,19 @@ export function buildFooter(
   // Dependencies: the blocking item carries "▶A2,A4" (order is visible at a glance). The waiting item only
   // keeps "⏸D1" when its blocker is open or unknown but not itself shown in the line; resolved blockers show nothing.
   const succ = successorMap(items);
-  const status = new Map(items.map((i) => [i.ref, i.status]));
-  const shownRefs = new Set(ordered.flatMap((g, i) => g.items.slice(0, shown[i]).map((it) => it.ref)));
+  const status = new Map(items.map((i) => [itemKey(i), i.status]));
+  const shownKeys = new Set(ordered.flatMap((g, i) => g.items.slice(0, shown[i]).map(itemKey)));
+  // Blockers outside the loaded items: with projectItems' ext_open only the open ones; without it, unknown keeps the marker.
+  const stillOpen = (it, k) => (status.has(k) ? OPEN.includes(status.get(k)) : !Array.isArray(it.ext_open) || it.ext_open.includes(k));
   const parts = ordered
     .map((g, i) => {
       if (!shown[i]) return null;
       const entries = g.items.slice(0, shown[i]).map((it) => {
-        const next = succ.get(it.ref) || [];
-        const waits = (it.waiting_on ? it.waiting_on.split(",") : []).filter(
-          // Unknown blockers (not in the loaded items) keep their marker; only known-closed ones are dropped.
-          (r) => (!status.has(r) || OPEN.includes(status.get(r))) && !shownRefs.has(r),
-        );
-        const marks = [next.length ? `▶${next.join(",")}` : "", waits.length ? `⏸${waits.join(",")}` : ""].filter(Boolean);
+        const next = succ.get(itemKey(it)) || [];
+        const waits = waitKeys(it).filter((k) => stillOpen(it, k) && !shownKeys.has(k));
+        const marks = [next.length ? `▶${next.map(lbl).join(",")}` : "", waits.length ? `⏸${waits.map(lbl).join(",")}` : ""].filter(Boolean);
         const progress = checkProgress(it);
-        return `${it.ref}${marks.length ? " " + marks.join(" ") : ""} ${shortLabel(it)}${progress ? " " + progress : ""}`;
+        return `${lbl(itemKey(it))}${marks.length ? " " + marks.join(" ") : ""} ${shortLabel(it)}${progress ? " " + progress : ""}`;
       });
       const hidden = g.items.length - shown[i];
       return `${g.label} ${entries.join(" · ")}${hidden ? ` (+${hidden})` : ""}`;
@@ -1211,8 +1377,8 @@ export function buildFooter(
     .filter(Boolean);
   const delta = [];
   if (since) {
-    const created = items.filter((i) => i.created_at >= since).map((i) => i.ref);
-    const done = items.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => i.ref);
+    const created = items.filter((i) => i.created_at >= since).map((i) => lbl(itemKey(i)));
+    const done = items.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => lbl(itemKey(i)));
     const dl = FOOTER_DELTA_LABELS[lang] || FOOTER_DELTA_LABELS.de;
     if (created.length) delta.push(`${dl.created}: ${created.join(", ")}`);
     if (done.length) delta.push(`${dl.done}: ${done.join(", ")}`);
@@ -1357,7 +1523,7 @@ async function updateSettings(db, input, actor) {
 export function buildMultiFooter(entries, kinds, opts = {}) {
   return entries
     .map(({ project, items }) => {
-      const line = buildFooter(items, kinds, opts);
+      const line = buildFooter(items, kinds, { ...opts, viewSlug: project.slug });
       if (!line) return null;
       // Multi layout: the project label gets a line of its own (also for a single group, so blocks look alike);
       // single layout and the short "neu/erledigt" line carry it as a prefix.
@@ -1377,14 +1543,21 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
     const p = await getProject(db, key);
     if (!projects.some((x) => x.slug === p.slug)) projects.push(p);
   }
-  const [kinds, settings, ...lists] = await Promise.all([
+  const [kinds, settings, codes, ...lists] = await Promise.all([
     listKinds(db, true),
     getSettings(db),
-    ...projects.map((p) => listItems(db, { project: p.slug, status: "all" })),
+    projectCodes(db),
+    ...projects.map((p) => projectItems(db, p, { status: "all" })),
   ]);
-  const opts = { since, deltaOnly: delta, max, lang: lang || settings.language, ...footerStyle(settings, layout) };
-  if (projects.length === 1) return buildFooter(lists[0], kinds, opts);
-  return buildMultiFooter(projects.map((project, i) => ({ project, items: lists[i] })), kinds, opts);
+  const opts = { since, deltaOnly: delta, max, lang: lang || settings.language, codes, ...footerStyle(settings, layout) };
+  if (projects.length === 1) return buildFooter(lists[0], kinds, { ...opts, viewSlug: projects[0].slug });
+  // An item shown in several of the requested projects appears once: in its home project's block (D26).
+  const asked = new Set(projects.map((p) => p.slug));
+  const entries = projects.map((project, i) => ({
+    project,
+    items: lists[i].filter((it) => it.project_slug === project.slug || !asked.has(it.project_slug)),
+  }));
+  return buildMultiFooter(entries, kinds, opts);
 }
 
 /**
@@ -1392,21 +1565,27 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
  * "A2 MCP-Server bauen ⏸D1 [in Arbeit] @Maria" or "D1 Lizenz wählen 📝 ▶A2,A4" (▶ = items waiting for it).
  * Bodies are left out; 📝 marks an item with a description (beyond its checklist) – fetch the item for details.
  */
-export function itemsAsText(items, kinds, { withProject = false, lang = "de" } = {}) {
+export function itemsAsText(items, kinds, { withProject = false, lang = "de", viewSlug = items[0]?.project_slug, codes = null } = {}) {
   const T = TEXT[lang] || TEXT.de;
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const succ = successorMap(items);
   const lines = items.map((it) => {
     const k = kindBy.get(it.kind);
-    const parts = [withProject ? `${it.project_slug}/${it.ref}` : it.ref, it.title];
+    // Cross-project list: references relative to each item's own project; otherwise to the project in view (D26).
+    const lbl = (key) => keyLabel(key, withProject ? it.project_slug : viewSlug, codes);
+    const parts = [withProject ? `${it.project_slug}/${it.ref}` : lbl(itemKey(it)), it.title];
     if (hasDetails(it.body)) parts.push("📝");
     const progress = checkProgress(it);
     if (progress) parts.push(`☑${progress}`);
     const size = sizeText(it, lang);
     if (size) parts.push(size);
-    if (it.waiting_on) parts.push(`⏸${it.waiting_on}`);
-    const next = succ.get(it.ref);
-    if (next && !withProject) parts.push(`▶${next.join(",")}`);
+    if (it.waiting_on) parts.push(`⏸${waitKeys(it).map(lbl).join(",")}`);
+    const next = succ.get(itemKey(it));
+    if (next && !withProject) parts.push(`▶${next.map(lbl).join(",")}`);
+    // ⇄ = also shown in these projects (on the item's home side; elsewhere its qualified reference says it all)
+    if (it.also_in && (withProject || it.project_slug === viewSlug)) {
+      parts.push(`⇄${refList(it.also_in).map((s) => codes?.get(s) || s).join(",")}`);
+    }
     if (it.status !== "open") parts.push(`[${T.statuses[it.status]}]`);
     if (it.owner && (!k || it.owner !== k.default_owner)) parts.push(`@${T.owners[it.owner] || it.owner}`);
     if (it.converted_to) parts.push(`→${it.converted_to}`);
@@ -1424,7 +1603,7 @@ export function sizeText(it, lang = "de") {
   return parts.join("·") + (it.sized_by === "user" ? "" : "?");
 }
 
-export function buildStatusMarkdown(project, items, kinds, origin, lang = "de") {
+export function buildStatusMarkdown(project, items, kinds, origin, lang = "de", codes = null) {
   const T = TEXT[lang] || TEXT.de;
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const open = items.filter((i) => OPEN.includes(i.status));
@@ -1442,7 +1621,7 @@ export function buildStatusMarkdown(project, items, kinds, origin, lang = "de") 
   lines.push(`| ${T.statusColumns.join(" | ")} |`, "|---|---|---|---|---|---|");
   for (const it of open) {
     const k = kindBy.get(it.kind);
-    const status = T.statuses[it.status] + (it.waiting_on ? ` ⏸${it.waiting_on.split(",").join(" ⏸")}` : "");
+    const status = T.statuses[it.status] + (it.waiting_on ? ` ⏸${waitKeys(it).map((k) => keyLabel(k, project.slug, codes)).join(" ⏸")}` : "");
     lines.push(
       `| ${it.ref} | ${cell(it.title)} | ${cell(k ? kindName(k, lang) : it.kind)} | ${cell(T.owners[it.owner] || it.owner || "")} | ${cell(it.source)} | ${status} |`,
     );
@@ -1493,13 +1672,45 @@ function normStatus(v) {
   return s;
 }
 
-function normRefs(v) {
+// waiting_on: "A2" (same project) or, across projects, "IMM:A2" / "immobilien:A2" – stored as "immobilien:A2"
+// (the slug never changes; codes are only for reading). A qualifier naming the item's own project is dropped.
+async function normWaiting(db, v, ownSlug) {
   if (v === undefined || v === null || v === "") return null;
   const list = (Array.isArray(v) ? v : String(v).split(/[\s,;]+/))
-    .map((r) => String(r).trim().replace(/^⏸/, "").toUpperCase())
+    .map((r) => String(r).trim().replace(/^⏸/, ""))
     .filter(Boolean);
-  for (const r of list) if (!REF_RE.test(r)) throw new HttpError(400, "invalid_field", `waiting_on (${r})`);
-  return list.length ? [...new Set(list)].join(",") : null;
+  const out = [];
+  for (const raw of list) {
+    const { qualifier, ref } = splitRef(raw);
+    const r = ref.toUpperCase();
+    if (!REF_RE.test(r)) throw new HttpError(400, "invalid_field", `waiting_on (${raw})`);
+    const slug = qualifier ? await projectSlugFor(db, qualifier, "waiting_on") : ownSlug;
+    out.push(slug === ownSlug ? r : `${slug}:${r}`);
+  }
+  return out.length ? [...new Set(out)].join(",") : null;
+}
+
+// also_in: further projects that show the item (decision D26), as slugs or codes; its own project is left out.
+const MAX_ALSO_IN = 5;
+async function normAlsoIn(db, v, ownSlug) {
+  if (v === undefined || v === null || v === "") return null;
+  const list = (Array.isArray(v) ? v : String(v).split(/[\s,;]+/)).map((k) => String(k).trim()).filter(Boolean);
+  const out = [];
+  for (const k of list) {
+    const slug = await projectSlugFor(db, k, "also_in");
+    if (slug !== ownSlug && !out.includes(slug)) out.push(slug);
+  }
+  if (out.length > MAX_ALSO_IN) throw new HttpError(400, "invalid_field", `also_in (at most ${MAX_ALSO_IN} projects)`);
+  return out.length ? out.join(",") : null;
+}
+
+async function projectSlugFor(db, key, field) {
+  try {
+    return (await getProject(db, key)).slug;
+  } catch (err) {
+    if (isHttpError(err) && err.status === 404) throw new HttpError(400, "invalid_field", `${field} (${key}: unknown project)`);
+    throw err;
+  }
 }
 
 function normDate(v) {
