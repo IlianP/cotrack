@@ -108,7 +108,8 @@
     projects; references of other projects always carry the code.
   - In its home project, **⇄ IMM** shows where an item is shown as well. In a footer for several projects an item appears
     once, in the block of its home project.
-  - The AI keeps the "Also shown in" field; in the edit dialog it only appears when it is set.
+  - The AI keeps the "Also shown in" field; in the edit dialog it only appears when it is set. To add a project yourself,
+    use "⇄ Also show in another project": type name, code or repository and pick from the suggestions (up to 5 projects).
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –

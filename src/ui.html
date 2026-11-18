@@ -630,6 +630,22 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .chk.on span { color: var(--muted); text-decoration: line-through; }
 .chk .x { border: 0; background: none; color: var(--muted); width: 32px; height: 32px; border-radius: 8px; flex: none; font-size: 18px; }
 .dlg input.check-add { border-style: dashed; }
+/* "Auch angezeigt in" (D26): chips plus a search field with suggestions, same matching as the project search */
+.ai-field { display: grid; gap: 4px; font-size: 13px; color: var(--muted); position: relative; }
+.ai-field[hidden], .ai-list[hidden], .ai-add[hidden] { display: none; }
+.ai-box { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 4px 6px; min-height: 40px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: text; }
+.ai-box:focus-within { border-color: var(--accent); }
+.dlg .ai-box input { flex: 1; min-width: 9em; width: auto; border: 0; padding: 5px 4px; background: transparent; outline: none; }
+.ai-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 1px 1px 1px 9px; border-radius: 99px;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--text); font-size: 13px; }
+.ai-chip-code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ai-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.ai-chip .x { border: 0; background: none; color: var(--muted); width: 28px; height: 28px; border-radius: 99px; flex: none; font-size: 17px; line-height: 1; }
+/* an overlay, not in the flow: closing it on blur must not move the buttons below (a click on "Speichern" would miss) */
+.ai-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px; max-height: 232px; background: var(--surface); color: var(--text); font-size: 15px; box-shadow: 0 8px 28px rgb(0 0 0 / .16); }
+.btn.ai-add { justify-self: start; height: 32px; font-size: 13px; color: var(--muted); }
 .pill.checks-pill { color: var(--accent); font-variant-numeric: tabular-nums; }
 .nx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .nx-actions .primary, .nx-actions .btn { height: 42px; }
@@ -878,7 +894,9 @@ const STRINGS = {
     allProjects: "Alle Projekte", noProject: "Kein Projekt", projectAria: (label) => "Projekt: " + label,
     noProjectYet: "Noch kein Projekt. Lege über ☰ ein neues an.", nothingOpen: "Nichts offen 🎉", noItems: "Keine Einträge",
     footerEmpty: "Nichts offen.", waitingFor: "wartet auf", followedBy: "danach folgt", source: "Quelle",
-    fAlsoIn: "Auch angezeigt in", alsoInTitle: "Wird auch in diesen Projekten angezeigt", sharedFrom: (p) => `Aus dem Projekt ${p}, hier mit angezeigt`,
+    fAlsoIn: "Auch angezeigt in", alsoInTitle: "Wird auch in diesen Projekten angezeigt", alsoInAdd: "Auch in anderem Projekt anzeigen",
+    alsoInRemove: (n) => `${n} entfernen`, alsoInFull: (n) => `Höchstens ${n} Projekte`, alsoInNone: "Keine weiteren Projekte",
+    alsoInUnknown: (t) => `„${t}“ passt nicht eindeutig zu einem Projekt – bitte aus der Liste wählen`, sharedFrom: (p) => `Aus dem Projekt ${p}, hier mit angezeigt`,
     reopen: "Wieder öffnen", markDone: "Erledigt", reopenAria: (ref) => `${ref} wieder öffnen`, doneAria: (ref) => `${ref} erledigt`,
     copyRef: "Kennung + Titel kopieren", created: (ref) => `${ref} angelegt`, saved: (ref) => `${ref} gespeichert`,
     deleted: (ref) => `${ref} gelöscht`, openItems: "offene Punkte", noProjectFound: "Kein Projekt gefunden",
@@ -1068,7 +1086,9 @@ const STRINGS = {
     allProjects: "All projects", noProject: "No project", projectAria: (label) => "Project: " + label,
     noProjectYet: "No project yet. Create one via ☰.", nothingOpen: "Nothing open 🎉", noItems: "No items",
     footerEmpty: "Nothing open.", waitingFor: "waiting for", followedBy: "followed by", source: "Source",
-    fAlsoIn: "Also shown in", alsoInTitle: "Also shown in these projects", sharedFrom: (p) => `From the project ${p}, shown here as well`,
+    fAlsoIn: "Also shown in", alsoInTitle: "Also shown in these projects", alsoInAdd: "Also show in another project",
+    alsoInRemove: (n) => `Remove ${n}`, alsoInFull: (n) => `At most ${n} projects`, alsoInNone: "No other projects",
+    alsoInUnknown: (t) => `"${t}" does not match exactly one project – please pick one from the list`, sharedFrom: (p) => `From the project ${p}, shown here as well`,
     reopen: "Reopen", markDone: "Mark as done", reopenAria: (ref) => `Reopen ${ref}`, doneAria: (ref) => `Mark ${ref} as done`,
     copyRef: "Copy reference + title", created: (ref) => `${ref} created`, saved: (ref) => `${ref} saved`,
     deleted: (ref) => `${ref} deleted`, openItems: "open items", noProjectFound: "No project found",
@@ -3087,8 +3107,16 @@ const ALL_OPTION = { slug: ALL, all: true, name: tr("allProjects") };
 function pickerMatches(query) {
   const terms = fold(query).split(/\s+/).filter(Boolean);
   if (!terms.length) return [ALL_OPTION, ...state.projects];
+  const out = projectMatches(query, state.projects);
+  if (terms.every((term) => fold(ALL_OPTION.name).includes(term))) out.push(ALL_OPTION);
+  return out;
+}
+// The matching rule of the project search, also used by "Auch angezeigt in" in the edit dialog.
+function projectMatches(query, list) {
+  const terms = fold(query).split(/\s+/).filter(Boolean);
+  if (!terms.length) return list.slice();
   const hits = [];
-  state.projects.forEach((p, i) => {
+  list.forEach((p, i) => {
     const fields = [p.code, p.name, p.repo, p.slug].map(fold);
     const hay = fields.join("\n");
     if (!terms.every((t) => hay.includes(t))) return;
@@ -3097,9 +3125,7 @@ function pickerMatches(query) {
     hits.push({ p, rank, i });
   });
   hits.sort((a, b) => a.rank - b.rank || a.i - b.i);
-  const out = hits.map((x) => x.p);
-  if (terms.every((term) => fold(ALL_OPTION.name).includes(term))) out.push(ALL_OPTION);
-  return out;
+  return hits.map((x) => x.p);
 }
 
 function renderPicker() {
@@ -3259,6 +3285,113 @@ $("#dlg").addEventListener("close", () => {
   if (dirty) dismissDialog();
 });
 
+// "Auch angezeigt in" (D26): the chosen projects as chips, a search field with suggestions below it – the same
+// matching as the project search (name, code, repo or slug). The AI keeps it up, so the field shows only when set;
+// otherwise a small button opens it. The hidden field holds the slugs: it is what gets saved and what
+// "unsaved changes?" compares. All elements exist from the start, so opening the field alone changes nothing.
+const MAX_ALSO_IN = 5; // as in src/worker.js
+function alsoInPicker(it) {
+  const initial = refList(it.also_in);
+  const chosen = initial.slice();
+  const value = h("input", { type: "hidden", value: chosen.join(",") });
+  const chips = h("div", { class: "ai-chips", style: "display:contents" });
+  const list = h("ul", { id: "aiList", class: "psel-list ai-list", role: "listbox", "aria-label": tr("projects"), hidden: true });
+  const input = h("input", { type: "search", role: "combobox", "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": "aiList",
+    "aria-label": tr("fAlsoIn"), autocomplete: "off", autocapitalize: "off", spellcheck: "false", enterkeyhint: "done" });
+  const st = { active: 0, options: [], nav: false };
+  const project = (slug) => state.projects.find((p) => p.slug === slug);
+  const candidates = () => state.projects.filter((p) => p.slug !== it.project_slug && !chosen.includes(p.slug));
+  const sync = () => {
+    value.value = chosen.join(",");
+    chips.replaceChildren(...chosen.map((slug) => {
+      const p = project(slug), name = p?.name || slug;
+      return h("span", { class: "ai-chip", title: name },
+        h("span", { class: "ai-chip-code" }, p?.code || slug), p?.code ? h("span", { class: "ai-chip-name" }, name) : null,
+        h("button", { type: "button", class: "x", title: tr("alsoInRemove", name), "aria-label": tr("alsoInRemove", name),
+          onclick: () => { chosen.splice(chosen.indexOf(slug), 1); sync(); input.focus(); } }, "×"));
+    }));
+    const full = chosen.length >= MAX_ALSO_IN;
+    input.disabled = full;
+    input.placeholder = full ? tr("alsoInFull", MAX_ALSO_IN) : tr("projectSearchPh");
+    if (full) close();
+    else if (document.activeElement === input) render();
+  };
+  const setActive = (i) => {
+    st.active = i;
+    list.querySelectorAll("[role=option]").forEach((el, j) => el.setAttribute("aria-selected", String(j === i)));
+    const el = list.querySelector(`#aiOpt-${i}`);
+    if (el) { input.setAttribute("aria-activedescendant", el.id); el.scrollIntoView({ block: "nearest" }); }
+    else input.removeAttribute("aria-activedescendant");
+  };
+  const render = () => {
+    st.options = projectMatches(input.value, candidates());
+    st.active = Math.min(st.active, Math.max(st.options.length - 1, 0));
+    list.replaceChildren(...st.options.map((p, i) => h("li", { id: "aiOpt-" + i, role: "option", "aria-selected": "false",
+        onmousemove: () => { if (st.active !== i) { st.nav = true; setActive(i); } }, onclick: () => pick(p) },
+      h("span", { class: "psel-code" }, p.code || ""), h("span", { class: "psel-name" }, p.name),
+      p.repo ? h("span", { class: "psel-repo" }, p.repo) : null)));
+    if (!st.options.length) list.append(h("li", { class: "psel-empty", role: "presentation" }, tr(candidates().length ? "noProjectFound" : "alsoInNone")));
+    list.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    setActive(st.active);
+  };
+  function close() {
+    list.hidden = true; st.nav = false;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+  }
+  const pick = (p) => {
+    if (!p || chosen.includes(p.slug) || chosen.length >= MAX_ALSO_IN) return;
+    chosen.push(p.slug);
+    input.value = ""; st.active = 0; st.nav = false;
+    sync();
+    if (!input.disabled) input.focus();
+  };
+  // Typed text that was not picked: an exact code, slug or name counts, as does a single hit.
+  const resolve = (text) => {
+    const t = fold(text.trim()), hits = projectMatches(text, candidates());
+    return hits.find((p) => [p.code, p.slug, p.name].some((x) => x && fold(x) === t)) || (hits.length === 1 ? hits[0] : null);
+  };
+  input.addEventListener("focus", () => { if (!input.disabled) render(); });
+  input.addEventListener("input", () => { st.active = 0; st.nav = false; render(); });
+  input.addEventListener("keydown", (e) => {
+    if (e.isComposing || e.keyCode === 229) return;
+    const n = st.options.length, open = !list.hidden;
+    if (e.key === "ArrowDown") { e.preventDefault(); if (!open) render(); else if (n) { st.nav = true; setActive((st.active + 1) % n); } }
+    else if (e.key === "ArrowUp" && open && n) { e.preventDefault(); st.nav = true; setActive((st.active - 1 + n) % n); }
+    // Enter and a comma pick a project – the highlighted one once something is typed or the arrows were used –
+    // and never submit the dialog from here.
+    else if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      if (open && n && (input.value.trim() || st.nav)) pick(st.options[st.active]);
+      else if (input.value.trim()) pick(resolve(input.value));
+    }
+    else if (e.key === "Escape" && open) { e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === "Backspace" && !input.value && chosen.length) { chosen.pop(); sync(); }
+  });
+  input.addEventListener("blur", close);
+  // Taps into the list must not take the focus away from the search field (that would close the list first).
+  list.addEventListener("mousedown", (e) => e.preventDefault());
+  const box = h("div", { class: "ai-box", onclick: (e) => { if (e.target === e.currentTarget && !input.disabled) input.focus(); } }, chips, input);
+  const fieldEl = h("div", { class: "ai-field", hidden: !chosen.length }, h("span", null, tr("fAlsoIn")), box, list, value);
+  const add = h("button", { type: "button", class: "btn ai-add", hidden: !!chosen.length,
+    onclick: () => { fieldEl.hidden = false; add.hidden = true; input.focus(); } }, "⇄ " + tr("alsoInAdd"));
+  sync();
+  return {
+    field: fieldEl, add, value,
+    changed: () => value.value !== initial.join(","),
+    // Before saving: take over typed text, or stop with a hint if it names no single project.
+    commit: () => {
+      const text = input.value.trim();
+      if (!text) return true;
+      const p = resolve(text);
+      if (!p) { toast(tr("alsoInUnknown", text)); input.focus(); return false; }
+      pick(p);
+      return true;
+    },
+  };
+}
+
 function openEdit(it) {
   const k = kindBy(it.kind) || { name: it.kind, color: "#6b7280" };
   // Tasks get their checklist as checkboxes; the text field then holds the rest of the description.
@@ -3277,8 +3410,7 @@ function openEdit(it) {
     source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
-  // Also shown in (D26): kept up by the AI, so the field only appears when it is set.
-  if (it.also_in) f.also_in = h("input", { value: refList(it.also_in).map(codeOf).join(", ") });
+  const ai = alsoInPicker(it);
   // Effort and benefit (actions and ideas): an untouched estimate stays an estimate unless "confirm" is ticked.
   const sizable = isSizable(it), est = isEstimate(it);
   const sz = sizable ? {
@@ -3336,6 +3468,8 @@ function openEdit(it) {
     e.preventDefault();
     const body = {};
     for (const [key, el] of Object.entries(f)) body[key] = el.value;
+    if (!ai.commit()) return;
+    if (ai.changed()) body.also_in = ai.value.value;
     if (isTask) {
       if (addInput.value.trim()) addCheck(); // typed but not yet added: keep it
       const same = (a) => JSON.stringify(a.map((c) => [c.done, c.text]));
@@ -3372,7 +3506,8 @@ function openEdit(it) {
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
     h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
-    f.also_in ? field(tr("fAlsoIn"), f.also_in) : null,
+    ai.field,
+    ai.add,
     h("p", { class: "small" }, tr("history", fmt(it.created_at), actorLabel(it.created_by), fmt(it.updated_at), actorLabel(it.updated_by))),
     !it.converted_to && convertTargets.length ? h("div", { class: "actions", style: "justify-content:flex-start" },
       h("span", { class: "small", style: "align-self:center" }, tr("accept")),
