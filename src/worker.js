@@ -340,13 +340,29 @@ export async function linkedScope(db, slug) {
     // we (or an item shown here) wait for an item elsewhere: its changes move our ⏸
     if (r.project_slug === slug || shownHere.has(itemKey(r))) for (const k of waits) if (!k.startsWith(slug + ":")) keys.add(k);
   }
-  const list = [...keys].slice(0, 200);
+  // Items of a shown item's home project that wait for it ("A1" there): their changes move its ▶ here.
+  const shared = [...shownHere].map((k) => ({ s: k.slice(0, k.indexOf(":")), r: k.slice(k.indexOf(":") + 1) }));
+  if (shared.length) {
+    const { results } = await db
+      .prepare("SELECT project_slug, kind || seq AS ref, waiting_on FROM items WHERE waiting_on IS NOT NULL AND project_slug IN (SELECT value FROM json_each(?))")
+      .bind(JSON.stringify([...new Set(shared.map((x) => x.s))]))
+      .all();
+    for (const r of results) if (waitKeys(r).some((k) => shownHere.has(k))) keys.add(itemKey(r));
+  }
+  // A removed dependency – or a deleted item that had one – is gone from the items and only left in its event:
+  // waiting_on_was (or the deleted item's snapshot). Match it against ours ("slug:A1" from other projects) and against
+  // the items shown here ("A1" from their home project), so the version still moves and cotrack_changes reports it.
+  const was = `(CASE WHEN json_valid(events.data) THEN ',' || COALESCE(json_extract(events.data, '$.waiting_on_was'),
+    CASE WHEN events.action = 'deleted' THEN json_extract(events.data, '$.waiting_on') END) || ',' END)`;
   const where = [
-    "project_slug = ?",
-    "(data LIKE '%\"also_in%' AND data LIKE ?)",
-    ...(list.length ? [`project_slug || ':' || item_ref IN (${list.map(() => "?").join(",")})`] : []),
+    "events.project_slug = ?",
+    "(events.data LIKE '%\"also_in%' AND events.data LIKE ?)",
+    "events.project_slug || ':' || events.item_ref IN (SELECT value FROM json_each(?))",
+    `(events.data LIKE '%waiting_on%' AND (${was} LIKE ? OR EXISTS (SELECT 1 FROM json_each(?) j
+      WHERE events.project_slug = json_extract(j.value, '$.s') AND ${was} LIKE '%,' || json_extract(j.value, '$.r') || ',%')))`,
   ].join(" OR ");
-  return { where, args: [slug, `%${slug}%`, ...list] };
+  // JSON lists keep the number of bound values small (D1 allows 100 per query).
+  return { where, args: [slug, `%${slug}%`, JSON.stringify([...keys]), `%,${slug}:%`, JSON.stringify(shared)] };
 }
 
 // ?after= (newer than, for catching up) and ?before= (older than, for paging back); newest first, at most 500.
@@ -1120,6 +1136,8 @@ export async function updateItem(db, project, item, input, actor) {
     }
     // Where it was shown before, so the projects it leaves notice the change as well (see linkedVersion).
     if ("also_in" in changes) data = { ...data, also_in_was: item.also_in ?? null };
+    // Likewise for dependencies: a removed link is otherwise gone from the items (see linkedScope).
+    if ("waiting_on" in changes) data = { ...data, waiting_on_was: item.waiting_on ?? null };
 
     const update = db
       .prepare(
@@ -1315,15 +1333,16 @@ export function buildFooter(
   kinds,
   {
     max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de", labels = FOOTER_OWNER_LABELS,
-    viewSlug = items[0]?.project_slug, codes = null,
+    viewSlug = items[0]?.project_slug, codes = null, hide = null,
   } = {},
 ) {
+  // hide: keys shown in another block of a multi-project footer – left out here, but still counted for ⏸ and ▶.
   // References are relative to the project in view: "A2" for its own items, "IMM:A2" for items of other projects (D26).
   const lbl = (key) => keyLabel(key, viewSlug, codes);
   const kindBy = new Map(kinds.map((k) => [k.code, k]));
   const groups = new Map();
   for (const it of items) {
-    if (!OPEN.includes(it.status)) continue;
+    if (!OPEN.includes(it.status) || hide?.has(itemKey(it))) continue;
     const k = kindBy.get(it.kind);
     let key, label, weight;
     if (!k || k.actionable) {
@@ -1377,8 +1396,9 @@ export function buildFooter(
     .filter(Boolean);
   const delta = [];
   if (since) {
-    const created = items.filter((i) => i.created_at >= since).map((i) => lbl(itemKey(i)));
-    const done = items.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => lbl(itemKey(i)));
+    const own = items.filter((i) => !hide?.has(itemKey(i)));
+    const created = own.filter((i) => i.created_at >= since).map((i) => lbl(itemKey(i)));
+    const done = own.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => lbl(itemKey(i)));
     const dl = FOOTER_DELTA_LABELS[lang] || FOOTER_DELTA_LABELS.de;
     if (created.length) delta.push(`${dl.created}: ${created.join(", ")}`);
     if (done.length) delta.push(`${dl.done}: ${done.join(", ")}`);
@@ -1522,8 +1542,8 @@ async function updateSettings(db, input, actor) {
  */
 export function buildMultiFooter(entries, kinds, opts = {}) {
   return entries
-    .map(({ project, items }) => {
-      const line = buildFooter(items, kinds, { ...opts, viewSlug: project.slug });
+    .map(({ project, items, hide = null }) => {
+      const line = buildFooter(items, kinds, { ...opts, viewSlug: project.slug, hide });
       if (!line) return null;
       // Multi layout: the project label gets a line of its own (also for a single group, so blocks look alike);
       // single layout and the short "neu/erledigt" line carry it as a prefix.
@@ -1551,12 +1571,20 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
   ]);
   const opts = { since, deltaOnly: delta, max, lang: lang || settings.language, codes, ...footerStyle(settings, layout) };
   if (projects.length === 1) return buildFooter(lists[0], kinds, { ...opts, viewSlug: projects[0].slug });
-  // An item shown in several of the requested projects appears once: in its home project's block (D26).
+  // An item shown in several of the requested projects appears once (D26): in its home project's block, or – if that
+  // project is not requested – in the first requested block that shows it. Hidden items still count for ⏸ and ▶.
   const asked = new Set(projects.map((p) => p.slug));
-  const entries = projects.map((project, i) => ({
-    project,
-    items: lists[i].filter((it) => it.project_slug === project.slug || !asked.has(it.project_slug)),
-  }));
+  const placed = new Set();
+  const entries = projects.map((project, i) => {
+    const hide = new Set();
+    for (const it of lists[i]) {
+      if (it.project_slug === project.slug) continue;
+      const k = itemKey(it);
+      if (asked.has(it.project_slug) || placed.has(k)) hide.add(k);
+      else placed.add(k);
+    }
+    return { project, items: lists[i], hide };
+  });
   return buildMultiFooter(entries, kinds, opts);
 }
 
