@@ -3376,7 +3376,7 @@ $("#dlg").addEventListener("close", () => {
 const MAX_ALSO_IN = 5; // as in src/worker.js
 // The open suggestion list re-places itself when the keyboard opens or closes, the device rotates or the dialog scrolls.
 let placeAlsoIn = null;
-const replaceAlsoIn = () => placeAlsoIn?.();
+const replaceAlsoIn = (e) => { if (!e?.target?.classList?.contains("ai-list")) placeAlsoIn?.(); }; // not for the list's own scrolling
 window.visualViewport?.addEventListener("resize", replaceAlsoIn);
 window.visualViewport?.addEventListener("scroll", replaceAlsoIn);
 window.addEventListener("resize", replaceAlsoIn);
@@ -3439,6 +3439,7 @@ function alsoInPicker(it) {
     const bottom = Math.min(d.bottom - (dlg?.clientTop || 0), vv ? vv.offsetTop + vv.height : innerHeight) - MARGIN;
     const f = fieldEl.getBoundingClientRect(), b = box.getBoundingClientRect();
     const above = b.top - GAP - top, below = bottom - b.bottom - GAP;
+    const keep = list.scrollTop; // measuring at full height would reset it
     list.style.maxHeight = "none";
     const want = Math.min(list.scrollHeight, LIST_MAX);
     const up = above >= want || above >= below;
@@ -3446,6 +3447,7 @@ function alsoInPicker(it) {
     list.style.top = up ? "" : `${b.bottom - f.top + GAP}px`;
     list.style.bottom = up ? `${f.bottom - b.top + GAP}px` : "";
     list.style.maxHeight = `${Math.max(Math.min(LIST_MAX, up ? above : below), 88)}px`;
+    list.scrollTop = keep;
   };
   function close() {
     list.hidden = true; st.nav = false;
