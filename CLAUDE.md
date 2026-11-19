@@ -50,6 +50,7 @@
   shared items) and adds `ext_open`/`ext_next` for links to items outside it; `linkedScope` widens versions and
   `cotrack_changes` to what a project shows or is linked to. The edit dialog shows "Auch angezeigt in" only when it is set (otherwise a small
   button opens it): chips plus a search field with suggestions, same matching as the project search (`projectMatches`,
+  the list opens upward and fits the visible dialog, keyboard included – `place`;
   `alsoInPicker` in `src/ui.html`; `MAX_ALSO_IN` exists there and in `src/worker.js` – keep both in sync).
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed

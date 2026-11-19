@@ -655,9 +655,12 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .ai-chip-code { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .ai-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .ai-chip .x { border: 0; background: none; color: var(--muted); width: 28px; height: 28px; border-radius: 99px; flex: none; font-size: 17px; line-height: 1; }
-/* an overlay, not in the flow: closing it on blur must not move the buttons below (a click on "Speichern" would miss) */
-.ai-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 5; border: 1px solid var(--line); border-radius: 8px;
+/* An overlay, not in the flow: closing it on blur must not move the buttons below (a click on "Speichern" would miss).
+   It opens upward over the fields above, so "Abbrechen" and "Speichern" stay reachable, and its height is limited to the
+   room inside the visible dialog (keyboard included), so the dialog never grows a scrollbar of its own (alsoInPicker → place). */
+.ai-list { position: absolute; left: 0; right: 0; z-index: 5; border: 1px solid var(--line); border-radius: 8px;
   padding: 4px; max-height: 232px; background: var(--surface); color: var(--text); font-size: 15px; box-shadow: 0 8px 28px rgb(0 0 0 / .16); }
+.ai-list.up { box-shadow: 0 -8px 28px rgb(0 0 0 / .16); }
 .btn.ai-add { justify-self: start; height: 32px; font-size: 13px; color: var(--muted); }
 .pill.checks-pill { color: var(--accent); font-variant-numeric: tabular-nums; }
 .nx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -3371,6 +3374,13 @@ $("#dlg").addEventListener("close", () => {
 // otherwise a small button opens it. The hidden field holds the slugs: it is what gets saved and what
 // "unsaved changes?" compares. All elements exist from the start, so opening the field alone changes nothing.
 const MAX_ALSO_IN = 5; // as in src/worker.js
+// The open suggestion list re-places itself when the keyboard opens or closes, the device rotates or the dialog scrolls.
+let placeAlsoIn = null;
+const replaceAlsoIn = (e) => { if (!e?.target?.classList?.contains("ai-list")) placeAlsoIn?.(); }; // not for the list's own scrolling
+window.visualViewport?.addEventListener("resize", replaceAlsoIn);
+window.visualViewport?.addEventListener("scroll", replaceAlsoIn);
+window.addEventListener("resize", replaceAlsoIn);
+document.addEventListener("scroll", replaceAlsoIn, { capture: true, passive: true });
 function alsoInPicker(it) {
   const initial = refList(it.also_in);
   const chosen = initial.slice();
@@ -3414,10 +3424,34 @@ function alsoInPicker(it) {
     if (!st.options.length) list.append(h("li", { class: "psel-empty", role: "presentation" }, tr(candidates().length ? "noProjectFound" : "alsoInNone")));
     list.hidden = false;
     input.setAttribute("aria-expanded", "true");
+    placeAlsoIn = place;
+    place();
     setActive(st.active);
+  };
+  // Where the list fits: upward by default (the buttons below stay free), downward only if there is clearly more room there.
+  // Room = the part of the dialog that is actually visible – on phones and tablets the keyboard takes the lower half.
+  const LIST_MAX = 232, GAP = 4, MARGIN = 8;
+  const place = () => {
+    if (list.hidden) return;
+    const dlg = input.closest("dialog"), vv = window.visualViewport;
+    const d = dlg ? dlg.getBoundingClientRect() : { top: 0, bottom: innerHeight };
+    const top = Math.max(d.top + (dlg?.clientTop || 0), vv ? vv.offsetTop : 0) + MARGIN;
+    const bottom = Math.min(d.bottom - (dlg?.clientTop || 0), vv ? vv.offsetTop + vv.height : innerHeight) - MARGIN;
+    const f = fieldEl.getBoundingClientRect(), b = box.getBoundingClientRect();
+    const above = b.top - GAP - top, below = bottom - b.bottom - GAP;
+    const keep = list.scrollTop; // measuring at full height would reset it
+    list.style.maxHeight = "none";
+    const want = Math.min(list.scrollHeight, LIST_MAX);
+    const up = above >= want || above >= below;
+    list.classList.toggle("up", up);
+    list.style.top = up ? "" : `${b.bottom - f.top + GAP}px`;
+    list.style.bottom = up ? `${f.bottom - b.top + GAP}px` : "";
+    list.style.maxHeight = `${Math.max(Math.min(LIST_MAX, up ? above : below), 88)}px`;
+    list.scrollTop = keep;
   };
   function close() {
     list.hidden = true; st.nav = false;
+    if (placeAlsoIn === place) placeAlsoIn = null;
     input.setAttribute("aria-expanded", "false");
     input.removeAttribute("aria-activedescendant");
   }
