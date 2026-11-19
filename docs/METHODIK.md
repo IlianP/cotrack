@@ -80,7 +80,8 @@
     in beiden Projekten; Kennungen anderer Projekte stehen immer mit Kürzel da.
   - Im Heimatprojekt zeigt **⇄ IMM**, wo ein Punkt noch angezeigt wird. In der Fußzeile über mehrere Projekte steht ein
     Punkt nur einmal, im Block seines Heimatprojekts.
-  - Das Feld „Auch angezeigt in“ pflegt die KI; im Bearbeiten-Dialog erscheint es nur, wenn es befüllt ist.
+  - Das Feld „Auch angezeigt in“ pflegt die KI; im Bearbeiten-Dialog erscheint es nur, wenn es befüllt ist. Selbst eintragen
+    geht über „⇄ Auch in anderem Projekt anzeigen“: Name, Kürzel oder Repo tippen und aus den Vorschlägen wählen (bis zu 5 Projekte).
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –

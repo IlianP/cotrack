@@ -48,7 +48,9 @@
   and `slug:REF` for others (input may use the code). Keys are `slug:REF` everywhere (`itemKey`, `waitKeys`, `keyLabel` in
   `src/worker.js`; `waitKey`, `keyRef` in `src/ui.html` – keep both in sync). `projectItems` loads a project's view (own +
   shared items) and adds `ext_open`/`ext_next` for links to items outside it; `linkedScope` widens versions and
-  `cotrack_changes` to what a project shows or is linked to. The edit dialog shows "Auch angezeigt in" only when it is set.
+  `cotrack_changes` to what a project shows or is linked to. The edit dialog shows "Auch angezeigt in" only when it is set (otherwise a small
+  button opens it): chips plus a search field with suggestions, same matching as the project search (`projectMatches`,
+  `alsoInPicker` in `src/ui.html`; `MAX_ALSO_IN` exists there and in `src/worker.js` – keep both in sync).
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.
