@@ -220,7 +220,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
-| GET | `/api/projects/:slug/items/:ref/events` | Änderungsprotokoll eines Punkts, neueste zuerst (≤ 500): `{ref, from, events}` – `from` = die Punkte, aus denen er umgewandelt wurde (nächster zuerst), deren Einträge mitkommen |
+| GET | `/api/projects/:slug/items/:ref/events` | Änderungsprotokoll eines Punkts, neueste zuerst (≤ 500): `{ref, from, events}` – `from` = die Punkte, aus denen er umgewandelt wurde (nächster zuerst, `deleted: true`, wenn inzwischen gelöscht), deren Einträge mitkommen |
 | GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit, Aufwand & Nutzen); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
