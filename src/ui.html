@@ -3347,10 +3347,15 @@ function alsoInPicker(it) {
     sync();
     if (!input.disabled) input.focus();
   };
-  // Typed text that was not picked: an exact code, slug or name counts, as does a single hit.
+  // Typed text that was not picked: an exact code or slug counts (both unique), then an exact name only if no other
+  // project has it (names may repeat), then a single hit. Anything else stays unresolved and saving stops with a hint.
   const resolve = (text) => {
     const t = fold(text.trim()), hits = projectMatches(text, candidates());
-    return hits.find((p) => [p.code, p.slug, p.name].some((x) => x && fold(x) === t)) || (hits.length === 1 ? hits[0] : null);
+    const byKey = hits.find((p) => [p.code, p.slug].some((x) => x && fold(x) === t));
+    if (byKey) return byKey;
+    const byName = hits.filter((p) => fold(p.name) === t);
+    if (byName.length) return byName.length === 1 ? byName[0] : null;
+    return hits.length === 1 ? hits[0] : null;
   };
   input.addEventListener("focus", () => { if (!input.disabled) render(); });
   input.addEventListener("input", () => { st.active = 0; st.nav = false; render(); });
