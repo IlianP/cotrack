@@ -286,6 +286,12 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
   background: var(--surface); border-top: 1px solid var(--line);
 }
 .footline[hidden] { display: none; }
+.footline .icon-copy {
+  flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.footline .icon-copy:hover, .footline .icon-copy:focus-visible { color: var(--text); background: var(--surface-2); }
+.footline .icon-copy svg { width: 16px; height: 16px; }
 .footline code {
   flex: 1; min-width: 0; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted);
   overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -865,7 +871,10 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 
 <footer class="footline">
   <code id="footerText" title="Fußzeile für den Chat" data-t-attr="title:footerTitle"></code>
-  <button id="copyFooter" class="btn" data-t="copy">Kopieren</button>
+  <button type="button" id="copyFooter" class="icon-copy" aria-label="Fußzeile kopieren" title="Fußzeile kopieren"
+    data-t-attr="aria-label:footerCopyTitle;title:footerCopyTitle"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
+    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path
+    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
 </footer>
 
 <dialog id="dlg" tabindex="-1"></dialog>
@@ -941,7 +950,7 @@ const STRINGS = {
     menuNewProject: "＋ Neues Projekt", menuSetCode: "Kürzel für dieses Projekt festlegen",
     menuStatusMd: "STATUS.md-Abschnitt kopieren", statusMdCopied: "STATUS.md-Abschnitt kopiert",
     secDevice: "Dieses Gerät", secProjects: "Projekte", secFooter: "Chat-Fußzeile", secAccess: (who) => "Zugang · angemeldet als " + who,
-    footerCopy: "Kopieren", footerCustomize: "Anpassen …", menuApi: "API-Doku ↗",
+    footerCopy: "Kopieren", footerCopyTitle: "Fußzeile kopieren", footerCustomize: "Anpassen …", menuApi: "API-Doku ↗",
     apiDocs: "https://github.com/IlianP/cotrack/blob/main/README.de.md#api",
     signOut: "Abmelden",
     installApp: "📲 Als App installieren", installIos: "Als App: im Teilen-Menü „Zum Home-Bildschirm“ wählen.", installed: "cotrack ist installiert",
@@ -1139,7 +1148,7 @@ const STRINGS = {
     menuNewProject: "＋ New project", menuSetCode: "Set the code for this project",
     menuStatusMd: "Copy STATUS.md section", statusMdCopied: "STATUS.md section copied",
     secDevice: "This device", secProjects: "Projects", secFooter: "Chat footer", secAccess: (who) => "Access · signed in as " + who,
-    footerCopy: "Copy", footerCustomize: "Customize …", menuApi: "API docs ↗",
+    footerCopy: "Copy", footerCopyTitle: "Copy footer", footerCustomize: "Customize …", menuApi: "API docs ↗",
     apiDocs: "https://github.com/IlianP/cotrack#api",
     signOut: "Sign out",
     installApp: "📲 Install as app", installIos: "As an app: Share menu → “Add to Home Screen”.", installed: "cotrack is installed",
