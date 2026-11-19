@@ -19,6 +19,7 @@ try { const t = localStorage.getItem("cotrack.theme"); if (t === "light" || t ==
   --radius: 12px; --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 2px 8px rgb(0 0 0 / .04);
   --ref-white: 0%; color-scheme: light;
   --lift: 0 2px 6px rgb(0 0 0 / .10), 0 6px 18px rgb(0 0 0 / .10); --lift-lg: 0 10px 32px rgb(0 0 0 / .18);
+  --node-bg: var(--surface); --node-line: var(--line); --node-done-bg: var(--surface-2);
 }
 /* Dark: chosen explicitly, or by the system unless light was chosen. Keep both blocks identical. */
 :root[data-theme="dark"] {
@@ -26,6 +27,7 @@ try { const t = localStorage.getItem("cotrack.theme"); if (t === "light" || t ==
   --line: #30302c; --accent: #2dd4bf; --accent-ink: #062b27; --danger: #f87171;
   --shadow: none; --ref-white: 40%; color-scheme: dark;
   --lift: 0 2px 10px rgb(0 0 0 / .55); --lift-lg: 0 10px 32px rgb(0 0 0 / .6);
+  --node-bg: #262623; --node-line: #5e5e58; --node-done-bg: transparent;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -33,6 +35,7 @@ try { const t = localStorage.getItem("cotrack.theme"); if (t === "light" || t ==
     --line: #30302c; --accent: #2dd4bf; --accent-ink: #062b27; --danger: #f87171;
     --shadow: none; --ref-white: 40%; color-scheme: dark;
     --lift: 0 2px 10px rgb(0 0 0 / .55); --lift-lg: 0 10px 32px rgb(0 0 0 / .6);
+    --node-bg: #262623; --node-line: #5e5e58; --node-done-bg: transparent;
   }
 }
 * { box-sizing: border-box; }
@@ -221,6 +224,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
   .bar-filter { gap: 10px; }
   .tg { padding: 0 7px; gap: 4px; }
 }
+/* phones held sideways (low screens): only the top bar sticks, the filter bar scrolls away and leaves the height to the content */
+@media (max-height: 500px) and (orientation: landscape) { .bar, .bar-filter { position: static; } }
 /* the toggles do not fit in one row (narrow phone, many categories): the counts go first, the column heads show them */
 #filterBar.tight #kindChips .n { display: none; }
 
@@ -359,7 +364,8 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 /* very narrow phones (iPhone SE): the project name needs the room more than the caret and the live dot */
 @media (max-width: 374px) { .psel-caret, .top .live { display: none; } }
 
-/* Ketten: what waits for what (A55). Columns left to right = order; on phones the chain runs top to bottom (.vert). */
+/* Ketten: what waits for what (A55). Columns left to right = order; on phones a list, one card per line, with the
+   arrows in lanes along the left side (.list, --gut = their width). Cards use --node-* so they stand out in dark mode. */
 .deps { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
 .deps.no-side { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 999px) { .deps { grid-template-columns: minmax(0, 1fr); } .dg-side { order: -1; } }
@@ -370,12 +376,13 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dg-proj { margin: 8px 0 -4px; font-size: 14px; font-weight: 650; }
 .dg-chain {
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
-  overflow-x: auto; overscroll-behavior-x: contain;
+  overflow-x: auto; overscroll-behavior-x: contain; container-type: inline-size;
 }
 .dg-graph {
-  position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: max-content; gap: 0 56px;
+  --cg: 56px; position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: max-content; gap: 0 var(--cg);
   padding: 34px 20px 36px; width: max-content; min-width: 100%;
 }
+@container (max-width: 960px) { .dg-graph { --cg: 44px; } }
 .dg-col { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; }
 .dg-via { width: 1px; height: 6px; flex: none; } /* stop of an arrow that skips this column */
 .dg-edges { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
@@ -385,32 +392,38 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dg-edges path.head.done { opacity: .6; }
 .dg-edges path.cycle { stroke: var(--danger); }
 .dg-edges path.head.cycle { fill: var(--danger); }
-.dg-graph.vert { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); gap: 34px 0; padding: 14px 34px 14px 32px; width: auto; }
-.vert .dg-col { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.dg-node {
-  position: relative; display: flex; gap: 10px; align-items: flex-start; width: 232px; padding: 10px 12px; text-align: left;
-  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); color: var(--text);
+.dg-edges path.gap { stroke: var(--surface); stroke-width: 6; stroke-linecap: butt; opacity: 1; stroke-dasharray: none; }
+.dg-graph.list {
+  grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); gap: 8px 0; width: auto;
+  padding: 14px 12px 16px calc(12px + var(--gut, 0px));
 }
-.vert .dg-node { width: auto; flex: 1 1 150px; max-width: 100%; }
-.vert .dg-node .kbadge { display: none; } /* narrow cards: the coloured reference says the category */
-.dg-node:hover { border-color: color-mix(in srgb, var(--kc) 55%, var(--line)); }
+.list .dg-node { width: auto; }
+.list .dg-pill { justify-self: start; }
+.list .dg-lv { margin-top: 10px; } /* the next column of the wide layout: a little more room */
+.dg-node {
+  position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; text-align: left;
+  /* the columns share the chain's width (tablets, phones held sideways); below 176px per card the chain scrolls instead */
+  width: 232px; width: clamp(176px, calc((100cqi - 40px - (var(--cols, 3) - 1) * var(--cg)) / var(--cols, 3)), 232px);
+  border: 1px solid var(--node-line); border-radius: 12px; background: var(--node-bg); box-shadow: var(--shadow); color: var(--text);
+}
+.dg-node:hover { border-color: color-mix(in srgb, var(--kc) 55%, var(--node-line)); }
 .dg-node .kbadge { flex: none; min-width: 26px; height: 26px; }
 .dg-node .tx { min-width: 0; display: grid; gap: 2px; }
 .dg-t { font-size: 14px; line-height: 1.35; overflow-wrap: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .dg-t b { color: color-mix(in srgb, var(--kc), white var(--ref-white)); font-variant-numeric: tabular-nums; }
 .dg-sub { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
-.dg-node.is-done { background: var(--surface-2); border-style: dashed; box-shadow: none; color: var(--muted); }
+.dg-node.is-done { background: var(--node-done-bg); border-style: dashed; box-shadow: none; color: var(--muted); }
 .dg-node.is-done .kbadge { background: color-mix(in srgb, var(--muted) 30%, var(--surface-2)); color: var(--text); }
 .dg-node.is-done .dg-t span { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
 .dg-node.is-free { border: 2px solid var(--accent); padding: 9px 11px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent); }
 .dg-node.is-free .dg-sub { color: var(--accent); font-weight: 600; }
 .dg-node.is-cycle { border: 2px solid var(--danger); padding: 9px 11px; }
 .dg-node.is-cycle .dg-sub { color: var(--danger); font-weight: 600; }
-.dg-node.is-ext { background: transparent; box-shadow: none; border: 1.5px dashed var(--line); }
-.dg-node.is-missing { background: transparent; box-shadow: none; border: 1.5px dashed color-mix(in srgb, var(--danger) 55%, var(--line)); }
+.dg-node.is-ext { background: transparent; box-shadow: none; border: 1.5px dashed var(--node-line); }
+.dg-node.is-missing { background: transparent; box-shadow: none; border: 1.5px dashed color-mix(in srgb, var(--danger) 55%, var(--node-line)); }
 .dg-pill {
   display: inline-flex; align-items: center; gap: 4px; padding: 4px 11px; border-radius: 99px; font-size: 13px; white-space: nowrap;
-  border: 1px dashed color-mix(in srgb, var(--muted) 50%, var(--line)); background: var(--surface-2); color: var(--muted);
+  border: 1px dashed color-mix(in srgb, var(--muted) 50%, var(--node-line)); background: var(--surface-2); color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 .dg-pill:hover { color: var(--text); }
@@ -2496,7 +2509,7 @@ function waitCard(d) {
 // the server is not involved. Only chains with an open item that waits are shown in "Offen" ("Erledigt": chains that are
 // all closed, "Alle": every chain). Filters and search never cut a chain: items they hide fold into "⋯ n", and in "Offen"
 // closed items shrink to "✓ A36" (dropped: "✕ A36"), so the order stays visible. Columns: prerequisites left, what waits right
-// (phones: top to bottom); arrows are an SVG drawn over the cards from their positions.
+// (phones: a list, one card per line, column after column); arrows are an SVG drawn over the cards from their positions.
 const deps = { model: null, chains: [], expanded: new Set(), sideOpen: null };
 const NARROW = matchMedia("(max-width: 699px)");
 const SVGNS = "http://www.w3.org/2000/svg";
@@ -2694,10 +2707,10 @@ function depsChain(c, filtered, match, compact, before) {
   for (const x of vnodes) (cols[level.get(x)] ||= []).push(x);
   // An arrow that skips columns gets an invisible stop in each column in between ("via"): the column makes room for it,
   // so the arrow runs between the cards instead of through them. For the order, a card counts the last stop as what it
-  // waits for, not the card further left. Phones (rows that wrap) keep the way along the left side instead.
+  // waits for, not the card further left. Phones need no stops: their arrows run in lanes beside the list.
   const lpre = new Map(vnodes.map((x) => [x, [...x.pre].filter((p) => !back.has(p.key + ">" + x.key))]));
   const edgeList = [...edges.values()].map((e) => ({
-    ...e, back: back.has(e.a.key + ">" + e.b.key), skip: level.get(e.b) - level.get(e.a) > 1, via: [],
+    ...e, back: back.has(e.a.key + ">" + e.b.key), via: [],
   }));
   for (const e of edgeList) {
     if (e.back || e.a === e.b || NARROW.matches) continue;
@@ -2722,17 +2735,55 @@ function depsChain(c, filtered, match, compact, before) {
     col.forEach((x, j) => pos.set(x, j));
   });
   const els = new Map();
-  const graph = h("div", { class: "dg-graph" + (NARROW.matches ? " vert" : "") },
-    cols.map((col) => h("div", { class: "dg-col" }, col.map((x) => {
+  let graph, lanes = null;
+  if (NARROW.matches) {
+    // Phones: one card per line, column after column (a little more room where the next column starts); within a column
+    // the closed "✓ A1" that nothing waits for go last, so the open cards stay together.
+    const ends = (x) => !!x.v?.item && isClosed(x.v.item) && !x.post.size;
+    const rows = cols.flatMap((col) => col.filter((x) => !ends(x)).concat(col.filter(ends)));
+    lanes = depsLanes(rows, edgeList);
+    graph = h("div", { class: "dg-graph list", style: `--gut:${lanes.gutter}px` }, rows.map((x, n) => {
+      const el = depsNode(x, c, compact, before);
+      if (n && level.get(x) !== level.get(rows[n - 1])) el.classList.add("dg-lv");
+      els.set(x, el);
+      return el;
+    }));
+  } else {
+    graph = h("div", { class: "dg-graph", style: `--cols:${cols.length}` }, cols.map((col) => h("div", { class: "dg-col" }, col.map((x) => {
       const el = x.via ? h("span", { class: "dg-via", "aria-hidden": "true" }) : depsNode(x, c, compact, before);
       els.set(x, el);
       return el;
     }))));
+  }
   const svg = document.createElementNS(SVGNS, "svg");
   svg.setAttribute("class", "dg-edges"); svg.setAttribute("aria-hidden", "true");
   graph.prepend(svg);
-  deps.chains.push({ graph, svg, els, cols, edges: edgeList });
+  deps.chains.push({ graph, svg, els, cols, edges: edgeList, lanes });
   return h("section", { class: "dg-chain" }, graph);
+}
+
+// Phones: every card that something waits for gets a lane, a line beside the list from its own row to the farthest row it
+// points to (up as well, for a cycle); lanes that do not overlap share a place. A lane may also go on where another one
+// ends in a card that the new one leaves (A73 → A67 → A69 on one line): it arrives at the upper left, leaves at the lower
+// left. Lane 0 runs next to the cards.
+function depsLanes(rows, edges) {
+  const row = new Map(rows.map((x, n) => [x, n]));
+  const span = new Map();
+  let loop = false;
+  for (const e of edges) {
+    if (e.a === e.b) { loop = true; continue; }
+    const s = span.get(e.a) || [row.get(e.a), row.get(e.a)];
+    span.set(e.a, [Math.min(s[0], row.get(e.b)), Math.max(s[1], row.get(e.b))]);
+  }
+  const ends = [], lane = new Map();
+  for (const [x, [from, to]] of [...span].sort((p, q) => p[1][0] - q[1][0] || q[1][1] - p[1][1])) {
+    const down = from === row.get(x); // starts at its own card, nothing above it
+    let i = ends.findIndex((end) => end.to < from || (end.to === from && end.arrives && down));
+    if (i < 0) i = ends.length;
+    ends[i] = { to, arrives: to > row.get(x) }; lane.set(x, i);
+  }
+  const step = ends.length > 5 ? Math.max(6, Math.floor(56 / ends.length)) : 11;
+  return { lane, step, gutter: Math.max(ends.length ? 12 + ends.length * step : 0, loop ? 22 : 0) };
 }
 
 // On a project's chains, items of other projects (D26) carry their code; "Alle Projekte" keeps the plain number.
@@ -2838,7 +2889,8 @@ function cyclePath(part) {
 }
 
 function depsSide(notes) {
-  if (deps.sideOpen === null) deps.sideOpen = !NARROW.matches; // on phones closed at first: the chains come first
+  // open at first only where it stands beside the chains; above them (phones, tablets, phones held sideways) the chains come first
+  if (deps.sideOpen === null) deps.sideOpen = matchMedia("(min-width: 1000px)").matches;
   const total = notes.reduce((s, n) => s + n.rows.length, 0);
   return h("details", { class: "dg-side", open: deps.sideOpen, ontoggle: (e) => { deps.sideOpen = e.target.open; } },
     h("summary", null, h("span", null, tr("depsNotable")), h("span", { class: "count" }, String(total))),
@@ -2863,16 +2915,17 @@ function depsJump(key) {
   el.classList.remove("ping", "flash"); void el.offsetWidth; el.classList.add("ping");
 }
 
-// Arrows from the cards' positions: prerequisite → what waits (left to right, on phones top to bottom). They leave a
-// card at its column's edge (a small "✓ A1" is narrower than the cards next to it) and pass the columns they skip
-// through their stops ("via"); one that closes a cycle runs back above the cards (phones: along the right side), so
-// none hides behind a card.
+// Arrows from the cards' positions: prerequisite → what waits (left to right). They leave a card at its column's edge
+// (a small "✓ A1" is narrower than the cards next to it) and pass the columns they skip through their stops ("via"); one
+// that closes a cycle runs back above the cards, so none hides behind a card. Phones: drawLanes.
+const svgEl = (d, cls) => { const p = document.createElementNS(SVGNS, "path"); p.setAttribute("d", d); if (cls) p.setAttribute("class", cls); return p; };
+const arrowHead = ([x, y], [dx, dy], cls) =>
+  svgEl(`M${x} ${y} L${x - 8 * dx - 4.5 * dy} ${y - 8 * dy + 4.5 * dx} L${x - 8 * dx + 4.5 * dy} ${y - 8 * dy - 4.5 * dx}Z`, ("head " + cls).trim());
+const edgeClass = (e) => (e.cycle ? "cycle" : e.done ? "done" : "");
 function drawDeps() {
-  const svgEl = (d, cls) => { const p = document.createElementNS(SVGNS, "path"); p.setAttribute("d", d); if (cls) p.setAttribute("class", cls); return p; };
   for (const ch of deps.chains) {
     const box = ch.graph.getBoundingClientRect();
     if (!box.width) continue;
-    const vert = ch.graph.classList.contains("vert");
     const W = ch.graph.scrollWidth, H = ch.graph.scrollHeight;
     ch.svg.setAttribute("width", W); ch.svg.setAttribute("height", H); ch.svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const at = (x) => {
@@ -2880,19 +2933,19 @@ function drawDeps() {
       const l = b.left - box.left, t = b.top - box.top;
       return { l, t, r: l + b.width, b: t + b.height, cx: l + b.width / 2, cy: t + b.height / 2 };
     };
-    // each column's outer edges (phones: each row's top and bottom)
+    if (ch.lanes) { ch.svg.replaceChildren(...drawLanes(ch, at)); continue; }
+    // each column's outer edges
     const ext = new Map();
     for (const col of ch.cols) {
       const r = col.map(at);
-      const s = vert ? { lo: Math.min(...r.map((q) => q.t)), hi: Math.max(...r.map((q) => q.b)) }
-        : { lo: Math.min(...r.map((q) => q.l)), hi: Math.max(...r.map((q) => q.r)) };
+      const s = { lo: Math.min(...r.map((q) => q.l)), hi: Math.max(...r.map((q) => q.r)) };
       for (const x of col) ext.set(x, s);
     }
     const out = [];
     for (const e of ch.edges) {
       const a = at(e.a), b = at(e.b);
       let d, tip, dir;
-      if (!e.back && e.a !== e.b && !vert) {
+      if (!e.back && e.a !== e.b) {
         // a → stops → b; between columns a curve, across a column a straight line
         const pts = [e.a, ...e.via, e.b];
         d = `M${a.r} ${a.cy}`;
@@ -2905,29 +2958,57 @@ function drawDeps() {
           d += last ? (x1 < q.l - 7 ? ` H${q.l - 7}` : "") : ` H${ext.get(pts[n]).hi}`;
         }
         tip = [b.l, b.cy]; dir = [1, 0];
-      } else if (e.skip && !e.back) {
-        const x = Math.min(a.l, b.l) - 22;
-        d = `M${a.l} ${a.cy} C${x} ${a.cy} ${x} ${b.cy} ${b.l - 7} ${b.cy}`; tip = [b.l, b.cy]; dir = [1, 0];
-      } else if (!e.back && e.a !== e.b) {
-        const c = Math.max(12, (b.t - a.b) / 2);
-        d = `M${a.cx} ${a.b} C${a.cx} ${a.b + c} ${b.cx} ${b.t - c} ${b.cx} ${b.t - 7}`; tip = [b.cx, b.t]; dir = [0, 1];
       } else if (e.a === e.b) {
         const x = a.r - 16;
         d = `M${x - 26} ${a.t} C${x - 26} ${a.t - 24} ${x} ${a.t - 24} ${x} ${a.t - 7}`; tip = [x, a.t]; dir = [0, 1];
-      } else if (!vert) {
+      } else {
         const y = Math.min(a.t, b.t) - 26;
         d = `M${a.cx} ${a.t} C${a.cx} ${y} ${b.cx} ${y} ${b.cx} ${b.t - 7}`; tip = [b.cx, b.t]; dir = [0, 1];
-      } else {
-        const x = Math.max(a.r, b.r) + 24;
-        d = `M${a.r} ${a.cy} C${x} ${a.cy} ${x} ${b.cy} ${b.r + 7} ${b.cy}`; tip = [b.r, b.cy]; dir = [-1, 0];
       }
-      const cls = e.cycle ? "cycle" : e.done ? "done" : "";
-      const [x, y] = tip, [dx, dy] = dir;
-      out.push(svgEl(d, cls),
-        svgEl(`M${x} ${y} L${x - 8 * dx - 4.5 * dy} ${y - 8 * dy + 4.5 * dx} L${x - 8 * dx + 4.5 * dy} ${y - 8 * dy - 4.5 * dx}Z`, ("head " + cls).trim()));
+      out.push(svgEl(d, edgeClass(e)), arrowHead(tip, dir, edgeClass(e)));
     }
     ch.svg.replaceChildren(...out);
   }
+}
+
+// Phones: a line leaves a card at its lower left into the card's lane, runs up or down beside the list and turns into each
+// card that waits for it at its upper left (several arrows into one card one below the other, the inner lane on top).
+// Where such a turn crosses another lane, that lane shows a small gap, so it is clear which line goes where.
+function drawLanes(ch, at) {
+  const { lane, step } = ch.lanes;
+  const pos = new Map([...ch.els.keys()].map((x) => [x, at(x)]));
+  const left = Math.min(...[...pos.values()].map((p) => p.l));
+  const laneX = (x) => left - 10 - lane.get(x) * step;
+  const outY = (p) => p.b - Math.min(12, (p.b - p.t) * 0.3);
+  const inBase = (p) => p.t + Math.min(14, (p.b - p.t) * 0.34);
+  const into = new Map();
+  for (const e of ch.edges) if (e.a !== e.b) (into.get(e.b) || into.set(e.b, []).get(e.b)).push(e);
+  const inY = new Map();
+  for (const [x, list] of into) {
+    const p = pos.get(x);
+    const gap = Math.min(10, Math.max(5, (outY(p) - 6 - inBase(p)) / Math.max(1, list.length - 1)));
+    list.sort((e, f) => lane.get(e.a) - lane.get(f.a));
+    list.forEach((e, n) => inY.set(e, Math.min(inBase(p) + n * gap, outY(p) - 4)));
+  }
+  const lines = [], gaps = [], tops = [];
+  for (const e of ch.edges) {
+    const a = pos.get(e.a), b = pos.get(e.b), cls = edgeClass(e);
+    if (e.a === e.b) {
+      const y0 = outY(a), y1 = inBase(a);
+      lines.push(svgEl(`M${left} ${y0} C${left - 16} ${y0} ${left - 16} ${y1} ${left - 7} ${y1}`, cls), arrowHead([left, y1], [1, 0], cls));
+      continue;
+    }
+    const X = laneX(e.a), y0 = outY(a), y1 = inY.get(e), s = y1 > y0 ? 1 : -1, r = Math.min(6, Math.abs(y1 - y0) / 2);
+    lines.push(svgEl(`M${left} ${y0} H${X + r} Q${X} ${y0} ${X} ${y0 + s * r} V${y1 - s * r} Q${X} ${y1} ${X + r} ${y1} H${left - 7}`, cls));
+    tops.push(arrowHead([left, y1], [1, 0], cls));
+    if (lane.get(e.a) > 0) {
+      for (const [y, end] of [[y0, left], [y1, left - 8]]) {
+        gaps.push(svgEl(`M${X + r + 2} ${y} H${end}`, "gap"));
+        tops.push(svgEl(`M${X + r} ${y} H${end}`, cls));
+      }
+    }
+  }
+  return [...lines, ...gaps, ...tops];
 }
 let depsFrame = 0;
 new ResizeObserver(() => { if (deps.chains.length && !depsFrame) depsFrame = requestAnimationFrame(() => { depsFrame = 0; drawDeps(); }); }).observe($("#deps"));
