@@ -71,7 +71,8 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Ketten** – die dritte Ansicht (oben umschaltbar: Board · Next · Ketten) zeigt, was worauf wartet: Pfeile von der
   Voraussetzung zum wartenden Punkt, erledigte Voraussetzungen gestrichelt, frei gewordene Punkte hervorgehoben, Kreise und
   unbekannte Kennungen rot; dazu „Auffällig“ (frei geworden, hält am meisten auf, du bist dran). Filter und Suche falten
-  Punkte nur ein („⋯ 2“), die Kette bleibt ganz.
+  Punkte nur ein („⋯ 2“), die Kette bleibt ganz. Auf dem Handy im Hochformat ist eine Kette eine Liste, eine Karte pro
+  Zeile, die Pfeile laufen am linken Rand.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll und Verlauf** – jede Änderung wird mit Urheber (du oder die KI) festgehalten; die Uhr oben zeigt
   sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf.
