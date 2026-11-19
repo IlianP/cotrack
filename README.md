@@ -70,7 +70,9 @@ warnings – a one-glance status that survives across conversations.
   chain stays whole. On phones held upright a chain is a list, one card per line, with the arrows running along the left side.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail and history** – every change is logged with who made it (you or the AI); the clock in the top bar shows
-  it, marks what the AI changed since you last looked and counts it on the button.
+  it, marks what the AI changed since you last looked and counts it on the button. Each item's edit dialog has a
+  collapsible history of its own (when · who · which fields, changes within 5 minutes combined), including the idea or
+  warning it was converted from.
 - **Statistics** – ☰ → *Statistics*, for one project or all: an overview (key figures, created and done per day,
   open by category, lead times, activity by weekday and hour), a weekly report (with streak, records and what becomes of
   ideas; copyable as text), flow & age (cumulative flow, the age of every open item, waiting times) and effort & benefit
@@ -207,6 +209,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | "Open points" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |
+| GET | `/api/projects/:slug/items/:ref/events` | one item's change log, newest first (≤ 500): `{ref, from, events}` – `from` = the items it was converted from (nearest first), whose events are included |
 | GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour, effort & benefit); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |

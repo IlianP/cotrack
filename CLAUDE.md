@@ -56,6 +56,10 @@
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.
 - Retired categories (`kinds.active = 0`, e.g. T from methodology v1) never appear in the web app's filter or board, unless
   they still hold open items; their closed items stay in the database as history. The API no longer accepts new ones.
+- History per item (decision D22): the edit dialog's "Angelegt … · geändert …" line opens a compact table (when · who ·
+  which fields; status and owner with value; same actor within 5 minutes = one row), loaded from
+  `GET …/items/:ref/events` (`itemHistory` in `src/worker.js`), which follows conversions back (`from`). UI:
+  `itemHistory`/`itemHistRows` in `src/ui.html`.
 - Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen; `GET/PATCH /api/settings`) set the footer's
   default layout and group markers for API and MCP. Only the user token may change them; a `layout` in a request wins.
   Who controls what (prompt vs. server vs. settings) is explained in `docs/PROMPT.md` → "Wozu der Prompt?".

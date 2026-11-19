@@ -715,6 +715,21 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 .hev .det { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
 .hev time { flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
 .hist-more { display: block; margin: 12px auto 0; }
+/* History per item in the edit dialog (D22): unobtrusive line, opens into a compact table */
+.ihist > summary { cursor: pointer; list-style: none; }
+.ihist > summary::-webkit-details-marker { display: none; }
+.ihist-toggle { color: var(--accent); white-space: nowrap; }
+.ihist-toggle::after { content: " ▸"; }
+.ihist[open] .ihist-toggle::after { content: " ▾"; }
+.ihist-box { margin-top: 8px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); max-height: 240px; overflow-y: auto; }
+.ihist-tab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ihist-tab td { padding: 4px 4px; border-top: 1px solid var(--line); vertical-align: top; }
+.ihist-tab tr:first-child td { border-top: 0; }
+.ihist-tab td.t { white-space: nowrap; width: 1%; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ihist-tab td.w { width: 1%; text-align: center; }
+.ihist-tab td.a { overflow-wrap: anywhere; }
+.ihist-from { margin: 8px 0 2px; padding-top: 6px; border-top: 1px dashed var(--line); font-size: 12.5px; font-weight: 650; color: color-mix(in srgb, var(--kc), var(--text) 25%); }
+.ihist-note { margin: 6px 0 2px; }
 @media (max-width: 560px) { .hist { width: 100vw; border-left: 0; } }
 
 #toast {
@@ -1008,7 +1023,13 @@ const STRINGS = {
       projectUpdated: "Projekt geändert", archived: "Projekt archiviert", restored: "Projekt zurückgeholt",
       titleChanged: "Titel geändert", bodyChanged: "Beschreibung geändert", sourceChanged: "Quelle geändert",
       checked: "abgehakt", unchecked: "Häkchen entfernt",
+      // Verlauf pro Punkt (D22): compact, field names only
+      checkedN: (n) => (n === 1 ? "Teilpunkt abgehakt" : `${n} Teilpunkte abgehakt`),
+      uncheckedN: (n) => (n === 1 ? "Häkchen entfernt" : `${n} Häkchen entfernt`),
+      sized: "Aufwand/Nutzen bestätigt", from: (ref, kind) => `Vorher ${ref} (${kind})`,
     },
+    itemHist: (n) => (n == null ? "Verlauf" : `Verlauf (${n})`), itemHistLoading: "Lädt …",
+    itemHistGrouped: "Änderungen derselben Person innerhalb von 5 Minuten sind zusammengefasst.",
     // Statistiken (A58)
     menuStats: "📊 Statistiken", stTitle: "Statistiken", stBack: "← Board", stLoading: "Wird gezählt …",
     stEmpty: "Noch keine Punkte – hier gibt es noch nichts zu zählen.",
@@ -1200,7 +1221,13 @@ const STRINGS = {
       projectUpdated: "Project changed", archived: "Project archived", restored: "Project restored",
       titleChanged: "Title changed", bodyChanged: "Description changed", sourceChanged: "Source changed",
       checked: "checked", unchecked: "unchecked",
+      // History per item (D22): compact, field names only
+      checkedN: (n) => (n === 1 ? "Sub-item checked" : `${n} sub-items checked`),
+      uncheckedN: (n) => (n === 1 ? "Sub-item unchecked" : `${n} sub-items unchecked`),
+      sized: "Effort/benefit confirmed", from: (ref, kind) => `Before: ${ref} (${kind})`,
     },
+    itemHist: (n) => (n == null ? "History" : `History (${n})`), itemHistLoading: "Loading …",
+    itemHistGrouped: "Changes by the same person within 5 minutes are combined.",
     // Statistics (A58)
     menuStats: "📊 Statistics", stTitle: "Statistics", stBack: "← Board", stLoading: "Counting …",
     stEmpty: "No items yet – nothing to count here.",
@@ -2057,6 +2084,84 @@ async function openHistItem(e) {
     openEdit(item);
   } catch { toast(tr("histGone", e.item_ref)); }
 }
+
+/* History per item (D22): a collapsible line at the bottom of the edit dialog. Rows = when · who · which fields; only
+   status and owner with their new value. Changes by the same person within 5 minutes form one row. An item that came
+   from a conversion also shows the history of the idea/warning it came from, below a divider. Loaded on first open. */
+const ITEM_HIST_GROUP_MS = 5 * 60 * 1000;
+const ITEM_HIST_ORDER = ["created", "converted", "status", "owner", "title", "body", "checked", "unchecked", "short",
+  "waiting_on", "also_in", "due", "effort", "benefit", "sized", "source", "deleted", "updated"];
+// The parts of one event, keyed so a group can merge them: [key, text, count?]
+function itemHistParts(e) {
+  const ev = tr("ev"), c = e.data || {};
+  if (e.action === "created") return [["created", ev.created]];
+  if (e.action === "converted") return [["converted", ev.converted(c.to)]];
+  if (e.action === "deleted") return [["deleted", ev.deleted]];
+  const out = [];
+  if ("status" in c) out.push(["status", `${tr("fStatus")}: ${STATUS_LABELS[c.status] || c.status}`]);
+  if ("owner" in c) out.push(["owner", `${tr("responsible")}: ${c.owner ? ownerLabel(c.owner) : "–"}`]);
+  const named = { title: "fTitle", body: "fBody", short: "fShort", waiting_on: "fWaiting", also_in: "fAlsoIn", due: "fDue",
+    effort: "effort", benefit: "benefit", source: "fSource" };
+  for (const [key, label] of Object.entries(named)) if (key in c) out.push([key, tr(label)]);
+  if (c.sized_by === "user" && !("effort" in c) && !("benefit" in c)) out.push(["sized", ev.sized]);
+  if (c.checked?.length) out.push(["checked", null, c.checked.length]);
+  if (c.unchecked?.length) out.push(["unchecked", null, c.unchecked.length]);
+  return out.length ? out : [["updated", ev.updated]];
+}
+// events newest first → rows { at (earliest of the group), actor, parts }
+function itemHistRows(events) {
+  const rows = [];
+  for (const e of events) {
+    const last = rows[rows.length - 1];
+    const t = Date.parse(e.at);
+    let row = last && last.actor === e.actor && Date.parse(last.newest) - t <= ITEM_HIST_GROUP_MS ? last : null;
+    if (!row) rows.push(row = { newest: e.at, at: e.at, actor: e.actor, parts: new Map() });
+    row.at = e.at;
+    for (const [key, text, n] of itemHistParts(e)) {
+      const had = row.parts.get(key);
+      if (n) row.parts.set(key, { n: (had?.n || 0) + n });
+      else if (!had) row.parts.set(key, { text }); // newest value wins (the list runs newest first)
+    }
+  }
+  const ev = tr("ev");
+  return rows.map((r) => ({ ...r, text: ITEM_HIST_ORDER.filter((k) => r.parts.has(k))
+    .map((k) => r.parts.get(k).text ?? (k === "checked" ? ev.checkedN : ev.uncheckedN)(r.parts.get(k).n)).join(", ") }));
+}
+function itemHistTable(rows) {
+  return h("table", { class: "ihist-tab" }, h("tbody", null, rows.map((r) => h("tr", null,
+    h("td", { class: "t" }, h("time", { datetime: r.at, title: r.newest !== r.at ? `${fmt(r.at)} – ${fmt(r.newest)}` : fmt(r.at) },
+      new Date(r.at).toLocaleString(LOCALE, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))),
+    h("td", { class: "w", title: ownerLabel(r.actor), "aria-label": ownerLabel(r.actor) }, r.actor === "ai" ? "🤖" : "👤"),
+    h("td", { class: "a" }, r.text)))));
+}
+function itemHistory(it, summaryText) {
+  const toggle = h("span", { class: "ihist-toggle" }, tr("itemHist"));
+  const box = h("div", { class: "ihist-box" }, h("p", { class: "small" }, tr("itemHistLoading")));
+  let loaded = false;
+  const load = async () => {
+    loaded = true;
+    try {
+      const r = await api(P(it.project_slug) + "/items/" + encodeURIComponent(it.ref) + "/events");
+      const byRef = (ref) => itemHistRows(r.events.filter((e) => e.item_ref === ref));
+      const own = byRef(r.ref);
+      const earlier = r.from.map((f) => ({ f, rows: byRef(f.ref) }));
+      const n = own.length + earlier.reduce((s, x) => s + x.rows.length, 0);
+      toggle.textContent = tr("itemHist", n);
+      const grouped = [own, ...earlier.map((x) => x.rows)].some((rows) => rows.some((row) => row.newest !== row.at));
+      box.replaceChildren(...[itemHistTable(own),
+        earlier.map(({ f, rows }) => [
+          h("div", { class: "ihist-from", style: `--kc:${kindBy(f.kind)?.color || "#6b7280"}` }, tr("ev").from(f.ref, kindBy(f.kind)?.name || f.kind)),
+          itemHistTable(rows)]),
+        grouped ? h("p", { class: "small ihist-note" }, tr("itemHistGrouped")) : null].flat(2).filter(Boolean));
+    } catch (err) {
+      loaded = false;
+      box.replaceChildren(h("p", { class: "small" }, tr("error", err.message)));
+    }
+  };
+  return h("details", { class: "ihist", ontoggle: (e) => { if (e.currentTarget.open && !loaded) load(); } },
+    h("summary", { class: "small" }, summaryText, " · ", toggle), box);
+}
+
 $("#histBtn").addEventListener("click", () => (hist.open ? closeHist(true) : openHist()));
 $("#histClose").addEventListener("click", () => closeHist(true));
 $("#histFilter").addEventListener("click", (e) => {
@@ -3595,7 +3700,7 @@ function openEdit(it) {
     ai.field,
     ai.add,
     // never changed since it was created (both times are set together): only "Angelegt …"
-    h("p", { class: "small" }, it.updated_at && it.updated_at !== it.created_at
+    itemHistory(it, it.updated_at && it.updated_at !== it.created_at
       ? tr("history", fmt(it.created_at), actorLabel(it.created_by), fmt(it.updated_at), actorLabel(it.updated_by))
       : tr("history", fmt(it.created_at), actorLabel(it.created_by))),
     !it.converted_to && convertTargets.length ? h("div", { class: "actions", style: "justify-content:flex-start" },

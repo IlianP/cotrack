@@ -75,7 +75,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   Zeile, die Pfeile laufen am linken Rand.
 - **STATUS.md-Export** – der Abschnitt „Offene Punkte“ für Übergaben.
 - **Änderungsprotokoll und Verlauf** – jede Änderung wird mit Urheber (du oder die KI) festgehalten; die Uhr oben zeigt
-  sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf.
+  sie, hebt hervor, was die KI seit deinem letzten Blick geändert hat, und zählt es am Knopf. Im Bearbeiten-Dialog hat
+  jeder Punkt einen eigenen, aufklappbaren Verlauf (wann · wer · welche Felder, Änderungen innerhalb von 5 Minuten
+  zusammengefasst), samt der Idee oder Warnung, aus der er umgewandelt wurde.
 - **Statistiken** – ☰ → *Statistiken*, für ein Projekt oder alle: eine Übersicht (Kennzahlen, angelegt und erledigt pro
   Tag, offen nach Kategorie, Durchlaufzeiten, Aktivität nach Wochentag und Uhrzeit), eine Wochenbilanz (mit Serie, Rekorden
   und dem, was aus Ideen wird; als Text kopierbar), Fluss & Alter (aufsummierter Fluss, Alter jedes offenen Punkts, Wartezeiten)
@@ -218,6 +220,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
+| GET | `/api/projects/:slug/items/:ref/events` | Änderungsprotokoll eines Punkts, neueste zuerst (≤ 500): `{ref, from, events}` – `from` = die Punkte, aus denen er umgewandelt wurde (nächster zuerst), deren Einträge mitkommen |
 | GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit, Aufwand & Nutzen); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |

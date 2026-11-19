@@ -263,6 +263,8 @@ async function route(req, db, url, actor) {
         if (method === "PATCH") return json({ item: await updateItem(db, project, item, await readJson(req), actor) });
         if (method === "DELETE") return json({ deleted: await deleteItem(db, project, item, actor) });
       }
+      // Change log of this one item, plus the items it was converted from (web app: edit dialog → Verlauf, D22)
+      if (seg.length === 5 && seg[4] === "events" && method === "GET") return json(await itemHistory(db, project, item));
       if (seg.length === 5 && seg[4] === "convert" && method === "POST") {
         return json(await convertItem(db, project, item, await readJson(req), actor), 201);
       }
@@ -394,6 +396,30 @@ export async function listEvents(db, { project = null, after = 0, before = null,
     .bind(...args, limit)
     .all();
   return results.map((e) => ({ ...e, data: e.data ? JSON.parse(e.data) : null }));
+}
+
+// One item's history, newest first: its own events and those of the items it was converted from (an idea or warning
+// that became this action/decision; followed back over several steps). from = those earlier items, nearest first.
+export async function itemHistory(db, project, item, { limit = 500 } = {}) {
+  const from = [];
+  for (let ref = item.ref; from.length < 5; ) {
+    const src = await db
+      .prepare("SELECT kind || seq AS ref, kind, title FROM items WHERE project_slug = ? AND converted_to = ? LIMIT 1")
+      .bind(project.slug, ref)
+      .first();
+    if (!src || src.ref === item.ref || from.some((f) => f.ref === src.ref)) break;
+    from.push(src);
+    ref = src.ref;
+  }
+  const refs = [item.ref, ...from.map((f) => f.ref)];
+  const { results } = await db
+    .prepare(
+      `SELECT id, item_ref, action, actor, data, at FROM events
+       WHERE project_slug = ? AND item_ref IN (${refs.map(() => "?").join(", ")}) ORDER BY id DESC LIMIT ?`,
+    )
+    .bind(project.slug, ...refs, limit)
+    .all();
+  return { ref: item.ref, from, events: results.map((e) => ({ ...e, data: e.data ? JSON.parse(e.data) : null })) };
 }
 
 /* ----------------------------------------------------------- statistics */
