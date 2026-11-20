@@ -11,7 +11,9 @@ A separate cotrack instance with invented data, for showing the app without touc
 
 ## Update the code
 
-The demo is **not** deployed automatically. With wrangler:
+Automatic: a second Workers Build (trigger "Deploy demo (main)" on the worker `cotrack-demo`) runs on every push to `main`,
+like the live one – it applies the migrations to `cotrack-demo-db` and runs `npx wrangler deploy --env demo`. The data stays.
+By hand, with wrangler:
 
 ```bash
 npx wrangler deploy --env demo

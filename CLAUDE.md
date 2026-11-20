@@ -6,8 +6,8 @@
   Schema in `migrations/` (D1). Keep it dependency-free.
 - Live instance: https://cotrack.ilianos1.workers.dev – project slug `cotrack` tracks this repo's own open points.
 - Demo instance (invented data, own tokens): https://cotrack-demo.ilianos1.workers.dev – worker `cotrack-demo`, D1
-  `cotrack-demo-db` (`[env.demo]`), data from `demo/seed.mjs` plus a copy of Patchwerk. Not deployed automatically; how to
-  update the code and reset the data: `demo/README.md`. Keep `demo/seed.mjs` in step with the event format in `src/worker.js`.
+  `cotrack-demo-db` (`[env.demo]`), data from `demo/seed.mjs` plus a copy of Patchwerk. Deployed with main by its own Workers Build (code + migrations,
+  data stays); resetting the data: `demo/README.md`. Keep `demo/seed.mjs` in step with the event format in `src/worker.js`.
 - `COTRACK.md` (repo root) maps this repo to its cotrack project (`project:` = slug; `code:` = short code once set). Keep it in sync with the board.
 - Open points of this project live in cotrack itself (project `cotrack`), never in `docs/STATUS.md` (that file only
   links to the board). Use the cotrack MCP tools if connected, otherwise the API with `COTRACK_TOKEN`:
