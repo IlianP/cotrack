@@ -2846,6 +2846,13 @@ function depsChain(c, filtered, match, compact, before) {
     return l;
   };
   vnodes.forEach(lv);
+  // A starting card (waits for nothing) stands right before the first card that waits for it, not always in the first
+  // column: otherwise a card that only the end of a long chain needs sits far left, its arrow running across everything.
+  for (const x of vnodes) {
+    if ([...x.pre].some((p) => !back.has(p.key + ">" + x.key))) continue;
+    const next = [...x.post].filter((y) => !back.has(x.key + ">" + y.key)).map((y) => level.get(y));
+    if (next.length) level.set(x, Math.max(0, Math.min(...next) - 1));
+  }
   const cols = [];
   for (const x of vnodes) (cols[level.get(x)] ||= []).push(x);
   // An arrow that skips columns gets an invisible stop in each column in between ("via"): the column makes room for it,
