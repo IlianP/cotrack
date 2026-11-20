@@ -382,9 +382,9 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
   .deps { grid-template-columns: minmax(0, 1fr); }
   .deps > .dg-main, .deps > .dg-side { grid-area: 1 / 1; }
   .dg-side { justify-self: end; z-index: 3; }
-  .dg-side[open] { width: 300px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18), var(--shadow); }
+  .dg-side[open] { width: 340px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18), var(--shadow); }
   .dg-side:not([open]) summary { padding: 7px 14px; }
-  .deps:not(.no-side) .dg-head { min-height: 36px; padding-right: 170px; display: flex; align-items: center; }
+  .deps:not(.no-side) .dg-head { min-height: 36px; padding-right: 480px; display: flex; align-items: center; }
 }
 @media (min-width: 1180px) {
   .dg-side { position: sticky; top: calc(var(--top-h, 59px) + 14px); }
@@ -456,16 +456,24 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dg-empty p { margin: 0; color: var(--muted); font-size: 14px; }
 /* "Auffällig": what stands out – a panel on the right, above the chains (and closable) on smaller screens */
 .dg-side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); min-width: 0; }
-.dg-side summary { display: flex; align-items: center; gap: 8px; padding: 12px 16px; font-weight: 650; cursor: pointer; list-style: none; }
+.dg-side summary { display: flex; align-items: center; gap: 10px; padding: 12px 16px; font-weight: 650; cursor: pointer; list-style: none; }
 .dg-side summary::-webkit-details-marker { display: none; }
 .dg-side summary::after { content: "▾"; margin-left: auto; color: var(--muted); font-size: 12px; transition: transform .15s; }
 .dg-side:not([open]) summary::after { transform: rotate(-90deg); }
 .dg-side summary .count { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.dg-side summary .dg-chips { flex: 1; }
+.dg-side-t { flex: none; }
+.dg-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.dg-chip {
+  display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 550; white-space: nowrap;
+  background: color-mix(in srgb, var(--tc) 13%, transparent); color: color-mix(in srgb, var(--tc), var(--text) 30%);
+  font-variant-numeric: tabular-nums;
+}
+.dg-note .t .dg-chips { margin-top: 3px; }
 .dg-side[open] summary { padding-bottom: 2px; }
-.dg-note { padding: 0 12px 10px; }
+.dg-note { padding: 4px 12px 10px; margin: 0; list-style: none; }
 .dg-note h3 { margin: 8px 4px 2px; font-size: 13.5px; }
 .dg-note h3.bad { color: var(--danger); }
-.dg-note ul { list-style: none; margin: 0; padding: 0; }
 .dg-note button {
   width: 100%; display: flex; gap: 8px; align-items: baseline; padding: 6px 4px; border: 0; border-radius: 8px;
   background: none; text-align: left; color: var(--text);
@@ -1033,6 +1041,8 @@ const STRINGS = {
     depsFreed: "Frei geworden", depsFreedWhy: (refs) => `${refs} erledigt`,
     depsHolds: "Hält am meisten auf", depsHoldsWhy: (n, direct) => `${n} warten dahinter${direct < n ? ` (${direct} direkt)` : ""}`,
     depsYours: "Du bist dran",
+    depsTag_cycle: "im Kreis", depsTag_missing: "unbekannt", depsTag_freed: "frei geworden", depsTagHolds: (n) => `bremst ${n}`, depsTag_yours: "du bist dran",
+    depsChip_cycle: "Kreis", depsChip_missing: "Unbekannt", depsChip_freed: "Frei", depsChip_holds: "Bremst", depsChip_yours: "Du dran",
     // Verlauf (A54)
     hist: "Verlauf", histClose: "Verlauf schließen", histWho: "Wer", histAll: "Alle", histAi: "🤖 KI", histUser: "👤 Du",
     histNew: (n) => (n === 1 ? "1 neue Änderung seit deinem letzten Blick" : `${n} neue Änderungen seit deinem letzten Blick`),
@@ -1231,6 +1241,8 @@ const STRINGS = {
     depsFreed: "Freed up", depsFreedWhy: (refs) => `${refs} done`,
     depsHolds: "Holds up the most", depsHoldsWhy: (n, direct) => `${n} waiting behind it${direct < n ? ` (${direct} directly)` : ""}`,
     depsYours: "Your turn",
+    depsTag_cycle: "in a cycle", depsTag_missing: "unknown", depsTag_freed: "freed up", depsTagHolds: (n) => `holds up ${n}`, depsTag_yours: "your turn",
+    depsChip_cycle: "Cycle", depsChip_missing: "Unknown", depsChip_freed: "Free", depsChip_holds: "Holding up", depsChip_yours: "Yours",
     // History (A54)
     hist: "History", histClose: "Close history", histWho: "Who", histAll: "All", histAi: "🤖 AI", histUser: "👤 You",
     histNew: (n) => (n === 1 ? "1 new change since you last looked" : `${n} new changes since you last looked`),
@@ -2978,14 +2990,14 @@ function depsNotes(m) {
   const row = (v, why, sub = v.item?.title) => ({ v, text: label(v), kc: color(v), sub, why });
   const notes = [];
   const cycles = m.cycles.filter((part) => inView.has(part[0]));
-  if (cycles.length) notes.push({ bad: true, title: tr("depsCycles"), rows: cycles.map((part) => {
+  if (cycles.length) notes.push({ id: "cycle", bad: true, title: tr("depsCycles"), rows: cycles.map((part) => {
     const path = cyclePath(part);
     return row(path[0], tr("depsCycleWhy"), path.map(label).join(" → "));
   }) });
   const missing = shown.filter((v) => !v.item && !v.external);
-  if (missing.length) notes.push({ bad: true, title: tr("depsMissing"), rows: missing.map((v) => row(v, tr("depsMissingWhy", v.post.map(label).join(", ")), null)) });
+  if (missing.length) notes.push({ id: "missing", bad: true, title: tr("depsMissing"), rows: missing.map((v) => row(v, tr("depsMissingWhy", v.post.map(label).join(", ")), null)) });
   const freed = shown.filter((v) => v.free);
-  if (freed.length) notes.push({ title: tr("depsFreed"), rows: freed.map((v) => row(v, tr("depsFreedWhy", v.resolved.map(label).join(", ")))) });
+  if (freed.length) notes.push({ id: "freed", title: tr("depsFreed"), rows: freed.map((v) => row(v, tr("depsFreedWhy", v.resolved.map(label).join(", ")))) });
   // holds up the most: everything still open behind an item, not only what waits for it directly
   const behind = (v) => {
     const seen = new Set(), todo = [...v.post];
@@ -2994,7 +3006,7 @@ function depsNotes(m) {
   };
   const holds = shown.filter((v) => v.open).map((v) => [v, behind(v)]).filter(([, n]) => n >= 2)
     .sort((a, b) => b[1] - a[1] || natural(a[0].key, b[0].key)).slice(0, 3);
-  if (holds.length) notes.push({ title: tr("depsHolds"), rows: holds.map(([v, n]) => row(v, tr("depsHoldsWhy", n, v.openPost.length))) });
+  if (holds.length) notes.push({ id: "holds", title: tr("depsHolds"), rows: holds.map(([v, n]) => ({ ...row(v, tr("depsHoldsWhy", n, v.openPost.length)), n })) });
   // your turn: yours, nothing left to wait for, and something waits for it
   const me = state.actor === "ai" ? "ai" : "user";
   const yours = shown.filter((v) => {
@@ -3002,7 +3014,7 @@ function depsNotes(m) {
     return v.open && k?.actionable && (v.item.owner || k.default_owner) === me && v.item.status !== "blocked"
       && v.openPost.length && v.resolved.length === v.pre.length;
   }).sort((a, b) => b.openPost.length - a.openPost.length || natural(a.key, b.key));
-  if (yours.length) notes.push({ title: tr("depsYours"), rows: yours.map((v) => row(v, tr("depsBlocks", v.openPost.length))) });
+  if (yours.length) notes.push({ id: "yours", title: tr("depsYours"), rows: yours.map((v) => row(v, tr("depsBlocks", v.openPost.length))) });
   return notes;
 }
 function cyclePath(part) {
@@ -3019,18 +3031,35 @@ function cyclePath(part) {
   return path;
 }
 
+// "Auffällig" (demo trial): the heading names what is there per category ("1 Kreis · 3 Bremst · 5 Du dran"), also when
+// folded; open, every item appears once, with its reasons as tags (an item can be freed, hold up others and be yours at once).
+const NOTE_TONE = { cycle: "var(--danger)", missing: "var(--danger)", freed: "var(--accent)", holds: "#d97706", yours: "#2563eb" };
 function depsSide(notes) {
   // folded at first: on wide screens it lies over the chains when open, on small ones it stands above them
   if (deps.sideOpen === null) deps.sideOpen = false;
-  const total = notes.reduce((s, n) => s + n.rows.length, 0);
+  const items = new Map();
+  for (const n of notes) for (const r of n.rows) {
+    const key = r.v.key;
+    if (!items.has(key)) items.set(key, { r, tags: [], bad: false, holds: 0, why: [] });
+    const it = items.get(key);
+    it.tags.push({ id: n.id, label: n.id === "holds" ? tr("depsTagHolds", r.n) : tr("depsTag_" + n.id), why: r.why });
+    if (n.bad) { it.bad = true; it.why.push(r.why); if (n.id === "cycle") it.r = { ...it.r, sub: r.sub }; }
+    if (n.id === "holds") it.holds = r.n;
+  }
+  const rows = [...items.values()].sort((a, b) => (a.bad === b.bad ? 0 : a.bad ? -1 : 1) || b.tags.length - a.tags.length
+    || b.holds - a.holds || natural(a.r.v.key, b.r.v.key));
+  const chip = (id, text, title) => h("span", { class: "dg-chip", style: `--tc:${NOTE_TONE[id]}`, title }, text);
   return h("details", { class: "dg-side", open: deps.sideOpen, ontoggle: (e) => { deps.sideOpen = e.target.open; } },
-    h("summary", null, h("span", null, tr("depsNotable")), h("span", { class: "count" }, String(total))),
-    notes.map((n) => h("section", { class: "dg-note" },
-      h("h3", { class: n.bad ? "bad" : null }, n.title),
-      h("ul", null, n.rows.map((r) => h("li", null,
-        h("button", { type: "button", onclick: () => depsJump(r.v.key) },
-          h("span", { class: "ref", style: `--kc:${r.kc}` }, r.text),
-          h("span", { class: "t" }, r.sub ? h("span", null, r.sub) : null, h("span", { class: "why" }, r.why)))))))));
+    h("summary", null,
+      h("span", { class: "dg-side-t" }, tr("depsNotable")),
+      h("span", { class: "dg-chips" }, notes.map((n) => chip(n.id, `${n.rows.length} ${tr("depsChip_" + n.id)}`, n.title)))),
+    h("ul", { class: "dg-note" }, rows.map((it) => h("li", null,
+      h("button", { type: "button", onclick: () => depsJump(it.r.v.key) },
+        h("span", { class: "ref", style: `--kc:${it.r.kc}` }, it.r.text),
+        h("span", { class: "t" },
+          it.r.sub ? h("span", null, it.r.sub) : null,
+          h("span", { class: "dg-chips" }, it.tags.map((t) => chip(t.id, t.label, t.why))),
+          it.why.length ? h("span", { class: "why" }, it.why.join(" ")) : null))))));
 }
 
 // From "Auffällig" to the card: unfold its chain if needed, scroll there and let it light up.
