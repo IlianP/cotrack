@@ -376,7 +376,20 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .deps { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
 .deps.no-side { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 999px) { .deps { grid-template-columns: minmax(0, 1fr); } .dg-side { order: -1; } }
-@media (min-width: 1180px) { .dg-side { position: sticky; top: calc(var(--top-h, 59px) + 14px); } }
+/* Wide screens: the chains take the full width; "Auffällig" floats over their top right corner (same grid cell, sticky).
+   Folded it is just its heading next to the "n Ketten" line; unfolded it lies over the chains, like the history panel. */
+@media (min-width: 1000px) {
+  .deps { grid-template-columns: minmax(0, 1fr); }
+  .deps > .dg-main, .deps > .dg-side { grid-area: 1 / 1; }
+  .dg-side { justify-self: end; z-index: 3; }
+  .dg-side[open] { width: 300px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18), var(--shadow); }
+  .dg-side:not([open]) summary { padding: 7px 14px; }
+  .deps:not(.no-side) .dg-head { min-height: 36px; padding-right: 170px; display: flex; align-items: center; }
+}
+@media (min-width: 1180px) {
+  .dg-side { position: sticky; top: calc(var(--top-h, 59px) + 14px); }
+  .dg-side[open] { max-height: calc(100vh - var(--top-h, 59px) - var(--dock, 0px) - 28px); overflow-y: auto; overscroll-behavior: contain; }
+}
 .dg-main { display: grid; gap: 14px; min-width: 0; }
 .dg-head, .dg-legend { margin: 0; color: var(--muted); font-size: 14px; }
 .dg-legend { font-size: 12.5px; }
@@ -3007,8 +3020,8 @@ function cyclePath(part) {
 }
 
 function depsSide(notes) {
-  // open at first only where it stands beside the chains; above them (phones, tablets, phones held sideways) the chains come first
-  if (deps.sideOpen === null) deps.sideOpen = matchMedia("(min-width: 1000px)").matches;
+  // folded at first: on wide screens it lies over the chains when open, on small ones it stands above them
+  if (deps.sideOpen === null) deps.sideOpen = false;
   const total = notes.reduce((s, n) => s + n.rows.length, 0);
   return h("details", { class: "dg-side", open: deps.sideOpen, ontoggle: (e) => { deps.sideOpen = e.target.open; } },
     h("summary", null, h("span", null, tr("depsNotable")), h("span", { class: "count" }, String(total))),
