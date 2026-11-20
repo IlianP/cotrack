@@ -233,6 +233,9 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; }
 /* a single category (filter): one readable column instead of a narrow first cell */
 .board.solo { grid-template-columns: minmax(0, 760px); }
+/* more categories than columns (portrait screens, tablets): rows of 2px, packBoard() puts each extra category under the
+   shortest column; the gap between categories in a column is part of their span */
+.board.packed { grid-auto-rows: 2px; row-gap: 0; }
 .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .col-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .col-head h2 { margin: 0; font-size: 14.5px; font-weight: 650; flex: 1; }
@@ -1573,6 +1576,52 @@ function render(before) {
       list.length
         ? h("ul", { class: "items" }, sortItems(list).map((it) => renderItem(it, k, before)))
         : h("p", { class: "empty" }, state.view === "open" ? tr("nothingOpen") : tr("noItems")))));
+  packBoard();
+  packObserve();
+}
+
+/* Board with more categories than columns side by side (portrait screens, tablets): the first row keeps the categories'
+   order, every further category goes under the shortest column (like a masonry) instead of starting a row below the
+   longest one. Only the position changes: the DOM keeps the order (screen readers, Tab). A category stays in the column it
+   had while that one is at most PACK_STICKY px longer than the shortest, so search and live updates do not shuffle it. */
+const PACK_ROW = 2, PACK_STICKY = 160;
+const packedAt = new Map(); // kind code → column it went into last time
+function packBoard() {
+  const board = $("#board");
+  const cols = [...board.children].filter((el) => el.matches("section.col"));
+  // Free them first: a category placed in column 3 would otherwise keep a third (implicit) column alive on a narrower screen.
+  for (const el of cols) el.style.gridArea = "";
+  const n = board.hidden ? 0 : getComputedStyle(board).gridTemplateColumns.split(" ").filter(Boolean).length;
+  const on = n > 1 && cols.length > n;
+  board.classList.toggle("packed", on);
+  if (!on) return;
+  const gap = parseFloat(getComputedStyle(board).columnGap) || 0;
+  const heights = cols.map((el) => el.getBoundingClientRect().height); // align-items: start = their own height
+  const top = new Array(n).fill(0); // rows used per column
+  cols.forEach((el, i) => {
+    const span = Math.ceil((heights[i] + gap) / PACK_ROW);
+    let c = i;
+    if (i >= n) {
+      c = top.indexOf(Math.min(...top));
+      const was = packedAt.get(el.dataset.kind);
+      if (was != null && was < n && (top[was] - top[c]) * PACK_ROW <= PACK_STICKY) c = was;
+    }
+    packedAt.set(el.dataset.kind, c);
+    el.style.gridArea = `${top[c] + 1} / ${c + 1} / span ${span} / span 1`;
+    top[c] += span;
+  });
+}
+// Heights change without a new render too (window width, fonts): pack again, at most once per frame.
+let packObs = null, packQueued = false;
+function packObserve() {
+  if (typeof ResizeObserver !== "function") return;
+  packObs ??= new ResizeObserver(() => {
+    if (packQueued) return;
+    packQueued = true;
+    requestAnimationFrame(() => { packQueued = false; packBoard(); });
+  });
+  packObs.disconnect();
+  for (const el of $("#board").children) packObs.observe(el);
 }
 
 /* filter bar: one toggle per category (letter + count) and Du/KI */
