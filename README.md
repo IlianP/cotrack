@@ -209,7 +209,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | "Open points" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |
-| GET | `/api/projects/:slug/items/:ref/events` | one item's change log, newest first (≤ 500): `{ref, from, events}` – `from` = the items it was converted from (nearest first), whose events are included |
+| GET | `/api/projects/:slug/items/:ref/events` | one item's change log, newest first (≤ 500): `{ref, from, events}` – `from` = the items it was converted from (nearest first, `deleted: true` if removed since), whose events are included |
 | GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour, effort & benefit); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
 | GET / POST | `/api/kinds` | list / create-or-update categories |

@@ -402,14 +402,32 @@ export async function listEvents(db, { project = null, after = 0, before = null,
 
 // One item's history, newest first: its own events and those of the items it was converted from (an idea or warning
 // that became this action/decision; followed back over several steps). from = those earlier items, nearest first.
+// The chain is read from the "converted" events, not from the items table: a source item deleted later keeps its
+// events (deleteItem only removes the row), so its history still shows up – then with deleted: true.
 export async function itemHistory(db, project, item, { limit = 500 } = {}) {
   const from = [];
   for (let ref = item.ref; from.length < 5; ) {
     const src = await db
-      .prepare("SELECT kind || seq AS ref, kind, title FROM items WHERE project_slug = ? AND converted_to = ? LIMIT 1")
+      .prepare(
+        `SELECT e.item_ref AS ref, i.kind, i.title FROM events e
+         LEFT JOIN items i ON i.project_slug = e.project_slug AND i.kind || i.seq = e.item_ref
+         WHERE e.project_slug = ? AND e.action = 'converted' AND json_extract(e.data, '$.to') = ?
+         ORDER BY e.id DESC LIMIT 1`,
+      )
       .bind(project.slug, ref)
       .first();
     if (!src || src.ref === item.ref || from.some((f) => f.ref === src.ref)) break;
+    if (!src.kind) {
+      // gone: kind from the reference, title from its last snapshot (the "deleted" event holds the whole item)
+      const snap = await db
+        .prepare(
+          `SELECT json_extract(data, '$.title') AS title FROM events WHERE project_slug = ? AND item_ref = ?
+           AND json_extract(data, '$.title') IS NOT NULL ORDER BY id DESC LIMIT 1`,
+        )
+        .bind(project.slug, src.ref)
+        .first();
+      Object.assign(src, { kind: src.ref.match(/^[A-Z]+/)?.[0] ?? null, title: snap?.title ?? null, deleted: true });
+    }
     from.push(src);
     ref = src.ref;
   }
