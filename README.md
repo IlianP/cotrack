@@ -11,8 +11,8 @@ an [MCP server](docs/MCP.en.md) (or the HTTP API). Every item has a stable refer
 **never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
 
 ```
-👤: D5 Lizenz wählen · A13 Prompt einspielen
-🤖: A6 Token-sparen · A7 README überarbeiten (+1)
+👤 D5 Lizenz wählen · A13 Prompt einspielen
+🤖 A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
 ⚠️ W1 Auth · W3 Tokens rotieren
 ```

@@ -62,5 +62,6 @@
   `GET …/items/:ref/events` (`itemHistory` in `src/worker.js`), which follows conversions back (`from`). UI:
   `itemHistory`/`itemHistRows` in `src/ui.html`.
 - Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen; `GET/PATCH /api/settings`) set the footer's
-  default layout and group markers for API and MCP. Only the user token may change them; a `layout` in a request wins.
+  default layout and group markers for API and MCP. Only the user token may change them; a `layout` in a request wins. A marker gets a ":" only when it ends in text ("Du:"), never after an emoji (`groupMark` in `src/worker.js`, `mark` in
+  `src/ui.html` – keep both in sync).
   Who controls what (prompt vs. server vs. settings) is explained in `docs/PROMPT.md` → "Wozu der Prompt?".

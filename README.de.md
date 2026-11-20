@@ -12,8 +12,8 @@ die **nie neu vergeben** wird – du kannst dich also in jedem Chat darauf bezie
 demselben Stand.
 
 ```
-👤: D5 Lizenz wählen · A13 Prompt einspielen
-🤖: A6 Token-sparen · A7 README überarbeiten (+1)
+👤 D5 Lizenz wählen · A13 Prompt einspielen
+🤖 A6 Token-sparen · A7 README überarbeiten (+1)
 💡 I10 Teilpunkte (+5)
 ⚠️ W1 Auth · W3 Tokens rotieren
 ```

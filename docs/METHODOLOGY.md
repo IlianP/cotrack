@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](METHODIK.md)
 
-> The group markers `👤:` and `🤖:` are the same in every language. Only the short line differs: `neu: … · erledigt: …`
+> The group markers `👤` and `🤖` are the same in every language. Only the short line differs: `neu: … · erledigt: …`
 > (German) or `new: … · done: …` (`lang=en`); without `lang` the language set in the web app applies (☰ → Language,
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
@@ -11,8 +11,8 @@
 
 | Letter | Meaning | Footer |
 |---|---|---|
-| **A** | Action – for you ("Du") or the AI; responsibility can change, the reference stays | under "👤:" or "🤖:" |
-| **D** | Decision – yours to make, the AI prepares options; the outcome is recorded | under "👤:", before the actions |
+| **A** | Action – for you ("Du") or the AI; responsibility can change, the reference stays | under "👤" or "🤖" |
+| **D** | Decision – yours to make, the AI prepares options; the outcome is recorded | under "👤", before the actions |
 | **I** | Idea – if accepted it becomes A or D, if declined it is "dropped" | 💡 |
 | **W** | Warning/risk – stays until resolved or explicitly accepted; problems that have occurred become A/D | ⚠️ |
 
@@ -36,10 +36,11 @@
     "done" in the short line. On `/convert` (I → A) the checklist moves along.
 - **Footer:** full only on "Status?", at the end of larger pieces of work, or roughly every four answers;
   when items change just the short line "neu: … · erledigt: …"; otherwise nothing at all.
-- **Group markers (v2.6):** The footer shows `👤:` for your items and `🤖:` for the AI's (instead of "Du:" and "🤖KI:") –
-  language-independent and shorter. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
+- **Group markers (v2.6):** The footer shows `👤` for your items and `🤖` for the AI's (instead of "Du:" and "🤖KI:") –
+  language-independent and shorter. Since 20 Nov 2026 without a colon, like 💡 and ⚠️ (the middle dot separates the groups);
+  only text markers ("Du", "KI") still get one. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
   markers can be changed in the web app (☰ → Chat footer → Customize, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
-- **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤:`, `🤖:`, `💡`, `⚠️`),
+- **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤`, `🤖`, `💡`, `⚠️`),
   followed if needed by the line "neu: … · erledigt: …". This is the default for now, to try out the overview;
   single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
   default yourself in the web app (☰ → Chat footer → Customize, stored in cotrack); a `layout` in a single request wins.
@@ -60,7 +61,7 @@
   (`owner/name`); (3) without a repository, the project from the project instructions; (4) otherwise ask once. Never create a
   project on your own.
 - **Several projects in one conversation (v2.4):** References in the text carry the code (`CT:A14`); the footer gets one block per
-  project: single-line `CT ▸ 👤: … · 🤖: …`, multi-line a `CT ▸` line with the group lines below. On changes, only projects
+  project: single-line `CT ▸ 👤 … · 🤖 …`, multi-line a `CT ▸` line with the group lines below. On changes, only projects
   with changes. New items belong to the project of the repo being worked on; if unclear, ask. Dependencies across project
   boundaries do not exist for now.
 - **Effort and benefit (v2.10, decision D21):** Actions (A) and ideas (I) can carry two optional, coarse values –

@@ -54,6 +54,8 @@ export const kindName = (k, lang) => (lang === "en" && k.name === KIND_DE_NAMES[
 // Footer group labels.
 // Language-independent since v2.6: 👤 = yours, 🤖 = the AI's.
 const FOOTER_OWNER_LABELS = { user: "👤", ai: "🤖" };
+// A group marker gets a ":" only when it ends in text ("Du:", "KI:"); emoji markers stand alone like 💡 and ⚠️.
+const groupMark = (label) => (/[\p{L}\p{N}]$/u.test(label) ? `${label}:` : label);
 // Footer wording per language (`lang=de|en`, default de): only the "new / done" short line.
 const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { created: "new", done: "done" } };
 // Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (👤 / 🤖 / 💡 / ⚠️),
@@ -1336,7 +1338,7 @@ function applyChecks(item, input) {
 
 /**
  * Builds the one-line summary used at the end of chat answers, e.g.
- * "👤: D1 ▶A3 Lizenz · 🤖: A3 Konzept (+2) · 💡 I1 MCP · ⚠️ W1 Auth · neu: A3 · erledigt: A1"
+ * "👤 D1 ▶A3 Lizenz · 🤖 A3 Konzept (+2) · 💡 I1 MCP · ⚠️ W1 Auth · neu: A3 · erledigt: A1"
  * Actionable kinds are grouped by owner (you first), others by kind.
  */
 // key ("slug:A4") -> keys of OPEN items that wait for it (the reverse of waiting_on; nothing extra is stored), plus
@@ -1374,11 +1376,11 @@ export function buildFooter(
     if (!k || k.actionable) {
       const owner = it.owner || "user";
       key = `o:${owner}`;
-      label = `${labels[owner] || FOOTER_OWNER_LABELS[owner] || owner}:`;
+      label = groupMark(labels[owner] || FOOTER_OWNER_LABELS[owner] || owner);
       weight = owner === "user" ? 0 : owner === "ai" ? 1 : 2;
     } else {
       key = `k:${k.code}`;
-      label = k.footer_label || `${k.name}:`;
+      label = k.footer_label || groupMark(k.name);
       weight = 10 + k.sort_order;
     }
     if (!groups.has(key)) groups.set(key, { label, weight, items: [] });
@@ -1530,7 +1532,7 @@ function normSetting(key, v) {
     if (!LANGS.includes(lang)) throw new HttpError(400, "invalid_field", `language (${LANGS.join("|")})`);
     return lang;
   }
-  // Group markers ("👤", "Du", …): short and on one line; the footer adds the ":" itself.
+  // Group markers ("👤", "Du", …): short and on one line; the footer adds a ":" after text markers itself (groupMark).
   const s = text(v, key, 16)?.replace(/:+$/, "").trim();
   if (!s) return null;
   if (/[\r\n\t·]/.test(s)) throw new HttpError(400, "invalid_field", `${key} (one line, without "·")`);
@@ -1563,7 +1565,7 @@ async function updateSettings(db, input, actor) {
 
 /**
  * Footer for several projects (decided 2026-11-04, D4): one line per project, prefixed with its code
- * (or slug), e.g. "CT ▸ 👤: D1 … · 🤖: A2 …". Projects without anything to show are left out,
+ * (or slug), e.g. "CT ▸ 👤 D1 … · 🤖 A2 …". Projects without anything to show are left out,
  * so with `deltaOnly` only projects with changes appear.
  */
 export function buildMultiFooter(entries, kinds, opts = {}) {

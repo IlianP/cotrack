@@ -3874,9 +3874,11 @@ async function openFooterSettings() {
   const ai = labelInput(s.footer_label_ai, d.footer_label_ai);
   const preview = h("pre", { class: "preview", "aria-live": "polite" });
   const marker = (input, def) => input.value.trim().replace(/:+$/, "") || def;
+  // Same rule as groupMark in src/worker.js: a ":" only after a text marker ("Du:"), not after an emoji.
+  const mark = (label) => (/[\p{L}\p{N}]$/u.test(label) ? `${label}:` : label);
   const showPreview = () => {
     const [mine, theirs, idea, warning] = tr("preview");
-    const groups = [`${marker(user, d.footer_label_user)}: ${mine}`, `${marker(ai, d.footer_label_ai)}: ${theirs}`, "💡 " + idea, "⚠️ " + warning];
+    const groups = [`${mark(marker(user, d.footer_label_user))} ${mine}`, `${mark(marker(ai, d.footer_label_ai))} ${theirs}`, "💡 " + idea, "⚠️ " + warning];
     preview.textContent = groups.join(layout.value === "single" ? " · " : "\n");
   };
   for (const el of [layout, user, ai]) el.addEventListener("input", showPreview);

@@ -2,7 +2,7 @@
 
 [English](METHODOLOGY.md) · **Deutsch**
 
-> Die Kennzeichen `👤:` und `🤖:` sind in jeder Sprache gleich. Nur die Kurzzeile unterscheidet sich: `neu: … · erledigt: …`
+> Die Kennzeichen `👤` und `🤖` sind in jeder Sprache gleich. Nur die Kurzzeile unterscheidet sich: `neu: … · erledigt: …`
 > (Deutsch) oder `new: … · done: …` (`lang=en`); ohne `lang` gilt die Sprache aus der Web-App (☰ → Sprache,
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
@@ -11,8 +11,8 @@
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
-| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „👤:“ bzw. „🤖:“ |
-| **D** | Entscheidung – triffst du, die KI bereitet Optionen vor; Ergebnis wird festgehalten | unter „👤:“, vor den Aufgaben |
+| **A** | Aufgabe – für dich (Du) oder die KI; Zuständigkeit kann wechseln, Kennung bleibt | unter „👤“ bzw. „🤖“ |
+| **D** | Entscheidung – triffst du, die KI bereitet Optionen vor; Ergebnis wird festgehalten | unter „👤“, vor den Aufgaben |
 | **I** | Idee – bei Zusage wird daraus A oder D, bei Absage „verworfen“ | 💡 |
 | **W** | Warnung/Risiko – bleibt bis erledigt oder ausdrücklich akzeptiert; eingetretene Probleme werden zu A/D | ⚠️ |
 
@@ -84,10 +84,11 @@
     geht über „⇄ Auch in anderem Projekt anzeigen“: Name, Kürzel oder Repo tippen und aus den Vorschlägen wählen (bis zu 5 Projekte).
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
-- **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤:` für deine Punkte und `🤖:` für die der KI (statt „Du:“ und „🤖KI:“) –
-  sprachunabhängig, kürzer. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“. Seit v2.7 lassen sich die Kennzeichen in
+- **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤` für deine Punkte und `🤖` für die der KI (statt „Du:“ und „🤖KI:“) –
+  sprachunabhängig, kürzer. Seit 20.11.2026 ohne Doppelpunkt, wie 💡 und ⚠️ (der Mittelpunkt trennt die Gruppen); nur
+  Kennzeichen aus Text („Du“, „KI“) bekommen ihn weiter. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“. Seit v2.7 lassen sich die Kennzeichen in
   der Web-App ändern (☰ → Chat-Fußzeile → Anpassen, z. B. zurück auf „Du“/„KI“); 👤/🤖 bleibt der Standard.
-- **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤:`, `🤖:`, `💡`, `⚠️`),
+- **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤`, `🤖`, `💡`, `⚠️`),
   danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist vorerst der Standard, um die Übersicht auszuprobieren;
   einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Seit v2.7 wählst du den Standard
   selbst in der Web-App (☰ → Chat-Fußzeile → Anpassen, gespeichert in cotrack); ein `layout` im einzelnen Aufruf geht vor.
@@ -107,7 +108,7 @@
   (`project:`/`code:`), einmal beim Start und wenn ein Repository hinzukommt; (2) `cotrack_projects` mit dem Repository
   (`owner/name`); (3) ohne Repository das Projekt aus den Projektanweisungen; (4) sonst einmal nachfragen. Nie selbst ein Projekt anlegen.
 - **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt einen Block:
-  einzeilig `CT ▸ 👤: … · 🤖: …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
+  einzeilig `CT ▸ 👤 … · 🤖 …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
   an dem gerade gearbeitet wird; bei Unklarheit fragen. Abhängigkeiten über Projektgrenzen gibt es vorerst nicht.
 - **PrioFlow (optional, Skill):** Statt selbst aus der Liste auszuwählen, rufst du den Skill `prioflow` auf. Das Modell
   bewertet die offenen Punkte (macht andere frei, schnell erledigt, Frist und Alter, Wirkung aufs Projektziel; Warnungen
