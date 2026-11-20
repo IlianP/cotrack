@@ -270,7 +270,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .pill { font-size: 12px; padding: 1px 7px; border-radius: 99px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pill.wait { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
-.pill.next { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+/* not ".next": that is the Next view's class (a grid up to 1080px wide) */
+.pill.follows { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
 .pill.st-doing { color: var(--accent); }
 .pill.st-blocked { color: var(--danger); }
 .pill a { color: inherit; }
@@ -1675,7 +1676,7 @@ function renderItem(it, k, before) {
   if (alsoIn.length && it.project_slug === state.project) meta.push(h("span", { class: "pill shared", title: tr("alsoInTitle") }, "⇄ " + alsoIn.map(codeOf).join(", ")));
   for (const k of waitKeys(it)) meta.push(h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + keyRef(k)));
   const next = successors.get(itemKey(it));
-  if (next) meta.push(h("span", { class: "pill next", title: tr("followedBy") }, "▶ " + next.map((k) => keyRef(k)).join(", ")));
+  if (next) meta.push(h("span", { class: "pill follows", title: tr("followedBy") }, "▶ " + next.map((k) => keyRef(k)).join(", ")));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
   if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
