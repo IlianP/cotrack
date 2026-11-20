@@ -53,6 +53,11 @@
   the list opens upward and fits the visible dialog, keyboard included – `place`;
   `alsoInPicker` in `src/ui.html`; `MAX_ALSO_IN` exists there and in `src/worker.js` – keep both in sync).
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
+- Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
+  scrolls, columns fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`),
+  `fit` (portrait with room for two columns: the board fills the screen, `fitPlan` spreads the categories over the columns by
+  item count, each scrolls on its own) and `swipe` (phones: one category per screen; the category toggles jump there
+  instead of filtering). Column scroll positions survive live updates (`boardSig`).
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.
 - Retired categories (`kinds.active = 0`, e.g. T from methodology v1) never appear in the web app's filter or board, unless

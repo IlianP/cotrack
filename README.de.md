@@ -56,6 +56,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **MCP-Server** – funktioniert mit Claude (claude.ai, Claude Code) und ChatGPT; die Antworten sind kompakter Text, um
   Tokens zu sparen.
 - **Live** – die Web-App übernimmt Änderungen von dir oder einer KI innerhalb weniger Sekunden.
+- **Board für jeden Bildschirm** – quer füllen die Spalten die ganze Breite. Hochkant (Monitor, Tablet) passt das Board auf
+  einen Bildschirm: Jede Kategorie scrollt für sich, kleine Kategorien teilen sich eine Spalte. Auf dem Handy wischst du von
+  Kategorie zu Kategorie, ein Tipp auf D, A, I oder W springt direkt hin.
 - **Sortierung** – das Symbol neben der Suche sortiert das Board nach Nummer (Standard), nach letzter Änderung oder nach
   Anlage. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip), und was in den letzten 24 Stunden
   geändert wurde, ist leicht hinterlegt. Gespeichert pro Gerät.
