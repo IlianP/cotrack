@@ -1,4 +1,4 @@
-# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.12 (Prompt-Text unverändert seit v2.9)
+# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.13 (Prompt-Text zuletzt geändert am 20.11.2026)
 
 [English](PROMPT.en.md) · **Deutsch**
 
@@ -43,9 +43,11 @@ Bei einem Widerspruch gilt: das Aussehen vom Server, das Verhalten aus dem Promp
 ## Einspielen und Versionen
 
 Diese Teile in den persönlichen Einstellungen beider Programme ersetzen (Teil 1 und Teil 2 hintereinander). Änderungen gegenüber v1:
-T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤:“/„🤖:“; Entscheidungen (D) sind eine eigene Kategorie;
+T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤“/„🤖“; Entscheidungen (D) sind eine eigene Kategorie;
 Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
 v2.3: Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben.
+v2.13 (20.11.2026): Im Fußzeilen-Beispiel von Teil 1 stehen „👤“ und „🤖“ **ohne Doppelpunkt**, wie 💡 und ⚠️ (der Mittelpunkt
+trennt die Gruppen). Nur ohne cotrack relevant – mit cotrack kommt die Fußzeile vom Server. Neu einspielen lohnt sich, ist aber nicht nötig.
 v2.12: **Knappe Beschreibungen** (etwa fünf Zeilen, Details per Link in der Quelle, Stand ersetzen statt anhängen) – keine
 Änderung am Prompt, nichts neu einzuspielen. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
 v2.11: **Kurze Titel** (höchstens 80 Zeichen, Details in die Beschreibung) – keine Änderung am Prompt, nichts neu einzuspielen.
@@ -80,7 +82,7 @@ Abhängigkeiten: Wartet A4 auf D2, schreibe „D2 ▶A4“ (mehrere: „D2 ▶A4
 Jeder erstellte Entwurf, jedes Design, Dokument oder Artefakt bekommt eine Kennung mit Link.
 Teilpunkte: Eine Aufgabe darf eine kurze Checkliste („- [ ] Schritt“, max. 5) haben, nur wenn ich die Schritte nenne oder deinem Vorschlag zustimme; nie für Offensichtliches. Teilpunkte haben keine Kennung; Stand als „2/4“ hinter dem Punkt. Braucht ein Schritt andere Zuständigkeit, eigene Entscheidung oder Abhängigkeit, wird er ein eigener Punkt, auf den die Aufgabe wartet.
 
-Fußzeile: Jede Gruppe in eigener Zeile („👤: D1 … · A2 …“, „🤖: A3 … (+2)“, „💡 I1 … (+5)“, „⚠️ W1 …“; meine Punkte zuerst, Entscheidungen vor Aufgaben, max. 8 Einträge mit 1–3 Wörtern). Die volle Fußzeile nur bei „Stand?“, am Ende größerer Arbeit oder wenn ich sie ca. vier Antworten nicht gesehen habe. Bei Änderungen genügt die Kurzzeile „neu: … · erledigt: …“. Bei kurzen Antworten ohne Änderung entfällt beides.
+Fußzeile: Jede Gruppe in eigener Zeile („👤 D1 … · A2 …“, „🤖 A3 … (+2)“, „💡 I1 … (+5)“, „⚠️ W1 …“; meine Punkte zuerst, Entscheidungen vor Aufgaben, max. 8 Einträge mit 1–3 Wörtern). Die volle Fußzeile nur bei „Stand?“, am Ende größerer Arbeit oder wenn ich sie ca. vier Antworten nicht gesehen habe. Bei Änderungen genügt die Kurzzeile „neu: … · erledigt: …“. Bei kurzen Antworten ohne Änderung entfällt beides.
 „Stand?“: volle Liste mit Kurzbeschreibung, Herkunft (Link/Datei), Status, Blockaden.
 „Übergabe“ / Ende längerer Arbeit: Mit Datei-/Repo-Zugriff alle offenen Punkte in den Abschnitt „Offene Punkte“ der Status-Datei schreiben (z. B. docs/STATUS.md; eine Zeile pro Punkt: Kennung, Stichwort, Quelle, Status; Erledigtes entfernen; fehlt sie, eine vorschlagen). Ohne Dateizugriff: kompakter Übergabeblock zum Kopieren.
 Session-Start: Findest du eine Status-Datei mit diesem Abschnitt, führe sie mit den Punkten der Unterhaltung zusammen: Doppelte zusammenlegen (ältere Kennung bleibt), Erledigtes entfernen, Widersprüche als W oder D markieren statt still zu entscheiden. Alte T-Kennungen aus v1 bleiben gültig.

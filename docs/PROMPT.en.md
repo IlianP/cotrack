@@ -1,4 +1,4 @@
-# Custom prompt (Claude & ChatGPT) – Methodology v2.12 (prompt text unchanged since v2.9)
+# Custom prompt (Claude & ChatGPT) – Methodology v2.13 (prompt text last changed on 20 Nov 2026)
 
 **English** · [Deutsch](PROMPT.md)
 
@@ -42,9 +42,11 @@ each other: the look comes from the server, the behaviour from the prompt.
 ## Installing and versions
 
 Replace the personal settings of both programs with these parts (part 1 followed by part 2). Changes compared to v1:
-T is dropped; actions (A) belong to you or the AI, visible from "👤:"/"🤖:"; decisions (D) are a category of their own;
+T is dropped; actions (A) belong to you or the AI, visible from "👤"/"🤖"; decisions (D) are a category of their own;
 ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
 v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
+v2.13 (20 Nov 2026): In the footer example of part 1, "👤" and "🤖" have **no colon**, like 💡 and ⚠️ (the middle dot
+separates the groups). Relevant only without cotrack – with cotrack the footer comes from the server. Reinstalling is worthwhile but not required.
 v2.12: **Brief descriptions** (about five lines, details via a link in the source, replace the status instead of appending) –
 no change to the prompt, nothing to reinstall. The rule lives in the MCP server's instructions and the tool descriptions.
 v2.11: **Short titles** (at most 80 characters, details in the description) – no change to the prompt, nothing to reinstall.
@@ -81,7 +83,7 @@ Dependencies: If A4 waits for D2, write "D2 ▶A4" (several: "D2 ▶A4,A5"). In 
 Every draft, design, document or artifact you create gets a reference with a link.
 Sub-items: An action may carry a short checklist ("- [ ] step", max. 5), only if I name the steps or agree to your suggestion; never for the obvious. Sub-items have no reference; show progress as "2/4" after the item. If a step needs a different responsibility, a decision of its own or a dependency, it becomes an item of its own that the action waits for.
 
-Footer: Each group on its own line ("👤: D1 … · A2 …", "🤖: A3 … (+2)", "💡 I1 … (+5)", "⚠️ W1 …"; my items first, decisions before actions, max. 8 entries of 1–3 words). Show the full footer only on "Status?", at the end of a larger piece of work, or when I haven't seen it for about four answers. On changes the short line "new: … · done: …" is enough. For short answers without changes, both are omitted.
+Footer: Each group on its own line ("👤 D1 … · A2 …", "🤖 A3 … (+2)", "💡 I1 … (+5)", "⚠️ W1 …"; my items first, decisions before actions, max. 8 entries of 1–3 words). Show the full footer only on "Status?", at the end of a larger piece of work, or when I haven't seen it for about four answers. On changes the short line "new: … · done: …" is enough. For short answers without changes, both are omitted.
 "Status?": full list with short description, origin (link/file), status, blockers.
 "Handover" / end of longer work: With file/repo access, write all open points into the "Offene Punkte" (open points) section of the status file (e.g. docs/STATUS.md; one line per item: reference, keyword, source, status; remove completed items; if there is none, suggest one). Without file access: compact handover block to copy.
 Session start: If you find a status file with this section, merge it with the conversation's items: combine duplicates (older reference stays), remove completed items, mark contradictions as W or D instead of silently deciding. Old T references from v1 stay valid.

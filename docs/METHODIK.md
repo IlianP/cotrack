@@ -88,9 +88,8 @@
   sprachunabhängig, kürzer. Seit 20.11.2026 ohne Doppelpunkt, wie 💡 und ⚠️ (der Mittelpunkt trennt die Gruppen); nur
   Kennzeichen aus Text („Du“, „KI“) bekommen ihn weiter. Die Zuständigkeit heißt im Text weiter „Du“ und „KI“. Seit v2.7 lassen sich die Kennzeichen in
   der Web-App ändern (☰ → Chat-Fußzeile → Anpassen, z. B. zurück auf „Du“/„KI“); 👤/🤖 bleibt der Standard.
-- **Fußzeile mehrzeilig (v2.5, Probephase):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤`, `🤖`, `💡`, `⚠️`),
-  danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist vorerst der Standard, um die Übersicht auszuprobieren;
-  einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Seit v2.7 wählst du den Standard
+- **Fußzeile mehrzeilig (v2.5):** Die volle Fußzeile hat je Gruppe eine eigene Zeile (`👤`, `🤖`, `💡`, `⚠️`),
+  danach bei Bedarf die Zeile „neu: … · erledigt: …“. Das ist der Standard; einzeilig gibt es weiter mit `layout=single`. Die Kurzzeile bleibt immer einzeilig. Seit v2.7 wählst du den Standard
   selbst in der Web-App (☰ → Chat-Fußzeile → Anpassen, gespeichert in cotrack); ein `layout` im einzelnen Aufruf geht vor.
   Eine neue Installation startet mehrzeilig.
 - **Wer regelt was (v2.7):** Der **Prompt** regelt das Verhalten der KI (ob und wann sie cotrack nutzt, wann die Fußzeile

@@ -58,7 +58,7 @@ const FOOTER_OWNER_LABELS = { user: "👤", ai: "🤖" };
 const groupMark = (label) => (/[\p{L}\p{N}]$/u.test(label) ? `${label}:` : label);
 // Footer wording per language (`lang=de|en`, default de): only the "new / done" short line.
 const FOOTER_DELTA_LABELS = { de: { created: "neu", done: "erledigt" }, en: { created: "new", done: "done" } };
-// Footer layout (decided 2026-11-06, trial phase): "multi" = one line per group (👤 / 🤖 / 💡 / ⚠️),
+// Footer layout (decided 2026-11-06): "multi" = one line per group (👤 / 🤖 / 💡 / ⚠️),
 // "single" = everything in one line. Built-in default only: since v2.7 the human picks the default in the
 // web app (setting `footer_layout`), and a `layout` parameter in a request wins over both.
 const FOOTER_LAYOUT_DEFAULT = "multi";

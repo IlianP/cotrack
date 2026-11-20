@@ -40,9 +40,8 @@
   language-independent and shorter. Since 20 Nov 2026 without a colon, like 💡 and ⚠️ (the middle dot separates the groups);
   only text markers ("Du", "KI") still get one. In the text, responsibility is still called "Du" (you) and "KI" (AI). Since v2.7 the
   markers can be changed in the web app (☰ → Chat footer → Customize, e.g. back to "Du"/"KI"); 👤/🤖 remains the default.
-- **Multi-line footer (v2.5, trial phase):** The full footer has one line per group (`👤`, `🤖`, `💡`, `⚠️`),
-  followed if needed by the line "neu: … · erledigt: …". This is the default for now, to try out the overview;
-  single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
+- **Multi-line footer (v2.5):** The full footer has one line per group (`👤`, `🤖`, `💡`, `⚠️`),
+  followed if needed by the line "neu: … · erledigt: …". This is the default; single-line output is still available with `layout=single`. The short line is always one line. Since v2.7 you choose the
   default yourself in the web app (☰ → Chat footer → Customize, stored in cotrack); a `layout` in a single request wins.
   A new installation starts multi-line.
 - **Who controls what (v2.7):** The **prompt** controls the AI's behaviour (whether and when it uses cotrack, when the footer
