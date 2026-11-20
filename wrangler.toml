@@ -15,6 +15,15 @@ migrations_dir = "migrations"
 #   TOKEN_USER – your token (web UI, consent page when connecting an AI via OAuth, manual API use)
 #   TOKEN_AI   – optional: fixed token for AI tools without a browser (scripts, cloud sessions); changes count as "ai"
 
+# Optional demo instance with invented data (the author's: cotrack-demo.ilianos1.workers.dev), see demo/README.md.
+# `npx wrangler deploy --env demo` deploys the worker "cotrack-demo" bound to its own database – never the live one.
+[env.demo]
+[[env.demo.d1_databases]]
+binding = "DB"
+database_name = "cotrack-demo-db"
+database_id = "ecc46ff1-c778-4833-8142-8ed4edb4afc5"   # the author's demo database
+migrations_dir = "migrations"
+
 # Workers Logs: request path, status and console output for debugging (e.g. MCP clients). Cloudflare masks the
 # Authorization header; secrets in request bodies are not logged. Free plan: 200k events/day, kept for 3 days.
 [observability]
