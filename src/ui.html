@@ -229,10 +229,35 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 /* the toggles do not fit in one row (narrow phone, many categories): the counts go first, the column heads show them */
 #filterBar.tight #kindChips .n { display: none; }
 
-/* board */
-.board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; }
+/* board (D30, layoutBoard): "page" = the page scrolls, columns fill the width (each at most BOARD_MAX px); "fit" = portrait
+   screens, the board fills the screen and every category scrolls on its own; "swipe" = phones, one category per screen.
+   --board-h = the height left below the bars and above the footer line (setBoardHeight). */
+.board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; margin-inline: auto; }
+body.on-board:not(.stats-mode) main { max-width: none; }
+body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 /* a single category (filter): one readable column instead of a narrow first cell */
 .board.solo { grid-template-columns: minmax(0, 760px); }
+/* more categories than columns (page): rows of 2px, packBoard() puts each extra category under the shortest column;
+   the gap between categories in a column is part of their span */
+.board.packed { grid-auto-rows: 2px; row-gap: 0; }
+.board.fit { height: var(--board-h, 70vh); align-items: stretch; }
+.fitcol { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+.fitcol > .col, .board.swipe > .col { display: flex; flex-direction: column; min-height: 0; }
+/* in a shared column the smaller categories keep their height, up to 45 % – and with --share categories in the column
+   never so much that the largest is left with less than its 120px */
+.fitcol > .col { flex: 0 0 auto; max-height: min(45%, calc((100% - 120px) / (var(--share, 2) - 1) - 14px)); }
+.fitcol > .col.grow { flex: 1 1 0; min-height: 120px; max-height: none; }
+.board.fit .col-head, .board.swipe .col-head { flex: none; }
+.board.fit .items, .board.swipe .items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* room to scroll the last items out from under the floating "+" */
+.board.fit .fitcol:last-child > .col:last-child .items, .board.swipe .items { padding-bottom: 68px; }
+.board.swipe {
+  position: relative; display: flex; align-items: stretch; gap: 10px; height: var(--board-h, 70vh); margin: 0 -16px; padding: 0 16px;
+  overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
+}
+.board.swipe::-webkit-scrollbar { display: none; }
+/* the neighbours show a little at the edges, so it is clear that there is more to swipe to */
+.board.swipe > .col { flex: 0 0 calc(100% - 24px); scroll-snap-align: center; }
 .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .col-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .col-head h2 { margin: 0; font-size: 14.5px; font-weight: 650; flex: 1; }
@@ -947,6 +972,7 @@ const STRINGS = {
     ageTitle: { changed: (at, who) => `Zuletzt geändert: ${at} von ${who}`, created: (at, who) => `Angelegt: ${at} von ${who}` },
     kindsGroup: "Nach Kategorie filtern", ownersGroup: "Nach Zuständigkeit filtern",
     onlyKind: (name) => `${name} – nur diese Kategorie (nochmal tippen: alle)`,
+    jumpKind: (name) => `${name} – dorthin springen (oder seitwärts wischen)`,
     onlyUser: "Nur deine Punkte (nochmal tippen: alle)", onlyAi: "Nur Punkte der KI (nochmal tippen: alle)",
     addOpen: "Neuer Punkt", addClose: "Eingabe schließen", category: "Kategorie", responsible: "Verantwortlich",
     addPh: "Neuer Punkt … z. B. „Lizenz wählen“", add: "Hinzufügen", addTip: "Tipp: „I: …“ wählt die Kategorie per Kürzel.",
@@ -1147,6 +1173,7 @@ const STRINGS = {
     ageTitle: { changed: (at, who) => `Last changed: ${at} by ${who}`, created: (at, who) => `Added: ${at} by ${who}` },
     kindsGroup: "Filter by category", ownersGroup: "Filter by owner",
     onlyKind: (name) => `${name} – only this category (tap again: all)`,
+    jumpKind: (name) => `${name} – go there (or swipe sideways)`,
     onlyUser: "Only your items (tap again: all)", onlyAi: "Only the AI's items (tap again: all)",
     addOpen: "New item", addClose: "Close input", category: "Category", responsible: "Responsible",
     addPh: "New item … e.g. “Choose a license”", add: "Add", addTip: "Tip: “I: …” picks the category by its letter.",
@@ -1561,7 +1588,10 @@ function render(before) {
   $("#sortBox").hidden = mode !== "board"; // Next and Ketten have an order of their own
   if (mode !== "board") setSortOpen(false);
   if (mode !== "deps") deps.chains = [];
+  document.body.classList.toggle("on-board", mode === "board");
+  if (mode !== "board" || !state.project) { boardShape = ""; document.body.classList.remove("board-fill"); }
   if (!state.project) {
+    board.className = "board"; board.removeAttribute("style"); document.body.classList.remove("board-fill");
     board.replaceChildren(h("div", { class: "col" }, h("p", { class: "empty" }, tr("noProjectYet"))));
     $("#kindChips").replaceChildren();
     return;
@@ -1576,6 +1606,10 @@ function render(before) {
   const extra = [...new Set(state.items.map((i) => i.kind).filter((c) => !known.has(c)))]
     .map((c) => ({ code: c, name: c, color: "#6b7280" }));
   const kinds = [...state.kinds, ...legacy, ...extra];
+  // Phones (D30): one category per screen, the toggles jump instead of filtering – a filter set on a wider screen
+  // becomes the category in view.
+  const layout = mode === "board" ? boardLayout() : "";
+  if (layout === "swipe" && state.kind) { state.lane = state.kind; state.kind = ""; }
   if (state.kind && !kinds.some((k) => k.code === state.kind)) state.kind = "";
   // Filters in the bar, each: tap = only this, tap again = all. Du/KI applies to kinds someone is responsible for (an
   // item without owner counts as its kind's default, D = Du); I and W have no owner, so they are hidden meanwhile.
@@ -1588,24 +1622,208 @@ function render(before) {
       shown: (!state.kind || state.kind === k.code) && (!state.owner || !!k.actionable),
     };
   });
-  renderFilterBar(cols);
-  if (mode === "deps") return renderDeps(cols, before);
   const visible = cols.filter((c) => c.shown);
-  board.classList.toggle("solo", visible.length === 1);
-  board.replaceChildren(...visible.map(({ k, list }) =>
+  if (layout === "swipe" && !visible.some((c) => c.k.code === state.lane)) state.lane = visible[0]?.k.code || "";
+  renderFilterBar(cols, layout === "swipe");
+  if (mode === "deps") return renderDeps(cols, before);
+  // Columns that scroll on their own (fit, swipe) keep their place across live updates; another filter, search, view or
+  // order starts them at the top.
+  const sig = [state.project, state.view, state.q, state.owner, state.kind, state.sort].join("|");
+  const kept = sig === boardSig
+    ? new Map([...board.querySelectorAll("section.col")].map((s) => [s.dataset.kind, s.querySelector(".items")?.scrollTop || 0]))
+    : new Map();
+  boardSig = sig;
+  const sections = visible.map(({ k, list }) =>
     h("section", { class: "col", "data-kind": k.code, style: `--kc:${k.color || "#6b7280"}` },
       h("header", { class: "col-head" },
         h("span", { class: "kbadge" }, k.code), h("h2", null, k.name), h("span", { class: "count" }, list.length)),
       list.length
         ? h("ul", { class: "items" }, sortItems(list).map((it) => renderItem(it, k, before)))
-        : h("p", { class: "empty" }, state.view === "open" ? tr("nothingOpen") : tr("noItems")))));
+        : h("p", { class: "empty" }, state.view === "open" ? tr("nothingOpen") : tr("noItems"))));
+  layoutBoard(layout, visible, sections);
+  for (const s of sections) {
+    const top = kept.get(s.dataset.kind), ul = s.querySelector(".items");
+    if (top && ul) ul.scrollTop = top;
+  }
 }
 
-/* filter bar: one toggle per category (letter + count) and Du/KI */
-function renderFilterBar(cols) {
+/* Board layout (D30), chosen by the screen:
+   - "page" (landscape): the page scrolls. As many columns as fit (BOARD_MIN px each), across the whole width but at most
+     BOARD_MAX px each; with more categories than columns the extra ones go under the shortest column (packBoard).
+   - "fit" (portrait from two columns on: a monitor turned upright, a tablet): the board fills the screen and every
+     category scrolls on its own. The categories are spread over the columns by their number of items (fitPlan), so a
+     large one gets a column of its own and small ones share one; within a column they keep their order.
+   - "swipe" (phones, and portrait screens too narrow for two columns): one category per screen, swiped sideways; the
+     category toggles jump to a category and show which one is in view (jumpLane, syncLaneChips). */
+const BOARD_MIN = 290, BOARD_MAX = 640, BOARD_SOLO = 760, BOARD_GAP = 14;
+const PHONE = matchMedia("(max-width: 560px)"), PORTRAIT = matchMedia("(orientation: portrait)");
+let boardSig = "", boardShape = "";
+function boardWidth() { return $("main").clientWidth - 32; } // main's padding
+function boardColumns(width) { return Math.max(1, Math.floor((width + BOARD_GAP) / (BOARD_MIN + BOARD_GAP))); }
+function boardLayout() {
+  if (PHONE.matches) return "swipe";
+  if (!PORTRAIT.matches) return "page";
+  return boardColumns(boardWidth()) < 2 ? "swipe" : "fit";
+}
+function layoutBoard(layout, visible, sections) {
+  const board = $("#board");
+  const n = Math.min(Math.max(visible.length, 1), boardColumns(boardWidth()));
+  boardShape = layout + ":" + n;
+  board.className = "board " + layout + (visible.length === 1 ? " solo" : "");
+  document.body.classList.toggle("board-fill", layout !== "page");
+  const widest = (cols) => (visible.length === 1 ? BOARD_SOLO : cols * BOARD_MAX + (cols - 1) * BOARD_GAP) + "px";
+  if (layout === "fit") {
+    const plan = fitPlan(visible, n);
+    const byCode = new Map(sections.map((s) => [s.dataset.kind, s]));
+    const count = new Map(visible.map((c) => [c.k.code, c.list.length]));
+    board.style.gridTemplateColumns = `repeat(${plan.length}, minmax(0, 1fr))`;
+    board.style.maxWidth = widest(plan.length);
+    board.replaceChildren(...plan.map((codes) => {
+      // the category with the most items fills the rest of the column (the lower one if two have as many)
+      const big = codes.reduce((m, c) => (count.get(c) >= count.get(m) ? c : m));
+      for (const c of codes) byCode.get(c).classList.toggle("grow", c === big);
+      return h("div", { class: "fitcol", style: `--share:${codes.length}` }, codes.map((c) => byCode.get(c)));
+    }));
+  } else if (layout === "swipe") {
+    board.style.gridTemplateColumns = ""; board.style.maxWidth = "";
+    board.replaceChildren(...sections);
+  } else {
+    board.style.gridTemplateColumns = visible.length === 1 ? "" : `repeat(${n}, minmax(0, 1fr))`;
+    board.style.maxWidth = widest(n);
+    board.replaceChildren(...sections);
+  }
+  setBoardHeight();
+  if (layout === "swipe") jumpLane(state.lane, false);
+  packBoard();
+  packObserve();
+}
+// Largest first, each into the column with the fewest items so far (a head counts like one and a half items). The last
+// plan stays as long as it is at most FIT_STICKY items worse, so a new item or a search does not move whole categories.
+const FIT_STICKY = 3;
+let fitLast = null;
+function fitPlan(visible, n) {
+  const weight = new Map(visible.map((c) => [c.k.code, c.list.length + 1.5]));
+  const order = (code) => visible.findIndex((c) => c.k.code === code);
+  const load = (plan) => Math.max(...plan.map((codes) => codes.reduce((sum, c) => sum + weight.get(c), 0)));
+  const groups = Array.from({ length: n }, () => ({ load: 0, codes: [] }));
+  for (const code of [...weight.keys()].sort((a, b) => weight.get(b) - weight.get(a))) {
+    const g = groups.reduce((m, g) => (g.load < m.load ? g : m));
+    g.codes.push(code); g.load += weight.get(code);
+  }
+  let plan = groups.filter((g) => g.codes.length)
+    .map((g) => g.codes.sort((a, b) => order(a) - order(b)))
+    .sort((a, b) => order(a[0]) - order(b[0]));
+  const key = visible.map((c) => c.k.code).join(",") + ":" + n;
+  if (fitLast?.key === key && load(fitLast.plan) <= load(plan) + FIT_STICKY) plan = fitLast.plan;
+  fitLast = { key, plan };
+  return plan;
+}
+function setBoardHeight() {
+  const board = $("#board");
+  if (!board.classList.contains("fit") && !board.classList.contains("swipe")) return board.style.removeProperty("--board-h");
+  const foot = $(".footline");
+  const top = board.getBoundingClientRect().top + window.scrollY;
+  const h = window.innerHeight - top - (foot.hidden ? 0 : foot.offsetHeight) - 12;
+  board.style.setProperty("--board-h", Math.max(280, Math.floor(h)) + "px");
+}
+// Width or orientation changed: a new layout or column count builds the board again, otherwise only its height follows.
+let boardFrame = 0;
+function onBoardResize() {
+  if (boardFrame) return;
+  boardFrame = requestAnimationFrame(() => {
+    boardFrame = 0;
+    const board = $("#board");
+    if (board.hidden || !state.project || state.mode !== "board") return;
+    const layout = boardLayout();
+    const n = layout === "swipe" ? 1 : boardColumns(boardWidth());
+    const was = boardShape.split(":");
+    if (layout !== was[0] || (layout !== "swipe" && Math.min(n, board.querySelectorAll("section.col").length) !== +was[1])) render();
+    else setBoardHeight();
+  });
+}
+window.addEventListener("resize", onBoardResize);
+// Phones: the category in view is the one whose middle is nearest the middle of the screen.
+function laneEls() { return [...$("#board").querySelectorAll(":scope > section.col")]; }
+function jumpLane(code, smooth) {
+  const board = $("#board"), lanes = laneEls();
+  const lane = lanes.find((s) => s.dataset.kind === code) || lanes[0];
+  if (!lane) return;
+  state.lane = lane.dataset.kind;
+  const left = lane.offsetLeft + lane.offsetWidth / 2 - board.clientWidth / 2;
+  board.scrollTo({ left, behavior: smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches ? "smooth" : "auto" });
+  syncLaneChips();
+}
+function syncLaneChips() {
+  for (const b of $("#kindChips").children) b.setAttribute("aria-pressed", String(b.dataset.kind === state.lane));
+}
+let laneFrame = 0;
+$("#board").addEventListener("scroll", () => {
+  if (laneFrame || !$("#board").classList.contains("swipe")) return;
+  laneFrame = requestAnimationFrame(() => {
+    laneFrame = 0;
+    const board = $("#board"), mid = board.scrollLeft + board.clientWidth / 2;
+    let best = null, dist = Infinity;
+    for (const s of laneEls()) {
+      const d = Math.abs(s.offsetLeft + s.offsetWidth / 2 - mid);
+      if (d < dist) { dist = d; best = s; }
+    }
+    if (best && best.dataset.kind !== state.lane) { state.lane = best.dataset.kind; syncLaneChips(); }
+  });
+}, { passive: true });
+
+/* Page layout with more categories than columns side by side (narrow landscape windows): the first row keeps the
+   categories' order, every further category goes under the shortest column (like a masonry) instead of starting a row
+   below the longest one. Only the position changes: the DOM keeps the order (screen readers, Tab). A category stays in
+   the column it had while that one is at most PACK_STICKY px longer than the shortest, so search and live updates do not
+   shuffle it. */
+const PACK_ROW = 2, PACK_STICKY = 160;
+const packedAt = new Map(); // kind code → column it went into last time
+function packBoard() {
+  const board = $("#board");
+  const cols = [...board.children].filter((el) => el.matches("section.col"));
+  if (!board.classList.contains("page")) { board.classList.remove("packed"); return; }
+  // Free them first: a category placed in column 3 would otherwise keep a third (implicit) column alive on a narrower screen.
+  for (const el of cols) el.style.gridArea = "";
+  const n = board.hidden ? 0 : getComputedStyle(board).gridTemplateColumns.split(" ").filter(Boolean).length;
+  const on = n > 1 && cols.length > n;
+  board.classList.toggle("packed", on);
+  if (!on) return;
+  const gap = parseFloat(getComputedStyle(board).columnGap) || 0;
+  const heights = cols.map((el) => el.getBoundingClientRect().height); // align-items: start = their own height
+  const top = new Array(n).fill(0); // rows used per column
+  cols.forEach((el, i) => {
+    const span = Math.ceil((heights[i] + gap) / PACK_ROW);
+    let c = i;
+    if (i >= n) {
+      c = top.indexOf(Math.min(...top));
+      const was = packedAt.get(el.dataset.kind);
+      if (was != null && was < n && (top[was] - top[c]) * PACK_ROW <= PACK_STICKY) c = was;
+    }
+    packedAt.set(el.dataset.kind, c);
+    el.style.gridArea = `${top[c] + 1} / ${c + 1} / span ${span} / span 1`;
+    top[c] += span;
+  });
+}
+// Heights change without a new render too (window width, fonts): pack again, at most once per frame.
+let packObs = null, packQueued = false;
+function packObserve() {
+  if (typeof ResizeObserver !== "function") return;
+  packObs ??= new ResizeObserver(() => {
+    if (packQueued) return;
+    packQueued = true;
+    requestAnimationFrame(() => { packQueued = false; packBoard(); });
+  });
+  packObs.disconnect();
+  for (const el of $("#board").children) packObs.observe(el);
+}
+
+/* filter bar: one toggle per category (letter + count) and Du/KI. Phones (swipe): the category toggles jump to a
+   category and show which one is in view. */
+function renderFilterBar(cols, swipe) {
   $("#kindChips").replaceChildren(...cols.map(({ k, count }) => h("button", {
     type: "button", class: "tg" + (state.owner && !k.actionable ? " dim" : ""), style: `--kc:${k.color || "#6b7280"}`,
-    "aria-pressed": String(state.kind === k.code), title: tr("onlyKind", k.name), "aria-label": `${k.name}: ${count}`,
+    "data-kind": k.code, "aria-pressed": String(swipe ? state.lane === k.code : state.kind === k.code),
+    title: tr(swipe ? "jumpKind" : "onlyKind", k.name), "aria-label": `${k.name}: ${count}`,
     onclick: () => toggleKind(k),
   }, h("span", { class: "kbadge" }, k.code), h("span", { class: "n" }, String(count)))));
   for (const b of $("#ownerChips").children) b.setAttribute("aria-pressed", String(b.dataset.owner === state.owner));
@@ -1621,6 +1839,12 @@ function fitFilterBar() {
 }
 // The two filters only exclude each other for kinds without owner (I, W): the last tap wins.
 function toggleKind(k) {
+  if (state.mode === "board" && $("#board").classList.contains("swipe")) {
+    state.lane = k.code;
+    // I and W have no owner: like filtering, going there lifts Du/KI
+    if (!k.actionable && state.owner) { state.owner = ""; return render(); }
+    return jumpLane(k.code, true);
+  }
   state.kind = state.kind === k.code ? "" : k.code;
   if (state.kind && !k.actionable) state.owner = "";
   render(); toBoardTop();
@@ -4047,6 +4271,7 @@ function updateMetrics() {
   document.documentElement.classList.toggle("kb", kb > 60);
   css.setProperty("--toast-up", ($("#add").hidden ? 78 : 86 + $("#add").offsetHeight) + "px");
   markStuck();
+  setBoardHeight();
 }
 // A thin line under the filter bar while it sticks.
 function markStuck() {

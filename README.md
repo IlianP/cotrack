@@ -52,6 +52,9 @@ warnings – a one-glance status that survives across conversations.
   ([details below](#linking-a-repository)).
 - **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
+- **A board for every screen** – in landscape the columns fill the whole width. Upright (monitor, tablet) the board fits on
+  one screen: every category scrolls on its own, small categories share a column. On phones you swipe from category to
+  category, and a tap on D, A, I or W jumps right there.
 - **Sort** – the icon next to the search sorts the board by number (default), by last change or by date added. Sorted by
   time, each card shows how long ago it was (who: in the tooltip), and what changed in the last 24 hours is tinted.
   Remembered on each device.
