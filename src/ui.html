@@ -243,8 +243,9 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .board.fit { height: var(--board-h, 70vh); align-items: stretch; }
 .fitcol { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .fitcol > .col, .board.swipe > .col { display: flex; flex-direction: column; min-height: 0; }
-/* in a shared column the smaller categories keep their height (up to 45 %), the largest takes the rest */
-.fitcol > .col { flex: 0 0 auto; max-height: 45%; }
+/* in a shared column the smaller categories keep their height, up to 45 % – and with --share categories in the column
+   never so much that the largest is left with less than its 120px */
+.fitcol > .col { flex: 0 0 auto; max-height: min(45%, calc((100% - 120px) / (var(--share, 2) - 1) - 14px)); }
 .fitcol > .col.grow { flex: 1 1 0; min-height: 120px; max-height: none; }
 .board.fit .col-head, .board.swipe .col-head { flex: none; }
 .board.fit .items, .board.swipe .items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
@@ -1655,7 +1656,7 @@ function layoutBoard(layout, visible, sections) {
       // the category with the most items fills the rest of the column (the lower one if two have as many)
       const big = codes.reduce((m, c) => (count.get(c) >= count.get(m) ? c : m));
       for (const c of codes) byCode.get(c).classList.toggle("grow", c === big);
-      return h("div", { class: "fitcol" }, codes.map((c) => byCode.get(c)));
+      return h("div", { class: "fitcol", style: `--share:${codes.length}` }, codes.map((c) => byCode.get(c)));
     }));
   } else if (layout === "swipe") {
     board.style.gridTemplateColumns = ""; board.style.maxWidth = "";
