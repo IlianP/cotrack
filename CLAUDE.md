@@ -60,6 +60,24 @@
   left them (`UNDO_FIELDS`), and sends what it read as `expect` – `updateItem` compares it inside the UPDATE (`EXPECT_COLS`,
   409 `conflict`, undo then reads again). Deleting has no confirm: `POST …/items/:ref/restore` (`restoreItem` in `src/worker.js`) brings
   the item back from the snapshot in its "deleted" event (event "restored"); the history panel offers it as well.
+- Overview (decision D34): the logo (`#homeBtn`, also ☰ and quick access) opens `#home` – `openHome`/`closeHome`,
+  `homeModel`, `renderHome`, `homeCard` in `src/ui.html`; like the statistics it replaces bar and board (`body.home-mode`)
+  and follows the poll. It reads the open items of all projects and the newest events, ranks "your turn" with
+  `nextQueue(items, true)` (the Next order, without "Später" and the time filter). "New" = changes by the other side since
+  the overview was last left (localStorage `cotrack.homeSeen`; the first time: 24 hours).
+- Quick access and links to items (D34): `#pal` (Ctrl/⌘+K, ☰) – `openPal`, `palMatches`, `palCommands` in `src/ui.html`;
+  items of all projects come from one `GET /api/items?status=all` per opening and are matched in the browser. The address
+  `#slug/A14` opens that item (`hashTarget`, `openHashItem`, `openItemKey`); the edit dialog copies it (`itemUrl`) and
+  `cotrack_get` (`src/mcp.js`) names it as `Link:`. References in pills open their item (`refLink`).
+- Due dates (D34, methodology v2.14): `due` (YYYY-MM-DD) is shown by `duePill` (`dueDays`, `dueRel`; amber from `DUE_SOON`
+  = 2 days before, red after), sorts the board (`SORTS` → `due`) and brings items forward in Next (`dueUrgent` in
+  `nextQueue`). The AI sets it via `cotrack_add`/`cotrack_update` only for real dates (`dueParam` and the instructions in
+  `src/mcp.js`). `demo/seed.mjs` writes due dates relative to today (`due(days)`).
+- Compact board (D34): `state.dense` (`#denseBtn`, localStorage `cotrack.dense`) renders one line per item in `renderItem`.
+  A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
+  therefore annotates `ext_open`/`ext_next` like the project lists.
+- Sources as links (D34): `sourceLink` in `src/ui.html` turns "PR #7", "#12", a commit hash or a repository path into a
+  GitHub link when the project has a `repo`; full addresses get a readable label.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
   scrolls, columns fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`),

@@ -55,15 +55,27 @@ warnings – a one-glance status that survives across conversations.
 - **A board for every screen** – in landscape the columns fill the whole width. Upright (monitor, tablet) the board fits on
   one screen: every category scrolls on its own, small categories share a column. On phones you swipe from category to
   category, and a tap on D, A, I or W jumps right there.
-- **Sort** – the icon next to the search sorts the board by number (default), by last change or by date added. Sorted by
-  time, each card shows how long ago it was (who: in the tooltip), and what changed in the last 24 hours is tinted.
-  Remembered on each device.
+- **Overview** – a tap on the logo shows all projects on one page: four figures across all projects (your turn, overdue,
+  with the AI, new for you – each leads to the matching view) and one card per project with its open items by category,
+  your next three items, what waits or sits with the AI, and what is due. Projects that need you come first.
+- **Quick access and links to items** – Ctrl+K / ⌘K (or ☰) opens one field for everything: an item of any project by
+  reference ("A14", "WEB:A14") or keyword, a project, a view. Every item has a link (`…/#project/A14`, copied in the edit
+  dialog; `cotrack_get` tells the AI), and references on the cards (⏸ A10, ▶ A16) open the item they name.
+- **Sort and compact view** – the icon next to the search sorts the board by number (default), by last change, by date
+  added or by due date. Sorted by time, each card shows how long ago it was (who: in the tooltip), and what changed in the
+  last 24 hours is tinted. The icon next to it shows one line per item instead of cards. A prerequisite that is done shows
+  as ✓ instead of ⏸. Remembered on each device.
+- **Due dates** – a date on an item shows the weekday and how far away it is ("Thu, 19/11 · 2 days overdue"), amber from
+  two days before, red after. The AI sets it only for real dates (`due`), never estimated.
+- **Sources as links** – with a GitHub repository on the project, "PR #7", "#12", commit hashes and file paths in an
+  item's source open the matching page.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
   (☰ → Chat footer → Customize), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
   per project when several are in play.
 - **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
   ([details below](#prioflow-what-is-next)).
-- **Next** – a view that shows one of your items at a time: first what you have started, then benefit relative to effort
+- **Next** – a view that shows one of your items at a time: first what you have started, then what is overdue or due
+  within two days, then benefit relative to effort
   (an item is worth at least as much as what waits for it), decisions before actions, oldest first. A time filter
   (5 min · 30 min · 2 h) shows only what fits. Set or confirm effort and benefit right on the card. *Done* (decisions with an
   optional outcome), *Later*, undo in the toast.
@@ -219,7 +231,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |
 | GET | `/api/projects/:slug/items/:ref/events` | one item's change log, newest first (≤ 500): `{ref, from, events}` – `from` = the items it was converted from (nearest first, `deleted: true` if removed since), whose events are included |
 | GET | `/api/stats?project=&tz=` | statistics for the web app (per day, open by category, lead times, streaks, records, ideas, waiting times, activity by weekday and hour, effort & benefit); without `project` across all projects; `tz` = the browser's `getTimezoneOffset()` |
-| GET | `/api/items?owner=user&status=open&format=text` | items across all projects |
+| GET | `/api/items?owner=user&status=open&format=text` | items across all projects (as JSON with `ext_open`/`ext_next` like the project lists) |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 | GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (defaults `multi`, `👤`, `🤖`, `de`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |
 

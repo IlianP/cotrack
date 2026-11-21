@@ -1,4 +1,4 @@
-# Custom prompt (Claude & ChatGPT) – Methodology v2.13 (prompt text last changed on 20 Nov 2026)
+# Custom prompt (Claude & ChatGPT) – Methodology v2.14 (prompt text last changed on 20 Nov 2026)
 
 **English** · [Deutsch](PROMPT.md)
 
@@ -45,6 +45,8 @@ Replace the personal settings of both programs with these parts (part 1 followed
 T is dropped; actions (A) belong to you or the AI, visible from "👤"/"🤖"; decisions (D) are a category of their own;
 ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
 v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
+v2.14: **Due dates** (real dates in the "Due" field, Next brings forward what is overdue) – no change to the prompt, nothing
+to reinstall. The rule lives in the MCP server's instructions and the tool descriptions.
 v2.13 (20 Nov 2026): In the footer example of part 1, "👤" and "🤖" have **no colon**, like 💡 and ⚠️ (the middle dot
 separates the groups). Relevant only without cotrack – with cotrack the footer comes from the server. Reinstalling is worthwhile but not required.
 v2.12: **Brief descriptions** (about five lines, details via a link in the source, replace the status instead of appending) –

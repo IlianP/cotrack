@@ -99,6 +99,7 @@ L ≤ 1 Tag, XL mehr. benefit = wie sehr es das Projektziel voranbringt: low, me
 geschätzt (in Listen mit „?“, z. B. „⏱S·★hoch?“), bis der Nutzer sie bestätigt oder ändert; bestätigte Werte änderst du nur auf seinen Wunsch.
 Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
 Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.
+Termine: Hat ein Punkt einen echten Termin (Frist, Veranstaltung, Zusage), setze due (JJJJ-MM-TT); schätze nie einen. In Listen steht er als 📅.
 Punkte, die mehrere Projekte betreffen: Jeder Punkt hat genau ein Heimatprojekt und behält dort seine Kennung. Betrifft er ein weiteres
 Projekt, setze also_in (z. B. "IMM"): Dann erscheint er auch dort in Status, Listen und Fußzeile, mit Kürzel („FIN:W3“). Nicht doppelt
 anlegen und nicht umziehen. waiting_on darf auf Punkte anderer Projekte zeigen ("IMM:A2"). In Antworten schreibe Kennungen anderer
@@ -137,6 +138,7 @@ M ≤ 2 h, L ≤ 1 day, XL more. benefit = how much it moves the project goal: l
 estimates (marked "?" in lists, e.g. "⏱S·★high?") until the user confirms or changes them; change confirmed values only when they ask.
 When they name or confirm them in the conversation, send them with confirmed true.
 Decisions and warnings get no values; a decision inherits the benefit of the items waiting for it.
+Dates: if an item has a real date (deadline, event, commitment), set due (YYYY-MM-DD); never estimate one. Lists show it as 📅.
 Items that concern several projects: every item has exactly one home project and keeps its reference there. If it concerns another
 project as well, set also_in (e.g. "IMM"): it then also appears there in status, lists and footer, with the code ("FIN:W3"). Do not
 add it twice and do not move it. waiting_on may point to items of other projects ("IMM:A2"). In answers, always write references of
@@ -167,6 +169,13 @@ function toolList(lang) {
     "Link oder Datei mit den Details (Dokument, PR, Recherche), aus der der Punkt stammt",
     "Link or file with the details (document, PR, research) the item comes from",
   );
+  const dueParam = {
+    type: "string",
+    description: t(
+      "Fällig am (JJJJ-MM-TT) – nur bei einem echten Termin (Frist, Veranstaltung, Zusage), nie geschätzt; leer löscht",
+      "Due on (YYYY-MM-DD) – only for a real date (deadline, event, commitment), never estimated; empty clears it",
+    ),
+  };
   const effortParam = {
     type: "string",
     enum: ["XS", "S", "M", "L", "XL", ""],
@@ -336,6 +345,7 @@ function toolList(lang) {
           waiting_on: waitingParam,
           also_in: alsoInParam,
           source: { type: "string", description: sourceText },
+          due: dueParam,
           effort: effortParam,
           benefit: benefitParam,
           confirmed: confirmedParam,
@@ -376,6 +386,7 @@ function toolList(lang) {
           waiting_on: waitingParam,
           also_in: alsoInParam,
           source: { type: "string", description: sourceText },
+          due: dueParam,
           check: {
             type: "string",
             description: t(
@@ -502,6 +513,7 @@ const MSG = {
     followedBy: "Danach folgt",
     alsoIn: "Auch angezeigt in",
     source: "Quelle",
+    due: "Fällig",
     convertedTo: "Umgewandelt in",
     history: (it) => `Angelegt ${it.created_at} (${it.created_by}), geändert ${it.updated_at} (${it.updated_by})`,
     created: "angelegt",
@@ -537,6 +549,7 @@ const MSG = {
     followedBy: "Followed by",
     alsoIn: "Also shown in",
     source: "Source",
+    due: "Due",
     convertedTo: "Converted to",
     history: (it) => `Created ${it.created_at} (${it.created_by}), changed ${it.updated_at} (${it.updated_by})`,
     created: "created",
@@ -585,7 +598,7 @@ const titleHint = (it, M) => ([...it.title].length >= TITLE_HINT_AT ? "\n" + M.t
 const bodyHint = (it, M) => ([...(it.body || "")].length >= BODY_HINT_AT ? "\n" + M.bodyHint([...it.body].length) : "");
 const projectTitle = (p) => `${p.slug}${p.code ? ` [${p.code}]` : ""} – ${p.name}${p.repo ? ` (${p.repo})` : ""}`;
 
-async function callTool(name, args, db, actor, lang) {
+async function callTool(name, args, db, actor, lang, origin = "") {
   const M = MSG[lang] || MSG.de;
   switch (name) {
     case "cotrack_projects": {
@@ -656,14 +669,17 @@ async function callTool(name, args, db, actor, lang) {
       if (it.effort || it.benefit) lines.push(M.sizing(it));
       const next = await successorsOf(db, it.project_slug, it.ref);
       if (next.length) lines.push(`${M.followedBy}: ▶${next.map(lbl).join(",")}`);
+      if (it.due) lines.push(`${M.due}: ${it.due}`);
       if (it.source) lines.push(`${M.source}: ${it.source}`);
       if (it.converted_to) lines.push(`${M.convertedTo}: ${it.converted_to}`);
       lines.push(M.history(it));
+      // Opens this item in the web app – for a link in the chat.
+      if (origin) lines.push(`Link: ${origin}/#${encodeURIComponent(it.project_slug)}/${it.ref}`);
       return lines.join("\n");
     }
     case "cotrack_add": {
       const project = await getProject(db, args.project);
-      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "effort", "benefit"]),
+      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "due", "effort", "benefit"]),
         ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
       const size = sizeText(it, lang);
@@ -672,7 +688,7 @@ async function callTool(name, args, db, actor, lang) {
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
       const item = await getItemByRef(db, project.slug, ref);
-      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "check", "uncheck", "effort", "benefit"]);
+      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "due", "check", "uncheck", "effort", "benefit"]);
       if (args.confirmed === true) fields.confirmed = true;
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);
@@ -729,7 +745,7 @@ function describeChange(e) {
 
 /* ---------------------------------------------------------- JSON-RPC */
 
-async function handleMessage(msg, db, actor, lang) {
+async function handleMessage(msg, db, actor, lang, origin = "") {
   const { id, method, params = {} } = msg || {};
   const isNotification = id === undefined || id === null;
   const reply = (result) => ({ jsonrpc: "2.0", id, result });
@@ -754,7 +770,7 @@ async function handleMessage(msg, db, actor, lang) {
       return reply({ tools: TOOLS[lang] });
     case "tools/call": {
       try {
-        const text = await callTool(params.name, params.arguments || {}, db, actor, lang);
+        const text = await callTool(params.name, params.arguments || {}, db, actor, lang, origin);
         return reply({ content: [{ type: "text", text }] });
       } catch (err) {
         // Tool errors go back to the AI as readable text so it can correct itself.
@@ -802,10 +818,10 @@ export async function handleMcp(request, env, url) {
   }
   const lang = await serverLang(env.DB);
   if (Array.isArray(body)) {
-    const answers = (await Promise.all(body.map((m) => handleMessage(m, env.DB, actor, lang)))).filter(Boolean);
+    const answers = (await Promise.all(body.map((m) => handleMessage(m, env.DB, actor, lang, url.origin)))).filter(Boolean);
     return answers.length ? rpcResponse(answers) : new Response(null, { status: 202, headers: CORS });
   }
-  const answer = await handleMessage(body, env.DB, actor, lang);
+  const answer = await handleMessage(body, env.DB, actor, lang, url.origin);
   return answer ? rpcResponse(answer) : new Response(null, { status: 202, headers: CORS });
 }
 

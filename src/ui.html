@@ -56,7 +56,7 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-.brand { font-weight: 700; letter-spacing: -.02em; font-size: 18px; white-space: nowrap; }
+.brand { font-weight: 700; letter-spacing: -.02em; font-size: 18px; white-space: nowrap; border: 0; background: none; padding: 0; flex: none; border-radius: 8px; }
 .brand b { color: var(--accent); }
 /* project picker: a button that opens a searchable list (name, code, repository, slug) */
 .psel { position: relative; min-width: 0; flex: 1 1 auto; max-width: 340px; }
@@ -233,8 +233,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
    screens, the board fills the screen and every category scrolls on its own; "swipe" = phones, one category per screen.
    --board-h = the height left below the bars and above the footer line (setBoardHeight). */
 .board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; margin-inline: auto; }
-body.on-board:not(.stats-mode) main { max-width: none; }
-body.board-fill:not(.stats-mode) { padding-bottom: 0; }
+body.on-board:not(.stats-mode):not(.home-mode) main { max-width: none; }
+body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
 /* a single category (filter): one readable column instead of a narrow first cell */
 .board.solo { grid-template-columns: minmax(0, 760px); }
 /* more categories than columns (page): rows of 2px, packBoard() puts each extra category under the shortest column;
@@ -304,6 +304,11 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .pill.wait { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
 /* not ".next": that is the Next view's class (a grid up to 1080px wide) */
 .pill.follows { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+/* due date: red once it has passed, amber from two days before */
+.pill.due-over { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); font-weight: 600; }
+.pill.due-soon { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
+/* a prerequisite that is done: the item does not wait for it any more */
+.pill.freed { color: var(--muted); border-style: dashed; }
 .pill.st-doing { color: var(--accent); }
 .pill.st-blocked { color: var(--danger); }
 .pill a { color: inherit; }
@@ -311,6 +316,20 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .pill.size { color: var(--text); }
 .pill.age { color: var(--text); }
 .pill.size.est { border-style: dashed; color: var(--muted); }
+
+/* compact board (density toggle): one line per item – reference, title, a few signs; the description stays in the dialog */
+.sort-btn[hidden] { display: none; }
+.sort-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.item.dense { padding: 5px 12px; align-items: center; }
+.item.dense .check { width: 18px; height: 18px; margin-top: 0; font-size: 10px; }
+.item.dense .l1 { align-items: center; }
+.item.dense .title { flex: 1 1 0; min-width: 3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item.dense.waits .title { color: var(--muted); }
+.mini { flex: none; display: flex; gap: 7px; align-items: center; }
+/* signs only – no frames, so the title keeps the room in a narrow column */
+.mini .pill { flex: none; padding: 0 1px; border: 0; background: none; font-size: 12px; line-height: 18px; }
+.mini .dot { flex: none; width: 9px; height: 9px; margin: 0 2px; border-radius: 50%; background: var(--accent); }
+.mini .dot.st-blocked { background: var(--danger); }
 
 /* footer line */
 .footline {
@@ -347,6 +366,37 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dlg textarea { min-height: 90px; resize: vertical; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+/* quick access (Ctrl/⌘+K) */
+dialog.pal { width: min(640px, calc(100vw - 24px)); margin-top: min(12vh, 96px); overflow: hidden; }
+dialog.pal[open] { display: flex; flex-direction: column; }
+.pal input {
+  flex: none; width: 100%; height: 54px; padding: 0 18px; border: 0; border-bottom: 1px solid var(--line); background: none;
+  font-size: 17px; outline: none; -webkit-appearance: none; appearance: none;
+}
+.pal input::-webkit-search-cancel-button { display: none; }
+.pal-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; max-height: min(60vh, 470px); overscroll-behavior: contain; }
+.pal-head { padding: 9px 10px 3px; font-size: 12px; font-weight: 650; color: var(--muted); }
+.pal-row { display: flex; align-items: baseline; gap: 9px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.pal-row[aria-selected="true"] { background: var(--surface-2); }
+.pal-row .ref { cursor: inherit; }
+.pal-row .pal-ic { flex: none; width: 1.6em; text-align: center; color: var(--muted); }
+.pal-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-row.is-done .pal-t { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.pal-x { flex: none; font-size: 12px; color: var(--muted); }
+.pal-foot { flex: none; margin: 0; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+@media (hover: none) { .pal-foot { display: none; } }
+@media (max-width: 560px) { dialog.pal { margin-top: 10px; } .pal-list { max-height: 46vh; } }
+/* a reference inside a pill opens that item */
+.reflink { border: 0; background: none; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; }
+.reflink:hover, .reflink:focus-visible { text-decoration-color: currentColor; }
+/* edit dialog: copy the link to this item */
+.link-copy { margin-left: auto; width: 34px; height: 34px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--muted); }
+.link-copy:hover, .link-copy:focus-visible { background: var(--surface-2); color: var(--text); }
+.link-copy svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn kbd { margin-left: 8px; font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
+.lbl-row { display: flex; justify-content: space-between; gap: 8px; }
+.src-open { color: var(--accent); }
+.src-open[hidden] { display: none; }
 .btn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; height: 38px; padding: 0 14px; }
 .btn.danger { color: var(--danger); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
@@ -535,6 +585,49 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 }
 .stats-mode #bar, .stats-mode #board, .stats-mode #next, .stats-mode #deps, .stats-mode #fab, .stats-mode #add { display: none !important; }
 .stats[hidden] { display: none; }
+/* overview (the logo): all projects at a glance – replaces bar and board while open, like the statistics */
+.home-mode #bar, .home-mode #board, .home-mode #next, .home-mode #deps, .home-mode #stats, .home-mode #fab, .home-mode #add, .home-mode .footline { display: none !important; }
+.home[hidden] { display: none; }
+.home { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+.home > * { min-width: 0; }
+.hm-tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.hm-tile {
+  display: grid; gap: 1px; align-content: start; text-align: left; padding: 13px 16px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+}
+.hm-tile:hover, .hm-tile:focus-visible { border-color: var(--accent); }
+.hm-tile .l { font-size: 13px; font-weight: 650; color: var(--muted); }
+.hm-tile b { font-size: 30px; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.hm-tile.alert b { color: var(--danger); }
+.hm-tile .s { font-size: 12.5px; color: var(--muted); }
+.hm-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); align-items: start; }
+.hm-card { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.hm-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; width: 100%; padding: 12px 14px 10px; border: 0; background: none; text-align: left; }
+.hm-top:hover, .hm-top:focus-visible { background: var(--surface-2); outline: none; }
+.hm-code { grid-row: span 2; display: grid; place-items: center; min-width: 40px; height: 40px; padding: 0 6px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-weight: 700; font-size: 13px; }
+.hm-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-open { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hm-last { grid-column: 2 / -1; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-new { color: var(--accent); font-weight: 650; }
+.hm-kinds { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 0 14px 10px; }
+.hm-kinds .st-split { height: 6px; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); }
+.hm-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; background: var(--kc); }
+.hm-sec { border-top: 1px solid var(--line); padding: 9px 8px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.hm-sec > .hd { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; padding: 0 6px 3px; font-size: 13px; }
+.hm-sec > .hd b { font-weight: 650; }
+.hm-sec > .hd span { color: var(--muted); font-size: 12.5px; }
+.hm-item { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 5px 6px; border: 0; border-radius: 8px; background: none; text-align: left; }
+.hm-item:hover, .hm-item:focus-visible { background: var(--surface-2); outline: none; }
+.hm-item .ref { cursor: inherit; }
+.hm-item .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-item .pill, .hm-item .dot { flex: none; }
+.hm-item .dot { align-self: center; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.hm-more { justify-self: start; margin: 2px 6px 0; padding: 0; border: 0; background: none; color: var(--accent); font-size: 13px; }
+.hm-more:hover { text-decoration: underline; }
+.hm-none { margin: 0; padding: 2px 6px 4px; font-size: 13px; color: var(--muted); }
+.hm-due { border-top: 1px solid var(--line); padding: 8px 14px 10px; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.hm-due .over { color: var(--danger); font-weight: 650; }
 .stats { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
 .st-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .stats > * { min-width: 0; }
@@ -643,6 +736,10 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .st-wait .track i { display: block; border-radius: 4px; }
 @media (max-width: 560px) {
   .st-head h1 { font-size: 21px; }
+  .hm-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hm-tile { padding: 11px 13px; }
+  .hm-tile b { font-size: 25px; }
+  .hm-grid { grid-template-columns: minmax(0, 1fr); }
   .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .st-card { padding: 12px; }
   .st-big { font-size: 26px; }
@@ -820,8 +917,9 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 </head>
 <body>
 <header class="top">
-  <div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path
-    d="M9 16.5l4.5 4.5L23 11.5"/></svg><span>co<b>track</b></span></div>
+  <button type="button" class="brand" id="homeBtn" aria-label="Übersicht: alle Projekte" title="Übersicht: alle Projekte"
+    data-t-attr="aria-label:homeOpen;title:homeOpen"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path
+    d="M9 16.5l4.5 4.5L23 11.5"/></svg><span>co<b>track</b></span></button>
   <div class="psel" id="psel">
     <button type="button" id="projectBtn" class="psel-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="projectPop">
       <span id="projectLabel"></span><span class="psel-caret" aria-hidden="true">▼</span>
@@ -880,6 +978,9 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
           d="M13.5 15.5L17 19l3.5-3.5"/></svg></button>
         <div id="sortPop" class="sort-pop" hidden></div>
       </div>
+      <!-- density: full cards or one line per item; label and title are set by syncDenseBtn() -->
+      <button type="button" id="denseBtn" class="sort-btn" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path
+        d="M4 6h16"/><path d="M4 10.5h16"/><path d="M4 15h16"/><path d="M4 19.5h16"/></svg></button>
     </div>
     <div class="bar-filter" id="filterBar">
       <div class="tgs" id="kindChips" role="group" aria-label="Nach Kategorie filtern" data-t-attr="aria-label:kindsGroup"></div>
@@ -895,6 +996,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
   <div id="board" class="board"></div>
   <div id="next" class="next" hidden></div>
   <section id="stats" class="stats" hidden aria-labelledby="statsHead"></section>
+  <section id="home" class="home" hidden aria-labelledby="homeHead"></section>
   <div id="deps" class="deps" hidden></div>
 </main>
 
@@ -934,6 +1036,14 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 
 <dialog id="dlg" tabindex="-1"></dialog>
 <dialog id="ask" class="ask"></dialog>
+<!-- quick access (Ctrl/⌘+K): items of all projects, projects, views and actions -->
+<dialog id="pal" class="pal" aria-label="Schnellzugriff" data-t-attr="aria-label:palTitle">
+  <input id="palInput" type="search" role="combobox" aria-expanded="true" aria-controls="palList" aria-autocomplete="list"
+    aria-label="Schnellzugriff" placeholder="Kennung, Stichwort, Projekt oder Ansicht …" autocomplete="off" autocapitalize="off"
+    spellcheck="false" enterkeyhint="go" data-t-attr="aria-label:palTitle;placeholder:palPh">
+  <ul id="palList" class="pal-list" role="listbox" aria-label="Schnellzugriff" data-t-attr="aria-label:palTitle"></ul>
+  <p class="pal-foot" data-t="palFoot">↑↓ wählen · ↵ öffnen · Esc schließen</p>
+</dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -973,8 +1083,8 @@ const STRINGS = {
     view: "Ansicht", viewOpen: "Offen", viewClosed: "Erledigt", viewAll: "Alle",
     search: "Suchen", searchTitle: "Suchen (Taste /)", searchPh: "Suchen …", searchClose: "Suche schließen",
     sort: "Sortieren", sortBy: (name) => `Sortierung: ${name}`, sortNote: "Gilt fürs Board · auf diesem Gerät gespeichert",
-    sortNames: { num: "Nummer", changed: "Zuletzt geändert", created: "Zuletzt angelegt" },
-    sortHints: { num: "D1, D2 … in der Reihenfolge der Anlage", changed: "Jüngste Änderung oben – wie im Verlauf", created: "Neue Punkte oben" },
+    sortNames: { num: "Nummer", changed: "Zuletzt geändert", created: "Zuletzt angelegt", due: "Fälligkeit" },
+    sortHints: { num: "D1, D2 … in der Reihenfolge der Anlage", changed: "Jüngste Änderung oben – wie im Verlauf", created: "Neue Punkte oben", due: "Was zuerst fällig ist, steht oben" },
     ageNow: "gerade eben", ageMin: (n) => `vor ${n} Min.`, ageHours: (n) => `vor ${n} Std.`, ageYesterday: "gestern",
     ageDays: (n) => `vor ${n} Tagen`, ageOn: (d) => `am ${d}`,
     ageTitle: { changed: (at, who) => `Zuletzt geändert: ${at} von ${who}`, created: (at, who) => `Angelegt: ${at} von ${who}` },
@@ -1042,7 +1152,7 @@ const STRINGS = {
     nextAge: (d) => (d <= 0 ? "Seit heute offen" : d === 1 ? "Seit gestern offen" : `Seit ${d} Tagen offen`),
     nextEmpty: "Nichts für dich offen 🎉", nextWaiting: (n) => `${n === 1 ? "1 weiterer Punkt wartet" : n + " weitere warten"} noch auf andere.`,
     nextAi: (n) => `Bei der KI: ${n} offen.`, nextHint: "„Später“ schiebt den Punkt ans Ende, ohne ihn zu ändern.",
-    nextOrder: "Reihenfolge: in Arbeit zuerst, dann Nutzen im Verhältnis zum Aufwand. Ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen zählen als S. Bei Gleichstand: Entscheidungen vor Aufgaben, älteste zuerst.",
+    nextOrder: "Reihenfolge: in Arbeit zuerst, dann was überfällig oder in den nächsten zwei Tagen fällig ist, dann Nutzen im Verhältnis zum Aufwand. Ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen zählen als S. Bei Gleichstand: Entscheidungen vor Aufgaben, älteste zuerst.",
     // Aufwand und Nutzen (D21, Methodik v2.10)
     effort: "Aufwand", benefit: "Nutzen", sizeNone: "– keine Angabe –",
     effortLabels: { XS: "≤ 5 Min.", S: "≤ 30 Min.", M: "≤ 2 Std.", L: "≤ 1 Tag", XL: "mehr als 1 Tag" },
@@ -1165,6 +1275,27 @@ const STRINGS = {
     stWaitTitle: "Warten aufeinander", stWaitsFor: "wartet auf", stWaitedFor: "wartete auf",
     stWaitStill: (t) => `seit ${t} · noch offen`, stWaitFreed: (t, d) => `${t} · frei seit ${d}`,
     stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
+    // Board: Kompakt-Ansicht, erledigte Voraussetzungen
+    sourceOpen: "öffnen ↗",
+    // Übersicht
+    homeOpen: "Übersicht: alle Projekte", homeTitle: "Übersicht", menuHome: "⌂ Übersicht über alle Projekte", homeLoading: "Wird geladen …",
+    homeScope: (p, n) => `${p === 1 ? "1 Projekt" : p + " Projekte"} · ${n} offen`,
+    homeMine: "Du bist dran", homeMineNone: "Gerade nichts für dich", homeMineN: (n) => `Du bist dran · ${n}`,
+    homeOver: "Überfällig", homeSoon: (n) => (n ? `${n} in den nächsten 7 Tagen fällig` : "nichts in den nächsten 7 Tagen"),
+    homeOther: (who) => `Bei ${who}`, homeDoing: (n) => (n ? `${n} in Arbeit` : "nichts in Arbeit"), homeOtherN: (who, n) => `${n} bei ${who}`,
+    homeNews: "Neu für dich", homeSince: (t) => `seit deinem letzten Blick (${t})`, homeDay: "in den letzten 24 Stunden",
+    homeLast: (t, who) => `zuletzt ${t} von ${who}`, homeNewN: (n) => `${n} neu`, homeWaiting: (n) => `⏸ ${n} ${n === 1 ? "wartet" : "warten"}`,
+    homeMore: (n) => `+ ${n} weitere in Next →`, homeOverN: (n) => `${n} überfällig`, homeMoreN: (n) => `(+${n})`,
+    homeOpenProject: (name) => `${name} öffnen`,
+    // Schnellzugriff, Direktlinks
+    palTitle: "Schnellzugriff", palPh: "Kennung, Stichwort, Projekt oder Ansicht …", palItems: "Punkte", palRecent: "Zuletzt geändert",
+    palActions: "Ansichten und Aktionen", palNone: "Nichts gefunden.", palFoot: "↑↓ wählen · ↵ öffnen · Esc schließen",
+    palOpen: (n) => `${n} offen`, menuPal: "🔎 Schnellzugriff: Punkte in allen Projekten finden", palKey: "Strg+K",
+    openRef: (ref) => `${ref} öffnen`, copyLink: "Link zu diesem Punkt kopieren", linkCopied: "Link kopiert",
+    // Fälligkeiten
+    dueOver: (n) => (n === 1 ? "seit gestern überfällig" : `${n} Tage überfällig`), dueToday: "heute", dueTomorrow: "morgen",
+    dueIn: (n) => `in ${n} Tagen`, nextDue: (t) => `Fällig ${t}`,
+    denseOn: "Kompakt: eine Zeile je Punkt", denseOff: "Ausführlich: Karten mit Beschreibung", waitDone: "Voraussetzung erledigt – wartet nicht mehr darauf",
   },
   en: {
     owners: { user: "You", ai: "AI" },
@@ -1175,8 +1306,8 @@ const STRINGS = {
     view: "View", viewOpen: "Open", viewClosed: "Done", viewAll: "All",
     search: "Search", searchTitle: "Search (key /)", searchPh: "Search …", searchClose: "Close search",
     sort: "Sort", sortBy: (name) => `Sort: ${name}`, sortNote: "Applies to the board · saved on this device",
-    sortNames: { num: "Number", changed: "Recently changed", created: "Recently added" },
-    sortHints: { num: "D1, D2 … in the order they were added", changed: "Latest change on top – like the history", created: "New items on top" },
+    sortNames: { due: "Due date", num: "Number", changed: "Recently changed", created: "Recently added" },
+    sortHints: { num: "D1, D2 … in the order they were added", changed: "Latest change on top – like the history", created: "New items on top", due: "What is due first comes first" },
     ageNow: "just now", ageMin: (n) => `${n} min ago`, ageHours: (n) => `${n} h ago`, ageYesterday: "yesterday",
     ageDays: (n) => `${n} days ago`, ageOn: (d) => `on ${d}`,
     ageTitle: { changed: (at, who) => `Last changed: ${at} by ${who}`, created: (at, who) => `Added: ${at} by ${who}` },
@@ -1244,7 +1375,7 @@ const STRINGS = {
     nextAge: (d) => (d <= 0 ? "Open since today" : d === 1 ? "Open since yesterday" : `Open for ${d} days`),
     nextEmpty: "Nothing open for you 🎉", nextWaiting: (n) => `${n === 1 ? "1 more item is" : n + " more are"} still waiting for others.`,
     nextAi: (n) => `With the AI: ${n} open.`, nextHint: "“Later” moves the item to the end without changing it.",
-    nextOrder: "Order: in progress first, then benefit relative to effort. An item is worth at least as much as what waits for it; without an estimate it counts as “medium” or M, decisions count as S. On a tie: decisions before actions, oldest first.",
+    nextOrder: "Order: in progress first, then what is overdue or due within two days, then benefit relative to effort. An item is worth at least as much as what waits for it; without an estimate it counts as “medium” or M, decisions count as S. On a tie: decisions before actions, oldest first.",
     // Effort and benefit (D21, methodology v2.10)
     effort: "Effort", benefit: "Benefit", sizeNone: "– not set –",
     effortLabels: { XS: "≤ 5 min", S: "≤ 30 min", M: "≤ 2 h", L: "≤ 1 day", XL: "more than a day" },
@@ -1367,6 +1498,27 @@ const STRINGS = {
     stWaitTitle: "Waiting for each other", stWaitsFor: "waits for", stWaitedFor: "waited for",
     stWaitStill: (t) => `for ${t} · still open`, stWaitFreed: (t, d) => `${t} · free since ${d}`,
     stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
+    // Board: compact view, prerequisites that are done
+    sourceOpen: "open ↗",
+    // Overview
+    homeOpen: "Overview: all projects", homeTitle: "Overview", menuHome: "⌂ Overview of all projects", homeLoading: "Loading …",
+    homeScope: (p, n) => `${p === 1 ? "1 project" : p + " projects"} · ${n} open`,
+    homeMine: "Your turn", homeMineNone: "Nothing for you right now", homeMineN: (n) => `Your turn · ${n}`,
+    homeOver: "Overdue", homeSoon: (n) => (n ? `${n} due within 7 days` : "nothing due within 7 days"),
+    homeOther: (who) => `With ${who}`, homeDoing: (n) => (n ? `${n} in progress` : "nothing in progress"), homeOtherN: (who, n) => `${n} with ${who}`,
+    homeNews: "New for you", homeSince: (t) => `since you last looked (${t})`, homeDay: "in the last 24 hours",
+    homeLast: (t, who) => `last change ${t} by ${who}`, homeNewN: (n) => `${n} new`, homeWaiting: (n) => `⏸ ${n} waiting`,
+    homeMore: (n) => `+ ${n} more in Next →`, homeOverN: (n) => `${n} overdue`, homeMoreN: (n) => `(+${n})`,
+    homeOpenProject: (name) => `Open ${name}`,
+    // Quick access, links to items
+    palTitle: "Quick access", palPh: "Reference, keyword, project or view …", palItems: "Items", palRecent: "Recently changed",
+    palActions: "Views and actions", palNone: "Nothing found.", palFoot: "↑↓ select · ↵ open · Esc close",
+    palOpen: (n) => `${n} open`, menuPal: "🔎 Quick access: find items in all projects", palKey: "Ctrl+K",
+    openRef: (ref) => `Open ${ref}`, copyLink: "Copy the link to this item", linkCopied: "Link copied",
+    // Due dates
+    dueOver: (n) => (n === 1 ? "overdue since yesterday" : `${n} days overdue`), dueToday: "today", dueTomorrow: "tomorrow",
+    dueIn: (n) => `in ${n} days`, nextDue: (t) => `Due ${t}`,
+    denseOn: "Compact: one line per item", denseOff: "Detailed: cards with description", waitDone: "Prerequisite done – no longer waiting for it",
   },
 };
 const lookup = (dict, key) => key.split(".").reduce((o, k) => (o == null ? o : o[k]), dict);
@@ -1406,12 +1558,19 @@ const ALL = "*";
 const VIEWS = ["open", "closed", "all"];
 const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · Next (A53) · Ketten (A55)
 // Board order within a column (A81): "num" = by number (the server's order), otherwise newest first by that time.
-const SORTS = ["num", "changed", "created"];
+const SORTS = ["num", "changed", "created", "due"];
 const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
-const SORT_SYM = { num: "#", changed: "↻", created: "+" };
+const SORT_SYM = { num: "#", changed: "↻", created: "+", due: "◷" };
+// The address: "#slug" selects a project, "#slug/A14" also opens that item – a link to one item, e.g. from a chat.
+function hashTarget() {
+  let raw = "";
+  try { raw = decodeURIComponent(location.hash.slice(1)); } catch {}
+  const n = raw.indexOf("/"), ref = n > 0 ? raw.slice(n + 1).toUpperCase() : "";
+  return { slug: n > 0 ? raw.slice(0, n) : raw, ref: /^[A-Z]{1,4}\d{1,6}$/.test(ref) ? ref : "" };
+}
 const state = {
   token: store.get("cotrack.token"),
-  project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
+  project: hashTarget().slug || store.get("cotrack.project") || "",
   // Next: deferred items ("Später", this page only), the item picked from the list, unsent outcomes per item
   nextLater: [], nextPick: null, nextDraft: {},
   nextTime: ["5", "30", "120"].includes(store.get("cotrack.nextTime")) ? store.get("cotrack.nextTime") : "", // Next: time filter in minutes
@@ -1419,6 +1578,7 @@ const state = {
   sort: SORTS.includes(store.get("cotrack.sort")) ? store.get("cotrack.sort") : "num",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
+  dense: store.get("cotrack.dense") === "1", // board: one line per item (this device)
 };
 
 /* tiny DOM helper: never uses innerHTML, so user text cannot inject markup */
@@ -1549,7 +1709,9 @@ async function boot() {
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
     renderKindSeg();
+    const linked = hashTarget(); // before the first refresh: selecting the project rewrites the address
     await refresh(true);
+    openHashItem(linked);
     if (!boot.started) {
       boot.started = true;
       setInterval(poll, 4000);
@@ -1605,6 +1767,7 @@ async function poll() {
     if (global !== state.globalVersion) {
       if (state.globalVersion !== -1) await loadProjects(true);
       state.globalVersion = global;
+      if (state.home) loadHome();
     }
     // The list changed the selection (first project appeared, current one archived): poll the new one.
     // null (unlike -1 from selectProject) means its board has not been loaded yet.
@@ -1652,8 +1815,13 @@ function renderKindSeg() {
 
 // ref -> open items waiting for it (reverse of waiting_on, computed from what is on screen)
 let successors = new Map();
+// Keys of the open items in the list: with ext_open (open blockers outside it) this tells whether an item still waits.
+let openKeys = new Set();
+const isOpen = (i) => i.status !== "done" && i.status !== "dropped";
+const stillOpen = (it, key) => openKeys.has(key) || (it.ext_open || []).includes(key);
 function render(before) {
   successors = new Map();
+  openKeys = new Set(state.items.filter(isOpen).map(itemKey));
   for (const i of state.items) {
     if (i.status === "done" || i.status === "dropped") continue;
     for (const key of waitKeys(i)) successors.set(key, [...(successors.get(key) || []), itemKey(i)]);
@@ -1667,6 +1835,7 @@ function render(before) {
   board.hidden = mode !== "board"; $("#next").hidden = mode !== "next"; $("#deps").hidden = mode !== "deps";
   $("#bar").hidden = mode === "next"; // Next has neither filters nor Offen/Erledigt/Alle
   $("#sortBox").hidden = mode !== "board"; // Next and Ketten have an order of their own
+  $("#denseBtn").hidden = mode !== "board";
   if (mode !== "board") setSortOpen(false);
   if (mode !== "deps") deps.chains = [];
   document.body.classList.toggle("on-board", mode === "board");
@@ -2001,6 +2170,34 @@ async function saveSize(it, body, confirmOnly) {
   refresh(false);
 }
 
+/* The source as a link: an address as it is; with a GitHub repository on the project also "PR #7", "#12" / "Issue #12",
+   a commit hash and a path in the repository ("docs/sitemap.md"). Anything else stays text. */
+function sourceLink(source, slug) {
+  const s = String(source || "").trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) {
+    const href = s.split(/\s+/)[0];
+    let label = tr("source");
+    try {
+      const u = new URL(href), gh = u.hostname === "github.com" && u.pathname.match(/^\/[^/]+\/[^/]+\/(pull|issues)\/(\d+)/);
+      label = gh ? `${gh[1] === "pull" ? "PR" : "Issue"} #${gh[2]}` : u.hostname.replace(/^www\./, "");
+    } catch {}
+    return { href, label };
+  }
+  const repo = state.projects.find((p) => p.slug === slug)?.repo;
+  if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+  const base = "https://github.com/" + repo;
+  let m;
+  if ((m = s.match(/^(?:PR|Pull Request)\s*#(\d+)/i))) return { href: `${base}/pull/${m[1]}`, label: s };
+  if ((m = s.match(/^(?:Issue\s*)?#(\d+)/i))) return { href: `${base}/issues/${m[1]}`, label: s };
+  if (/^[0-9a-f]{7,40}$/i.test(s)) return { href: `${base}/commit/${s}`, label: s.slice(0, 7) };
+  // a path: no spaces, and a folder or a file extension ("README.md", "docs/", "src/ui.html#L10")
+  if (/^[\w.@-]+(\/[\w.@-]+)*\/?(#[\w.-]+)?$/.test(s) && (s.includes("/") || /\.[a-z0-9]{1,8}(#|$)/i.test(s))) {
+    return { href: `${base}/blob/HEAD/${s}`, label: s };
+  }
+  return null;
+}
+
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
   const meta = [];
@@ -2010,19 +2207,26 @@ function renderItem(it, k, before) {
   // On its home board: where else it is shown (only then – nothing is added for items that are not shared).
   const alsoIn = refList(it.also_in).filter((slug) => slug !== state.project);
   if (alsoIn.length && it.project_slug === state.project) meta.push(h("span", { class: "pill shared", title: tr("alsoInTitle") }, "⇄ " + alsoIn.map(codeOf).join(", ")));
-  for (const k of waitKeys(it)) meta.push(h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + keyRef(k)));
+  // What it waits for: ⏸ while the prerequisite is open, ✓ once it is done (then nothing holds the item up any more).
+  const waits = closed ? [] : waitKeys(it).filter((k) => stillOpen(it, k));
+  for (const k of waitKeys(it)) {
+    meta.push(closed || waits.includes(k)
+      ? h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ ", refLink(k))
+      : h("span", { class: "pill freed", title: tr("waitDone") }, "✓ ", refLink(k)));
+  }
   const next = successors.get(itemKey(it));
-  if (next) meta.push(h("span", { class: "pill follows", title: tr("followedBy") }, "▶ " + next.map((k) => keyRef(k)).join(", ")));
+  if (next) meta.push(h("span", { class: "pill follows", title: tr("followedBy") }, "▶ ", refLinks(next)));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
-  if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
+  if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ ", refLink(it.project_slug + ":" + it.converted_to)));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
   const checks = itemChecks(it);
   if (checks.length) meta.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
   const size = sizePill(it);
   if (size) meta.push(size);
-  if (it.due) meta.push(h("span", { class: "pill" }, "📅 " + it.due));
-  if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
-    ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + tr("source"))
+  if (it.due) meta.push(duePill(it));
+  const src = sourceLink(it.source, it.project_slug);
+  if (it.source) meta.push(h("span", { class: "pill" }, src
+    ? h("a", { href: src.href, title: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + src.label)
     : "📄 " + it.source));
   const preview = checks.length ? splitBody(it.body).rest : it.body; // the checklist itself shows as the ☑ counter
   const key = it.project_slug + ":" + it.ref + ":" + it.updated_at;
@@ -2030,21 +2234,60 @@ function renderItem(it, k, before) {
   // Sorted by time, each card says when (who: in the tooltip) – the order alone would not tell.
   const [at, by] = SORT_FIELD[state.sort] || [];
   const recent = at && it[at] && Date.now() - new Date(it[at]) < 864e5;
-  if (at && it[at]) meta.unshift(h("span", { class: "pill age", title: tr("ageTitle." + state.sort, fmt(it[at]), actorLabel(it[by])) },
-    SORT_SYM[state.sort] + " " + ageText(it[at])));
-  return h("li", { class: `item${closed ? " is-done" : ""}${changed ? " flash" : ""}${recent ? " recent" : ""}` },
-    h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
-      onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : ""),
+  const age = at && it[at] ? h("span", { class: "pill age", title: tr("ageTitle." + state.sort, fmt(it[at]), actorLabel(it[by])) },
+    SORT_SYM[state.sort] + " " + ageText(it[at])) : null;
+  const cls = `item${closed ? " is-done" : ""}${changed ? " flash" : ""}${recent ? " recent" : ""}`;
+  const check = h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
+    onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : "");
+  const ref = h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${refLabel(it)} ${it.title}`); } }, refLabel(it));
+  if (state.dense) {
+    // One line: what is needed to pick an item – does it wait, is someone on it, how far, for whom. Everything else in the dialog.
+    const mini = [];
+    // (the project is already in the reference: "WEB:A4" in "Alle Projekte" and for items shown from another project)
+    if (age) mini.push(age);
+    if (waits.length) mini.push(h("span", { class: "pill wait", title: `${tr("waitingFor")}: ${waits.map((k) => keyRef(k)).join(", ")}` },
+      "⏸ ", waits.length > 1 ? waits.length : state.project === ALL ? "" : refLink(waits[0])));
+    if (it.status === "doing" || it.status === "blocked") mini.push(h("span", { class: "dot st-" + it.status, role: "img", title: STATUS_LABELS[it.status], "aria-label": STATUS_LABELS[it.status] }));
+    else if (it.status === "dropped") mini.push(h("span", { class: "pill" }, STATUS_LABELS[it.status]));
+    if (checks.length) mini.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
+    if (it.due) mini.push(duePill(it, true));
+    if (k.actionable && it.owner && it.owner !== k.default_owner) mini.push(h("span", { class: "pill", title: ownerLabel(it.owner) }, it.owner === "ai" ? "🤖" : "👤"));
+    return h("li", { class: cls + " dense" + (waits.length ? " waits" : ""), title: it.title }, check,
+      h("div", { class: "main", onclick: () => openEdit(it) },
+        h("div", { class: "l1" }, ref, h("span", { class: "title" }, it.title), mini.length ? h("span", { class: "mini" }, mini) : null)));
+  }
+  if (age) meta.unshift(age);
+  return h("li", { class: cls },
+    check,
     h("div", { class: "main", onclick: () => openEdit(it) },
-      h("div", { class: "l1" },
-        h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${refLabel(it)} ${it.title}`); } }, refLabel(it)),
-        h("span", { class: "title" }, it.title)),
+      h("div", { class: "l1" }, ref, h("span", { class: "title" }, it.title)),
       preview ? h("p", { class: "desc" }, preview.length > 160 ? preview.slice(0, 160) + " …" : preview) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
 }
 
+/* Due dates: days until the date (negative = overdue). Open items say how far away it is and turn amber from DUE_SOON
+   days before, red once the date has passed; closed items only show the date. */
+const DUE_SOON = 2;
+const dueDate = (it) => { const [y, m, d] = it.due.split("-").map(Number); return new Date(y, m - 1, d); };
+const dueDays = (it) => (it.due ? Math.round((dueDate(it).getTime() - dayStart(new Date())) / 864e5) : null);
+const dueRel = (days) => (days < 0 ? tr("dueOver", -days) : days === 0 ? tr("dueToday") : days === 1 ? tr("dueTomorrow") : tr("dueIn", days));
+const dueUrgent = (it) => { const d = isOpen(it) ? dueDays(it) : null; return d != null && d <= DUE_SOON; };
+function duePill(it, short) {
+  const days = dueDays(it), open = isOpen(it), date = dueDate(it);
+  const day = date.toLocaleDateString(LOCALE, short ? { day: "numeric", month: "numeric" } : { weekday: "short", day: "numeric", month: "numeric" });
+  const rel = open && days <= 14 ? dueRel(days) : "";
+  const text = short ? (rel && days >= 0 && days <= 1 ? rel : day) : day + (rel ? " · " + rel : "");
+  return h("span", { class: "pill due" + (!open ? "" : days < 0 ? " due-over" : days <= DUE_SOON ? " due-soon" : ""),
+    title: `${tr("fDue")}: ${date.toLocaleDateString(LOCALE, { dateStyle: "full" })}${rel ? " – " + rel : ""}` }, "📅 " + text);
+}
+
 // Newest first by the chosen time; Array.prototype.sort is stable, so equal times keep the number order.
 function sortItems(list) {
+  // By due date: the soonest first, items without a date after them in number order.
+  if (state.sort === "due") {
+    const d = (i) => i.due || "9999-12-31";
+    return list.slice().sort((a, b) => (d(a) < d(b) ? -1 : d(a) > d(b) ? 1 : 0));
+  }
   const [at] = SORT_FIELD[state.sort] || [];
   return at ? list.slice().sort((a, b) => String(b[at] || "").localeCompare(String(a[at] || ""))) : list;
 }
@@ -2088,9 +2331,10 @@ function keyRef(key, from = state.project) {
 }
 const refLabel = (i) => keyRef(itemKey(i));
 
-function nextQueue() {
+// plain (the overview): the ranked items as they are – no "Später", no time filter, nothing remembered.
+function nextQueue(items = state.items, plain = false) {
   const me = state.actor === "ai" ? "ai" : "user";
-  const open = state.items.filter((i) => i.status !== "done" && i.status !== "dropped");
+  const open = items.filter((i) => i.status !== "done" && i.status !== "dropped");
   const openKeys = new Set(open.map(itemKey));
   const waiters = new Map(); // key -> keys of open items waiting for it (also from other projects, ext_next)
   for (const i of open) for (const k of waitKeys(i)) waiters.set(k, [...(waiters.get(k) || []), itemKey(i)]);
@@ -2132,12 +2376,13 @@ function nextQueue() {
     const holds = Math.min((waiters.get(itemKey(i)) || []).length, 3) * 0.5;
     return Math.round(((chainBenefit(i)[0] || BENEFIT_PTS.medium) + holds) / cost(i) * 1000) / 1000;
   };
-  const rank = (i) => [i.status === "doing" ? 0 : 1, -score(i), kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
+  const rank = (i) => [i.status === "doing" ? 0 : 1, dueUrgent(i) ? 0 : 1, dueUrgent(i) ? i.due : "", -score(i), kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
   mine.sort((a, b) => {
     const x = rank(a), y = rank(b);
     for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] < y[n] ? -1 : 1;
     return 0;
   });
+  if (plain) return { queue: mine, waiting, others };
   state.nextLater = state.nextLater.filter((k) => mine.some((i) => itemKey(i) === k));
   const limit = Number(state.nextTime) || 0;
   const minutes = (i) => (i.kind === "D" ? EFFORT_MIN.S : isSizable(i) && i.effort ? EFFORT_MIN[i.effort] : null);
@@ -2148,6 +2393,8 @@ function nextQueue() {
   const why = (i) => {
     const parts = [];
     if (i.status === "doing") parts.push(tr("nextDoing"));
+    const days = dueDays(i);
+    if (days != null && days <= 14) parts.push(days < 0 ? dueRel(days) : tr("nextDue", dueRel(days)));
     const w = waiters.get(itemKey(i));
     if (w?.length) parts.push(tr("nextBlocks", w.map((k) => keyRef(k)).join(", ")));
     const freed = waitKeys(i).filter((k) => !blocks(i, k));
@@ -2214,6 +2461,7 @@ function nextCard(it, whyText, inherits) {
   if (result) result.value = state.nextDraft[key] || ""; // survives live re-renders
   const pr = state.project === ALL ? state.projects.find((p) => p.slug === it.project_slug) : null;
   const nxChecks = itemChecks(it), nxRest = nxChecks.length ? splitBody(it.body).rest : "";
+  const nxSrc = sourceLink(it.source, it.project_slug);
   return h("article", { class: "nx-card", style: `--kc:${k.color || "#6b7280"}`, "aria-labelledby": "nxTitle" },
     h("div", { class: "nx-top" },
       h("span", { class: "kbadge" }, it.kind),
@@ -2221,8 +2469,7 @@ function nextCard(it, whyText, inherits) {
       h("span", { class: "nx-kind" }, k.name),
       h("span", { class: "spacer" }),
       pr ? h("span", { class: "pill", title: pr.slug }, pr.name) : null,
-      it.source && /^https?:\/\//.test(it.source)
-        ? h("a", { class: "pill", href: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + tr("source")) : null),
+      nxSrc ? h("a", { class: "pill", href: nxSrc.href, title: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + nxSrc.label) : null),
     h("h2", { class: "nx-title", id: "nxTitle" }, it.title),
     h("p", { class: "nx-why" }, whyText),
     sizeControls(it, inherits),
@@ -2535,6 +2782,155 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && hist.open && !e.defaultPrevented && !document.querySelector("dialog[open]")) closeHist(true);
 });
 
+/* ---------------------------------------------------------- overview (the logo) */
+// All projects at a glance: where it is your turn, what is due, what the other side works on and what changed since
+// you last looked – one card per project, those that need you first. Built here from the open items of all projects
+// (ranked like Next) and the newest events. Replaces bar and board while open (like the statistics), follows the live
+// poll. "New" = changes by the other side since you last left the overview (remembered on this device; the first time:
+// the last 24 hours).
+const home = { items: null, events: [], req: 0, since: null };
+state.home = false;
+const homeSeen = () => { try { const m = JSON.parse(store.get("cotrack.homeSeen") || "null"); return m && Number.isFinite(m.id) ? m : null; } catch { return null; } };
+function openHome() {
+  if (!state.token || !state.projects.length || state.home) return;
+  if (state.stats) closeStats();
+  state.home = true;
+  home.since = homeSeen();
+  document.body.classList.add("home-mode");
+  $("#home").hidden = false;
+  closeHist(); setAddOpen(false);
+  window.scrollTo(0, 0);
+  renderHome();
+  loadHome();
+  updateMetrics();
+}
+function closeHome() {
+  if (!state.home) return;
+  state.home = false;
+  // what was shown as new counts as seen from now on
+  if (home.events.length) store.set("cotrack.homeSeen", JSON.stringify({ id: home.events[0].id, at: new Date().toISOString() }));
+  document.body.classList.remove("home-mode");
+  $("#home").hidden = true;
+  updateMetrics();
+}
+async function loadHome() {
+  const req = ++home.req;
+  try {
+    const [{ items }, { events }] = await Promise.all([api("/items?status=open"), api("/events?limit=300")]);
+    if (req !== home.req || !state.home) return;
+    home.items = items; home.events = events;
+    renderHome();
+  } catch (e) { if (e.message !== "unauthorized") toast(tr("error", e.message)); }
+}
+$("#homeBtn").addEventListener("click", () => (state.home ? homeGo(state.project) : openHome()));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state.home && !e.defaultPrevented && !hist.open && !document.querySelector("dialog[open]")) homeGo(state.project);
+});
+// From the overview to a project (or "Alle Projekte"), optionally in a certain view.
+function homeGo(slug, mode) {
+  closeHome();
+  if (mode && state.mode !== mode) { state.mode = mode; state.nextPick = null; store.set("cotrack.mode", mode); syncModes(); }
+  if (slug && slug !== state.project) selectProject(slug); else refresh(true);
+  window.scrollTo(0, 0);
+}
+function homeModel() {
+  const items = home.items || [];
+  const other = state.actor === "ai" ? "user" : "ai";
+  const { queue, waiting } = nextQueue(items, true);
+  const per = new Map(state.projects.map((p) => [p.slug, { p, open: 0, kinds: new Map(), ready: [], waiting: 0, other: 0, otherDoing: 0, over: [], soon: [], news: 0, last: null }]));
+  for (const i of items) {
+    const c = per.get(i.project_slug);
+    if (!c) continue;
+    c.open++;
+    c.kinds.set(i.kind, (c.kinds.get(i.kind) || 0) + 1);
+    const k = kindBy(i.kind);
+    if (k?.actionable && (i.owner || k.default_owner) === other) { c.other++; if (i.status === "doing") c.otherDoing++; }
+    const days = dueDays(i);
+    if (days != null && days < 0) c.over.push(i); else if (days != null && days <= 7) c.soon.push(i);
+  }
+  for (const i of queue) per.get(i.project_slug)?.ready.push(i);
+  for (const i of waiting) { const c = per.get(i.project_slug); if (c) c.waiting++; }
+  const dayAgo = Date.now() - 864e5;
+  const isNew = (e) => e.actor !== state.actor && (home.since ? e.id > home.since.id : new Date(e.at).getTime() > dayAgo);
+  for (const e of home.events) {
+    const c = per.get(e.project_slug);
+    if (!c) continue;
+    c.last = c.last || e;
+    if (isNew(e)) c.news++;
+  }
+  const cards = [...per.values()];
+  for (const c of cards) for (const l of [c.over, c.soon]) l.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
+  // Those that need you first: something overdue, then your turn, then the latest change.
+  const at = (c) => c.last?.at || c.p.updated_at || "";
+  cards.sort((a, b) => b.over.length - a.over.length || Math.sign(b.ready.length) - Math.sign(a.ready.length)
+    || Math.sign(b.open) - Math.sign(a.open) || at(b).localeCompare(at(a)));
+  return { cards, queue, other, items };
+}
+function renderHome() {
+  const box = $("#home");
+  const head = h("div", { class: "st-head" },
+    h("button", { type: "button", class: "btn", onclick: () => homeGo(state.project) }, tr("stBack")),
+    h("h1", { id: "homeHead" }, tr("homeTitle")),
+    h("span", { class: "scope" }, home.items ? tr("homeScope", state.projects.length, home.items.length) : ""));
+  if (!home.items) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("homeLoading")));
+  const { cards, queue, other, items } = homeModel();
+  const sum = (f) => cards.reduce((n, c) => n + f(c), 0);
+  const over = sum((c) => c.over.length), soon = sum((c) => c.soon.length), news = sum((c) => c.news);
+  const byKind = (code) => queue.filter((i) => i.kind === code).length;
+  const mineParts = state.kinds.filter((k) => k.actionable && byKind(k.code)).map((k) => `${k.name} ${byKind(k.code)}`);
+  const since = home.since ? tr("homeSince", ageText(home.since.at)) : tr("homeDay");
+  const tile = (cls, label, n, sub, onclick) => h("button", { type: "button", class: "hm-tile" + cls, onclick },
+    h("span", { class: "l" }, label), h("b", null, n), h("span", { class: "s" }, sub));
+  const tiles = h("div", { class: "hm-tiles" },
+    tile("", tr("homeMine"), queue.length, mineParts.join(" · ") || tr("homeMineNone"), () => homeGo(ALL, "next")),
+    tile(over ? " alert" : "", tr("homeOver"), over, tr("homeSoon", soon), () => {
+      state.sort = "due"; store.set("cotrack.sort", "due"); syncSortBtn();
+      state.view = "open"; store.set("cotrack.view", "open"); syncViewChips();
+      state.owner = ""; state.kind = "";
+      homeGo(ALL, "board");
+    }),
+    tile("", tr("homeOther", actorLabel(other)), sum((c) => c.other), tr("homeDoing", sum((c) => c.otherDoing)), () => {
+      state.view = "open"; store.set("cotrack.view", "open"); syncViewChips();
+      state.owner = other; state.kind = "";
+      homeGo(ALL, "board");
+    }),
+    tile("", tr("homeNews"), news, since, () => { homeGo(ALL); openHist(); }));
+  box.replaceChildren(head, tiles, h("div", { class: "hm-grid" }, cards.map((c) => homeCard(c, other))));
+}
+function homeCard(c, other) {
+  const p = c.p;
+  const kinds = [...state.kinds, ...state.allKinds.filter((k) => !k.active)].filter((k) => c.kinds.get(k.code));
+  const last = c.last ? tr("homeLast", ageText(c.last.at), actorLabel(c.last.actor)) : "";
+  const itemRow = (it) => {
+    const days = dueDays(it);
+    return h("button", { type: "button", class: "hm-item", style: `--kc:${kindBy(it.kind)?.color || "#6b7280"}`, title: it.title, onclick: () => openItemKey(itemKey(it)) },
+      h("span", { class: "ref" }, it.ref), h("span", { class: "t" }, it.title),
+      it.status === "doing" ? h("span", { class: "dot", role: "img", title: STATUS_LABELS.doing, "aria-label": STATUS_LABELS.doing }) : null,
+      days != null && days <= 7 ? duePill(it, true) : null);
+  };
+  const dueLine = [];
+  if (c.over.length) dueLine.push(h("span", { class: "over" }, tr("homeOverN", c.over.length)));
+  const nextDue = c.soon[0];
+  if (nextDue) dueLine.push(h("span", null, `📅 ${nextDue.ref} ${dueRel(dueDays(nextDue))}${c.soon.length > 1 ? " " + tr("homeMoreN", c.soon.length - 1) : ""}`));
+  return h("article", { class: "hm-card" },
+    h("button", { type: "button", class: "hm-top", title: tr("homeOpenProject", p.name), onclick: () => homeGo(p.slug, "board") },
+      h("span", { class: "hm-code" }, p.code || p.name.slice(0, 2).toUpperCase()),
+      h("span", { class: "hm-name" }, p.name),
+      h("span", { class: "hm-open" }, c.open ? tr("palOpen", c.open) : ""),
+      h("span", { class: "hm-last" }, c.news ? h("span", { class: "hm-new" }, "● " + tr("homeNewN", c.news)) : null, c.news && last ? " · " : "", last)),
+    c.open ? h("div", { class: "hm-kinds" },
+      splitBar(kinds.map((k) => [c.kinds.get(k.code), k.color || "#6b7280", `${k.name} ${c.kinds.get(k.code)}`])),
+      h("div", { class: "hm-legend" }, kinds.map((k) => h("span", { style: `--kc:${k.color || "#6b7280"}` }, h("i"), `${k.name} ${c.kinds.get(k.code)}`)))) : null,
+    c.open ? h("div", { class: "hm-sec" },
+      h("div", { class: "hd" }, h("b", null, tr("homeMineN", c.ready.length)),
+        c.waiting ? h("span", null, tr("homeWaiting", c.waiting)) : null,
+        c.other ? h("span", null, `${other === "ai" ? "🤖" : "👤"} ${tr("homeOtherN", actorLabel(other), c.other)}`) : null),
+      c.ready.slice(0, 3).map(itemRow),
+      c.ready.length > 3 ? h("button", { type: "button", class: "hm-more", onclick: () => homeGo(p.slug, "next") }, tr("homeMore", c.ready.length - 3)) : null,
+      c.ready.length ? null : h("p", { class: "hm-none" }, tr("homeMineNone"))) : h("div", { class: "hm-sec" }, h("p", { class: "hm-none" }, tr("nothingOpen"))),
+    dueLine.length ? h("div", { class: "hm-due" }, dueLine) : null);
+}
+
 /* ---------------------------------------------------------- statistics (A58) */
 // Three views on the counts the server builds (GET /api/stats): an overview dashboard, a weekly report and flow/age.
 // Hidden in ☰ → Projekte → Statistiken; replaces bar and board while open and follows the live poll.
@@ -2568,6 +2964,7 @@ const statRef = (o) => refLabel({ project_slug: o.project_slug, ref: o.ref });
 const openRef = (o) => openHistItem({ project_slug: o.project_slug, item_ref: o.ref });
 
 function openStats() {
+  closeHome();
   state.stats = true;
   document.body.classList.add("stats-mode");
   $("#stats").hidden = false;
@@ -3567,6 +3964,7 @@ syncModes();
 $("#modeSwitch").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   if (state.stats) closeStats(); // a view button leaves the statistics
+  if (state.home) { closeHome(); if (b.dataset.mode === state.mode) refresh(true); } // … and the overview
   if (b.dataset.mode === state.mode) return;
   state.mode = b.dataset.mode; state.nextPick = null;
   store.set("cotrack.mode", state.mode);
@@ -3620,6 +4018,19 @@ $("#sortPop").addEventListener("keydown", (e) => {
   else if (e.key === "Escape") { e.preventDefault(); setSortOpen(false, true); }
   else if (e.key === "Tab") setSortOpen(false);
 });
+/* density: full cards or one line per item (board only); remembered on this device */
+function syncDenseBtn() {
+  const b = $("#denseBtn"), label = tr(state.dense ? "denseOff" : "denseOn");
+  b.title = label; b.setAttribute("aria-label", label);
+  b.setAttribute("aria-pressed", String(state.dense));
+}
+syncDenseBtn();
+$("#denseBtn").addEventListener("click", () => {
+  state.dense = !state.dense;
+  store.set("cotrack.dense", state.dense ? "1" : null);
+  syncDenseBtn();
+  render();
+});
 // Sorted by time, "vor 5 Min." and the 24-hour tint depend on the clock, not only on data: poll() re-renders only when
 // something changed, so a quiet board is redrawn every minute while visible, and right away when it comes back.
 function tickAges() {
@@ -3663,9 +4074,35 @@ document.addEventListener("keydown", (e) => {
 const copyFooter = async () => copy((await api(P(state.project) + "/footer?lang=" + LANG)).footer, tr("footerCopied"));
 $("#copyFooter").addEventListener("click", () => copyFooter().catch((err) => toast(tr("error", err.message))));
 $("#menuBtn").addEventListener("click", openMenu);
-window.addEventListener("hashchange", () => { const s = decodeURIComponent(location.hash.slice(1)); if (s && s !== state.project) selectProject(s); });
+window.addEventListener("hashchange", () => {
+  const t = hashTarget();
+  if (t.slug && t.slug !== state.project) selectProject(t.slug);
+  openHashItem(t);
+});
+// Opens the item an address names ("#slug/A14"); the address then goes back to the project, so a reload shows the board.
+async function openHashItem(t) {
+  if (!t.ref || !t.slug || t.slug === ALL) return;
+  history.replaceState(null, "", "#" + encodeURIComponent(t.slug));
+  await openItemKey(t.slug + ":" + t.ref);
+}
+const itemUrl = (it) => `${location.origin}/#${encodeURIComponent(it.project_slug)}/${it.ref}`;
+// Opens an item by its key ("slug:A4") without leaving the view: from the loaded list, otherwise fetched.
+async function openItemKey(key) {
+  const loaded = state.items.find((i) => itemKey(i) === key);
+  if (loaded) return openEdit(loaded);
+  const n = key.indexOf(":");
+  try {
+    const { item } = await api(P(key.slice(0, n)) + "/items/" + encodeURIComponent(key.slice(n + 1)));
+    openEdit(item);
+  } catch (e) { if (e.message !== "unauthorized") toast(tr("histGone", keyRef(key))); }
+}
+// A reference inside a pill: a tap opens that item instead of the card it sits on.
+const refLink = (key) => h("button", { type: "button", class: "reflink", title: tr("openRef", keyRef(key)),
+  onclick: (e) => { e.stopPropagation(); openItemKey(key); } }, keyRef(key));
+const refLinks = (keys) => keys.map((k, n) => [n ? ", " : "", refLink(k)]);
 
 function selectProject(slug) {
+  closeHome();
   state.project = slug; state.version = -1; state.nextPick = null;
   store.set("cotrack.project", slug);
   history.replaceState(null, "", "#" + encodeURIComponent(slug));
@@ -3762,6 +4199,119 @@ function choosePicker(i) {
   if (p.slug !== state.project) selectProject(p.slug);
 }
 
+/* ---------------------------------------------------------- quick access (Ctrl/⌘+K) */
+// One field for everything: an item of any project by reference ("A14", "WEB:A14") or by words, a project, a view or an
+// action. The items (all projects, open and closed) are loaded once per opening and matched here; an item opens in its
+// dialog without leaving the current view.
+const pal = { items: [], rows: [], active: 0, req: 0 };
+const PAL_KEY = matchMedia("(hover: hover)").matches ? (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : tr("palKey")) : "";
+function palCommands() {
+  const mode = (m) => () => $(`#modeSwitch [data-mode="${m}"]`).click();
+  return [
+    { icon: "⌂", label: tr("homeOpen"), words: "übersicht overview home start projekte projects cockpit", run: openHome },
+    { icon: "▦", label: tr("modeBoard"), words: "board", run: mode("board") },
+    { icon: "▶", label: tr("viewNextTitle"), words: "next weiter", run: mode("next") },
+    { icon: "⛓", label: tr("modeDepsTitle"), words: "ketten chains abhängigkeiten dependencies", run: mode("deps") },
+    { icon: "↺", label: tr("hist"), words: "verlauf history änderungen changes", run: openHist },
+    { icon: "📊", label: tr("stTitle"), words: "statistiken statistics zahlen", run: openStats },
+    ...($("#fab").hidden ? [] : [{ icon: "+", label: tr("addOpen"), words: "neu new anlegen add punkt item", run: () => setAddOpen(true) }]),
+    { icon: "☰", label: tr("menu"), words: "menü menu einstellungen settings sprache darstellung", run: openMenu },
+  ];
+}
+function palMatches(query) {
+  const q = fold(query).trim(), terms = q.split(/\s+/).filter(Boolean), tight = q.replace(/[\s:]+/g, "");
+  const here = state.project;
+  const items = [];
+  for (const it of pal.items) {
+    const code = fold(codeOf(it.project_slug)), ref = fold(it.ref);
+    let score = 0;
+    if (!terms.length) score = isOpen(it) ? 1 : 0; // nothing typed: what changed last
+    else if (tight === ref || tight === code + ref) score = 100;
+    else if (/^[a-z]{1,4}\d+$/.test(tight) && (ref.startsWith(tight) || (code + ref).startsWith(tight))) score = 80;
+    else {
+      const text = fold(`${it.title} ${it.short || ""} ${it.ref} ${codeOf(it.project_slug)}`);
+      if (terms.every((t) => text.includes(t))) score = 50 + (fold(it.title).split(/[^\p{L}\p{N}]+/u).some((w) => w.startsWith(terms[0])) ? 10 : 0);
+    }
+    if (!score) continue;
+    items.push({ type: "item", it, score: score + (isOpen(it) ? 5 : 0) + (it.project_slug === here ? 3 : 0) });
+  }
+  items.sort((a, b) => b.score - a.score || String(b.it.updated_at || "").localeCompare(String(a.it.updated_at || "")));
+  const projects = (terms.length ? projectMatches(query, state.projects) : state.projects.filter((p) => p.slug !== here))
+    .slice(0, terms.length ? 5 : 4).map((p) => ({ type: "project", p }));
+  const cmds = palCommands().filter((c) => !terms.length || terms.every((t) => fold(c.label + " " + c.words).includes(t))).map((c) => ({ type: "cmd", c }));
+  return [[tr(terms.length ? "palItems" : "palRecent"), items.slice(0, terms.length ? 8 : 5)], [tr("projects"), projects], [tr("palActions"), cmds]];
+}
+function renderPal() {
+  const groups = palMatches($("#palInput").value).filter(([, rows]) => rows.length);
+  pal.rows = groups.flatMap(([, rows]) => rows);
+  pal.active = Math.min(pal.active, Math.max(pal.rows.length - 1, 0));
+  let n = 0;
+  const row = (r) => {
+    const i = n++;
+    const attrs = { role: "option", id: "pal-" + i, class: "pal-row", "aria-selected": String(i === pal.active), onclick: () => choosePal(i) };
+    if (r.type === "item") {
+      const it = r.it, k = kindBy(it.kind), pr = state.projects.find((p) => p.slug === it.project_slug);
+      return h("li", { ...attrs, class: "pal-row" + (isOpen(it) ? "" : " is-done"), style: `--kc:${k?.color || "#6b7280"}` },
+        h("span", { class: "ref" }, refLabel(it)), h("span", { class: "pal-t" }, it.title),
+        h("span", { class: "pal-x" }, isOpen(it) ? (it.project_slug === state.project ? "" : pr?.name || it.project_slug) : STATUS_LABELS[it.status]));
+    }
+    if (r.type === "project") {
+      return h("li", attrs, h("span", { class: "psel-code" }, r.p.code || "–"), h("span", { class: "pal-t" }, r.p.name),
+        h("span", { class: "pal-x" }, r.p.open_count ? tr("palOpen", r.p.open_count) : ""));
+    }
+    return h("li", attrs, h("span", { class: "pal-ic", "aria-hidden": "true" }, r.c.icon), h("span", { class: "pal-t" }, r.c.label));
+  };
+  $("#palList").replaceChildren(...(groups.length
+    ? groups.flatMap(([label, rows]) => [h("li", { class: "pal-head", role: "presentation" }, label), ...rows.map(row)])
+    : [h("li", { class: "psel-empty", role: "presentation" }, tr("palNone"))]));
+  $("#palInput").setAttribute("aria-activedescendant", pal.rows.length ? "pal-" + pal.active : "");
+}
+function setPalActive(i) {
+  if (!pal.rows.length) return;
+  pal.active = (i + pal.rows.length) % pal.rows.length;
+  for (const el of $("#palList").querySelectorAll('[role="option"]')) el.setAttribute("aria-selected", String(el.id === "pal-" + pal.active));
+  $("#palInput").setAttribute("aria-activedescendant", "pal-" + pal.active);
+  document.getElementById("pal-" + pal.active)?.scrollIntoView({ block: "nearest" });
+}
+function choosePal(i) {
+  const r = pal.rows[i];
+  if (!r) return;
+  $("#pal").close();
+  if (r.type === "item") openItemKey(itemKey(r.it));
+  else if (r.type === "project") { if (r.p.slug !== state.project) selectProject(r.p.slug); }
+  else r.c.run();
+}
+async function openPal() {
+  const d = $("#pal");
+  if (d.open || !state.token || !state.projects.length) return;
+  $("#palInput").value = ""; pal.active = 0;
+  renderPal();
+  d.showModal();
+  $("#palInput").focus();
+  const req = ++pal.req;
+  try {
+    const { items } = await api("/items?status=all");
+    if (req !== pal.req) return;
+    pal.items = items;
+    if (d.open) renderPal();
+  } catch {}
+}
+$("#palInput").addEventListener("input", () => { pal.active = 0; renderPal(); });
+$("#palInput").addEventListener("keydown", (e) => {
+  if (e.isComposing) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setPalActive(pal.active + (e.key === "ArrowDown" ? 1 : -1)); }
+  else if (e.key === "Enter") { e.preventDefault(); choosePal(pal.active); }
+  // a search field would first only clear itself on Escape
+  else if (e.key === "Escape") { e.preventDefault(); $("#pal").close(); }
+});
+// Ctrl+K / ⌘K from anywhere – but not over another dialog (its changes would be at stake).
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "k" || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.isComposing) return;
+  if ($("#dlg").open || $("#ask").open) return;
+  e.preventDefault();
+  if ($("#pal").open) $("#pal").close(); else openPal();
+});
+
 $("#projectBtn").addEventListener("click", () => (picker.open ? closePicker(true) : openPicker()));
 // While open, a click on the button only closes (Safari does not focus buttons, so focusout would close and reopen).
 $("#projectBtn").addEventListener("mousedown", (e) => { if (picker.open) e.preventDefault(); });
@@ -3797,6 +4347,7 @@ function showDialog(quiet, content) {
   delete d.dataset.locked; // showLogin sets it: that dialog cannot be dismissed
   delete d.dataset.closing;
   if ($("#ask").open) $("#ask").close();
+  if ($("#pal").open) $("#pal").close(); // e.g. a link to an item arriving while the quick access is open
   if (!d.open) d.showModal();
   if (quiet) d.focus();
   dialogInitial = formValues(form);
@@ -3847,6 +4398,7 @@ function onBackdrop(d, fn) {
 }
 onBackdrop($("#dlg"), dismissDialog);
 onBackdrop($("#ask"), () => $("#ask").close());
+onBackdrop($("#pal"), () => $("#pal").close());
 $("#dlg").addEventListener("cancel", (e) => { e.preventDefault(); dismissDialog(); });
 // Browsers may close a modal on a repeated Escape without a cancelable cancel event (Chrome does without a click
 // in between). If that dialog had to stay (login) or holds changes, bring it back and ask.
@@ -4023,6 +4575,10 @@ function openEdit(it) {
     source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
+  const srcOpen = h("a", { class: "src-open", target: "_blank", rel: "noopener noreferrer" }, tr("sourceOpen"));
+  const syncSrc = () => { const l = sourceLink(f.source.value, it.project_slug); srcOpen.hidden = !l; if (l) srcOpen.href = l.href; };
+  f.source.addEventListener("input", syncSrc);
+  syncSrc();
   const ai = alsoInPicker(it);
   // Effort and benefit (actions and ideas): an untouched estimate stays an estimate unless "confirm" is ticked.
   const sizable = isSizable(it), est = isEstimate(it);
@@ -4115,7 +4671,11 @@ function openEdit(it) {
     } catch (err) { toast(tr("error", err.message)); }
   };
   const d = openDialogQuiet(
-    h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, refLabel(it)), k.name),
+    h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, refLabel(it)), k.name,
+      h("button", { type: "button", class: "link-copy", title: tr("copyLink"), "aria-label": tr("copyLink"), onclick: () => copy(itemUrl(it), tr("linkCopied")) },
+        svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" },
+          svg("path", { d: "M10 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2" }),
+          svg("path", { d: "M14 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2" })))),
     h("label", null, tr("fTitle"), f.title, titleCount),
     h("label", null, tr("fBody"), f.body, bodyCount),
     checkBox,
@@ -4123,7 +4683,7 @@ function openEdit(it) {
     sz?.confirm ? h("label", { class: "chk size-confirm" }, sz.confirm, h("span", null, `${tr("sizeEstimated")} – ${tr("sizeConfirm")}`)) : null,
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
-    h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
+    h("div", { class: "row2" }, h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source), field(tr("fDue"), f.due)),
     ai.field,
     ai.add,
     // never changed since it was created (both times are set together): only "Angelegt …"
@@ -4159,9 +4719,11 @@ function openMenu() {
     installRow(),
     sec(tr("secProjects")),
     h("div", { class: "menu-list" },
+      h("button", { type: "button", class: "btn", onclick: go(openPal) }, tr("menuPal"), PAL_KEY ? h("kbd", null, PAL_KEY) : null),
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md?lang=" + LANG), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
+      state.projects.length ? h("button", { type: "button", class: "btn", onclick: go(openHome) }, tr("menuHome")) : null,
       state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
     sec(tr("secFooter")),
     h("div", { class: "menu-row" },

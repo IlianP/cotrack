@@ -59,16 +59,29 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Board für jeden Bildschirm** – quer füllen die Spalten die ganze Breite. Hochkant (Monitor, Tablet) passt das Board auf
   einen Bildschirm: Jede Kategorie scrollt für sich, kleine Kategorien teilen sich eine Spalte. Auf dem Handy wischst du von
   Kategorie zu Kategorie, ein Tipp auf D, A, I oder W springt direkt hin.
-- **Sortierung** – das Symbol neben der Suche sortiert das Board nach Nummer (Standard), nach letzter Änderung oder nach
-  Anlage. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip), und was in den letzten 24 Stunden
-  geändert wurde, ist leicht hinterlegt. Gespeichert pro Gerät.
+- **Übersicht** – ein Tipp auf das Logo zeigt alle Projekte auf einer Seite: vier Zahlen über alle Projekte (du bist dran,
+  überfällig, bei der KI, neu für dich – jede führt in die passende Ansicht) und je Projekt eine Karte mit den offenen
+  Punkten nach Kategorie, deinen drei nächsten Punkten, dem, was wartet oder bei der KI liegt, und dem, was fällig ist.
+  Projekte, die dich brauchen, stehen vorn.
+- **Schnellzugriff und Links auf Punkte** – Strg+K / ⌘K (oder ☰) öffnet ein Feld für alles: ein Punkt aus irgendeinem
+  Projekt per Kennung („A14“, „WEB:A14“) oder Stichwort, ein Projekt, eine Ansicht. Jeder Punkt hat einen Link
+  (`…/#projekt/A14`, im Bearbeiten-Dialog zu kopieren; `cotrack_get` nennt ihn der KI), und Kennungen auf den Karten
+  (⏸ A10, ▶ A16) öffnen den Punkt, den sie nennen.
+- **Sortierung und Kompakt-Ansicht** – das Symbol neben der Suche sortiert das Board nach Nummer (Standard), nach letzter
+  Änderung, nach Anlage oder nach Fälligkeit. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip),
+  und was in den letzten 24 Stunden geändert wurde, ist leicht hinterlegt. Das Symbol daneben zeigt eine Zeile je Punkt
+  statt Karten. Eine erledigte Voraussetzung steht als ✓ statt ⏸ da. Gespeichert pro Gerät.
+- **Fälligkeiten** – ein Termin am Punkt zeigt Wochentag und Abstand („Do., 19.11. · 2 Tage überfällig“), gelb ab zwei
+  Tagen vorher, rot danach. Die KI setzt ihn nur bei echten Terminen (`due`), nie geschätzt.
+- **Quellen als Links** – hat das Projekt ein GitHub-Repository, öffnen „PR #7“, „#12“, Commit-Kennungen und Dateipfade
+  in der Quelle eines Punkts die passende Seite.
 - **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
   Web-App ein (☰ → Chat-Fußzeile → Anpassen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
   etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
 - **PrioFlow** – ein Skill, mit dem die KI die offenen Punkte bewertet und dich durch die nächsten führt
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
-- **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann Nutzen im
-  Verhältnis zum Aufwand (ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet), Entscheidungen vor Aufgaben,
+- **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann was überfällig
+  oder in den nächsten zwei Tagen fällig ist, dann Nutzen im Verhältnis zum Aufwand (ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet), Entscheidungen vor Aufgaben,
   älteste zuerst. Ein Zeit-Filter (5 Min. · 30 Min. · 2 Std.) zeigt nur, was hineinpasst. Aufwand und Nutzen setzt oder bestätigst
   du direkt auf der Karte. *Erledigt* (Entscheidungen mit optionalem Ergebnis), *Später*, Rückgängig im Toast.
 - **Rückgängig** – nach deinen eigenen Änderungen in der Web-App (erledigt oder wieder geöffnet, im Bearbeiten-Dialog
@@ -230,7 +243,7 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
 | GET | `/api/projects/:slug/items/:ref/events` | Änderungsprotokoll eines Punkts, neueste zuerst (≤ 500): `{ref, from, events}` – `from` = die Punkte, aus denen er umgewandelt wurde (nächster zuerst, `deleted: true`, wenn inzwischen gelöscht), deren Einträge mitkommen |
 | GET | `/api/stats?project=&tz=` | Statistiken für die Web-App (pro Tag, offen nach Kategorie, Durchlaufzeiten, Serien, Rekorde, Ideen, Wartezeiten, Aktivität nach Wochentag und Uhrzeit, Aufwand & Nutzen); ohne `project` über alle Projekte; `tz` = `getTimezoneOffset()` des Browsers |
-| GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg |
+| GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg (als JSON mit `ext_open`/`ext_next` wie in den Projektlisten) |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
 | GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (Standard `multi`, `👤`, `🤖`, `de`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |
 

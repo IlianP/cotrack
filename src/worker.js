@@ -227,6 +227,8 @@ async function route(req, db, url, actor) {
   // Cross-project view, e.g. GET /api/items?owner=user&status=open
   if (seg[0] === "items" && seg.length === 1 && method === "GET") {
     const items = await listItems(db, filtersFrom(q));
+    // ext_open / ext_next as for one project: with a search or filter, a blocker may be open but not in the list.
+    await annotateLinks(db, items);
     if (q.get("format") === "text") {
       return plain(itemsAsText(items, await listKinds(db, true), { withProject: true, lang: await langFor(db, q), codes: await projectCodes(db) }));
     }
