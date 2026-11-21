@@ -1125,7 +1125,24 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
   return db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(row.id).first();
 }
 
+// expect (optional, e.g. from undo in the web app): { field: value } the item must still hold when the update is written;
+// compared in the UPDATE itself, so a change by someone else in between is not overwritten (409 conflict instead).
+const EXPECT_COLS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by"];
+function expectPredicate(input, item) {
+  const e = input.expect;
+  if (e === undefined || e === null) return { sql: "", args: [] };
+  if (typeof e !== "object" || Array.isArray(e)) throw new HttpError(400, "invalid_field", "expect");
+  const cols = Object.keys(e);
+  const bad = cols.find((c) => !EXPECT_COLS.includes(c) || (e[c] !== null && typeof e[c] !== "string"));
+  if (bad) throw new HttpError(400, "invalid_field", `expect.${bad}`);
+  // also_in before migration 0010: the column does not exist, so only null can match
+  const known = cols.filter((c) => item[c] !== undefined);
+  if (cols.some((c) => item[c] === undefined && e[c] !== null)) throw new HttpError(409, "conflict", "the item changed meanwhile");
+  return { sql: known.map((c) => ` AND ${c} IS ?`).join(""), args: known.map((c) => e[c]) };
+}
+
 export async function updateItem(db, project, item, input, actor) {
+  const expect = expectPredicate(input, item);
   const ticking = ["check", "uncheck"].some((k) => input[k] !== undefined && input[k] !== null && input[k] !== "");
   // Sub-item texts in order when the request arrived: a retry may only re-apply the selectors if they still mean the same lines.
   const layout = (it) => JSON.stringify(parseChecks(it.body).map((c) => c.text));
@@ -1192,9 +1209,9 @@ export async function updateItem(db, project, item, input, actor) {
     const update = db
       .prepare(
         `UPDATE items SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ?, updated_by = ? WHERE id = ?` +
-          (ticks ? " AND body IS ?" : ""),
+          (ticks ? " AND body IS ?" : "") + expect.sql,
       )
-      .bind(...cols.map((c) => changes[c]), t, actor, item.id, ...(ticks ? [item.body] : []));
+      .bind(...cols.map((c) => changes[c]), t, actor, item.id, ...(ticks ? [item.body] : []), ...expect.args);
     // The event is only written if the update hit the row (changes() refers to the statement before it).
     const event = db
       .prepare(
@@ -1203,6 +1220,7 @@ export async function updateItem(db, project, item, input, actor) {
       .bind(project.slug, item.ref, action, actor, JSON.stringify(data), t);
     const [res] = await batchSharing(db, [update, event, touchProject(db, project.slug, t)]);
     const fresh = await db.prepare(`${ITEM_SELECT} WHERE i.id = ?`).bind(item.id).first();
+    if (!res.meta.changes && expect.sql) throw new HttpError(409, "conflict", "the item changed meanwhile");
     if (res.meta.changes || !ticks) return fresh;
     if (attempt >= 2 || !fresh || layout(fresh) !== firstLayout) {
       throw new HttpError(409, "conflict", "the checklist changed meanwhile, read it again and retry");

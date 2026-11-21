@@ -57,7 +57,8 @@
   `alsoInPicker` in `src/ui.html`; `MAX_ALSO_IN` exists there and in `src/worker.js` – keep both in sync).
 - Undo (decision D33): your own changes in the web app get "Rückgängig" in the toast (`undoToast`; Ctrl+Z / ⌘Z while shown;
   only the latest toast counts). `revertChange(before, after)` in `src/ui.html` puts back only fields still as that change
-  left them (`UNDO_FIELDS`). Deleting has no confirm: `POST …/items/:ref/restore` (`restoreItem` in `src/worker.js`) brings
+  left them (`UNDO_FIELDS`), and sends what it read as `expect` – `updateItem` compares it inside the UPDATE (`EXPECT_COLS`,
+  409 `conflict`, undo then reads again). Deleting has no confirm: `POST …/items/:ref/restore` (`restoreItem` in `src/worker.js`) brings
   the item back from the snapshot in its "deleted" event (event "restored"); the history panel offers it as well.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
