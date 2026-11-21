@@ -365,6 +365,9 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dlg textarea { min-height: 90px; resize: vertical; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.lbl-row { display: flex; justify-content: space-between; gap: 8px; }
+.src-open { color: var(--accent); }
+.src-open[hidden] { display: none; }
 .btn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; height: 38px; padding: 0 14px; }
 .btn.danger { color: var(--danger); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
@@ -1185,6 +1188,7 @@ const STRINGS = {
     stWaitStill: (t) => `seit ${t} · noch offen`, stWaitFreed: (t, d) => `${t} · frei seit ${d}`,
     stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
     // Board: Kompakt-Ansicht, erledigte Voraussetzungen
+    sourceOpen: "öffnen ↗",
     // Fälligkeiten
     dueOver: (n) => (n === 1 ? "seit gestern überfällig" : `${n} Tage überfällig`), dueToday: "heute", dueTomorrow: "morgen",
     dueIn: (n) => `in ${n} Tagen`, nextDue: (t) => `Fällig ${t}`,
@@ -1391,6 +1395,7 @@ const STRINGS = {
     stWaitStill: (t) => `for ${t} · still open`, stWaitFreed: (t, d) => `${t} · free since ${d}`,
     stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
     // Board: compact view, prerequisites that are done
+    sourceOpen: "open ↗",
     // Due dates
     dueOver: (n) => (n === 1 ? "overdue since yesterday" : `${n} days overdue`), dueToday: "today", dueTomorrow: "tomorrow",
     dueIn: (n) => `in ${n} days`, nextDue: (t) => `Due ${t}`,
@@ -1965,6 +1970,34 @@ async function saveSize(it, body, confirmOnly) {
   refresh(false);
 }
 
+/* The source as a link: an address as it is; with a GitHub repository on the project also "PR #7", "#12" / "Issue #12",
+   a commit hash and a path in the repository ("docs/sitemap.md"). Anything else stays text. */
+function sourceLink(source, slug) {
+  const s = String(source || "").trim();
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) {
+    const href = s.split(/\s+/)[0];
+    let label = tr("source");
+    try {
+      const u = new URL(href), gh = u.hostname === "github.com" && u.pathname.match(/^\/[^/]+\/[^/]+\/(pull|issues)\/(\d+)/);
+      label = gh ? `${gh[1] === "pull" ? "PR" : "Issue"} #${gh[2]}` : u.hostname.replace(/^www\./, "");
+    } catch {}
+    return { href, label };
+  }
+  const repo = state.projects.find((p) => p.slug === slug)?.repo;
+  if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) return null;
+  const base = "https://github.com/" + repo;
+  let m;
+  if ((m = s.match(/^(?:PR|Pull Request)\s*#(\d+)/i))) return { href: `${base}/pull/${m[1]}`, label: s };
+  if ((m = s.match(/^(?:Issue\s*)?#(\d+)/i))) return { href: `${base}/issues/${m[1]}`, label: s };
+  if (/^[0-9a-f]{7,40}$/i.test(s)) return { href: `${base}/commit/${s}`, label: s.slice(0, 7) };
+  // a path: no spaces, and a folder or a file extension ("README.md", "docs/", "src/ui.html#L10")
+  if (/^[\w.@-]+(\/[\w.@-]+)*\/?(#[\w.-]+)?$/.test(s) && (s.includes("/") || /\.[a-z0-9]{1,8}(#|$)/i.test(s))) {
+    return { href: `${base}/blob/HEAD/${s}`, label: s };
+  }
+  return null;
+}
+
 function renderItem(it, k, before) {
   const closed = it.status === "done" || it.status === "dropped";
   const meta = [];
@@ -1991,8 +2024,9 @@ function renderItem(it, k, before) {
   const size = sizePill(it);
   if (size) meta.push(size);
   if (it.due) meta.push(duePill(it));
-  if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
-    ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + tr("source"))
+  const src = sourceLink(it.source, it.project_slug);
+  if (it.source) meta.push(h("span", { class: "pill" }, src
+    ? h("a", { href: src.href, title: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + src.label)
     : "📄 " + it.source));
   const preview = checks.length ? splitBody(it.body).rest : it.body; // the checklist itself shows as the ☑ counter
   const key = it.project_slug + ":" + it.ref + ":" + it.updated_at;
@@ -2225,6 +2259,7 @@ function nextCard(it, whyText, inherits) {
   if (result) result.value = state.nextDraft[key] || ""; // survives live re-renders
   const pr = state.project === ALL ? state.projects.find((p) => p.slug === it.project_slug) : null;
   const nxChecks = itemChecks(it), nxRest = nxChecks.length ? splitBody(it.body).rest : "";
+  const nxSrc = sourceLink(it.source, it.project_slug);
   return h("article", { class: "nx-card", style: `--kc:${k.color || "#6b7280"}`, "aria-labelledby": "nxTitle" },
     h("div", { class: "nx-top" },
       h("span", { class: "kbadge" }, it.kind),
@@ -2232,8 +2267,7 @@ function nextCard(it, whyText, inherits) {
       h("span", { class: "nx-kind" }, k.name),
       h("span", { class: "spacer" }),
       pr ? h("span", { class: "pill", title: pr.slug }, pr.name) : null,
-      it.source && /^https?:\/\//.test(it.source)
-        ? h("a", { class: "pill", href: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + tr("source")) : null),
+      nxSrc ? h("a", { class: "pill", href: nxSrc.href, title: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + nxSrc.label) : null),
     h("h2", { class: "nx-title", id: "nxTitle" }, it.title),
     h("p", { class: "nx-why" }, whyText),
     sizeControls(it, inherits),
@@ -4029,6 +4063,10 @@ function openEdit(it) {
     source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
     due: h("input", { type: "date", value: it.due || "" }),
   };
+  const srcOpen = h("a", { class: "src-open", target: "_blank", rel: "noopener noreferrer" }, tr("sourceOpen"));
+  const syncSrc = () => { const l = sourceLink(f.source.value, it.project_slug); srcOpen.hidden = !l; if (l) srcOpen.href = l.href; };
+  f.source.addEventListener("input", syncSrc);
+  syncSrc();
   const ai = alsoInPicker(it);
   // Effort and benefit (actions and ideas): an untouched estimate stays an estimate unless "confirm" is ticked.
   const sizable = isSizable(it), est = isEstimate(it);
@@ -4124,7 +4162,7 @@ function openEdit(it) {
     sz?.confirm ? h("label", { class: "chk size-confirm" }, sz.confirm, h("span", null, `${tr("sizeEstimated")} – ${tr("sizeConfirm")}`)) : null,
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
-    h("div", { class: "row2" }, field(tr("fSource"), f.source), field(tr("fDue"), f.due)),
+    h("div", { class: "row2" }, h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source), field(tr("fDue"), f.due)),
     ai.field,
     ai.add,
     // never changed since it was created (both times are set together): only "Angelegt …"
