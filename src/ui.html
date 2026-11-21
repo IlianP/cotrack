@@ -248,16 +248,23 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .fitcol > .col { flex: 0 0 auto; max-height: min(45%, calc((100% - 120px) / (var(--share, 2) - 1) - 14px)); }
 .fitcol > .col.grow { flex: 1 1 0; min-height: 120px; max-height: none; }
 .board.fit .col-head, .board.swipe .col-head { flex: none; }
-.board.fit .items, .board.swipe .items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+/* only up and down stay inside a category: "contain" on both axes would also swallow the sideways swipe to the next one */
+.board.fit .items, .board.swipe .items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
 /* room to scroll the last items out from under the floating "+" */
 .board.fit .fitcol:last-child > .col:last-child .items, .board.swipe .items { padding-bottom: 68px; }
 .board.swipe {
-  position: relative; display: flex; align-items: stretch; gap: 10px; height: var(--board-h, 70vh); margin: 0 -16px; padding: 0 16px;
+  position: relative; display: flex; align-items: stretch; gap: 10px; height: var(--board-h, 70vh); margin: 0 -16px; padding: 0 28px;
   overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
 }
 .board.swipe::-webkit-scrollbar { display: none; }
-/* the neighbours show a little at the edges, so it is clear that there is more to swipe to */
-.board.swipe > .col { flex: 0 0 calc(100% - 24px); scroll-snap-align: center; }
+/* One swipe = one category: every category is a stop (also a fast fling moves only to the next one), centred, and the
+   neighbours show 18px at the edges (first and last too, thanks to the 28px padding), so it is clear there is more. */
+.board.swipe > .col { flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+/* The neighbours are only a hint: their content is faded and cannot be tapped (no accidental "done" at the screen edge);
+   a tap there goes to that category (jumpLane). */
+.board.swipe > .col:not(.cur) { cursor: pointer; }
+.board.swipe > .col > * { transition: opacity .2s; }
+.board.swipe > .col:not(.cur) > * { pointer-events: none; opacity: .35; }
 .col { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .col-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 .col-head h2 { margin: 0; font-size: 14.5px; font-weight: 650; flex: 1; }
@@ -1755,7 +1762,13 @@ function jumpLane(code, smooth) {
 }
 function syncLaneChips() {
   for (const b of $("#kindChips").children) b.setAttribute("aria-pressed", String(b.dataset.kind === state.lane));
+  for (const s of laneEls()) s.classList.toggle("cur", s.dataset.kind === state.lane);
 }
+// A tap on a neighbour at the screen edge goes there – its items take no taps (CSS), so nothing is ticked by accident.
+$("#board").addEventListener("click", (e) => {
+  const lane = $("#board").classList.contains("swipe") && e.target.closest?.("#board > section.col:not(.cur)");
+  if (lane) jumpLane(lane.dataset.kind, true);
+});
 let laneFrame = 0;
 $("#board").addEventListener("scroll", () => {
   if (laneFrame || !$("#board").classList.contains("swipe")) return;
