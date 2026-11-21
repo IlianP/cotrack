@@ -365,6 +365,34 @@ dialog.ask { width: min(470px, calc(100vw - 24px)); }
 .dlg textarea { min-height: 90px; resize: vertical; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+/* quick access (Ctrl/⌘+K) */
+dialog.pal { width: min(640px, calc(100vw - 24px)); margin-top: min(12vh, 96px); overflow: hidden; }
+dialog.pal[open] { display: flex; flex-direction: column; }
+.pal input {
+  flex: none; width: 100%; height: 54px; padding: 0 18px; border: 0; border-bottom: 1px solid var(--line); background: none;
+  font-size: 17px; outline: none; -webkit-appearance: none; appearance: none;
+}
+.pal input::-webkit-search-cancel-button { display: none; }
+.pal-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; max-height: min(60vh, 470px); overscroll-behavior: contain; }
+.pal-head { padding: 9px 10px 3px; font-size: 12px; font-weight: 650; color: var(--muted); }
+.pal-row { display: flex; align-items: baseline; gap: 9px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.pal-row[aria-selected="true"] { background: var(--surface-2); }
+.pal-row .ref { cursor: inherit; }
+.pal-row .pal-ic { flex: none; width: 1.6em; text-align: center; color: var(--muted); }
+.pal-t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-row.is-done .pal-t { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.pal-x { flex: none; font-size: 12px; color: var(--muted); }
+.pal-foot { flex: none; margin: 0; padding: 8px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+@media (hover: none) { .pal-foot { display: none; } }
+@media (max-width: 560px) { dialog.pal { margin-top: 10px; } .pal-list { max-height: 46vh; } }
+/* a reference inside a pill opens that item */
+.reflink { border: 0; background: none; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; }
+.reflink:hover, .reflink:focus-visible { text-decoration-color: currentColor; }
+/* edit dialog: copy the link to this item */
+.link-copy { margin-left: auto; width: 34px; height: 34px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--muted); }
+.link-copy:hover, .link-copy:focus-visible { background: var(--surface-2); color: var(--text); }
+.link-copy svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn kbd { margin-left: 8px; font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); }
 .lbl-row { display: flex; justify-content: space-between; gap: 8px; }
 .src-open { color: var(--accent); }
 .src-open[hidden] { display: none; }
@@ -957,6 +985,14 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 
 <dialog id="dlg" tabindex="-1"></dialog>
 <dialog id="ask" class="ask"></dialog>
+<!-- quick access (Ctrl/⌘+K): items of all projects, projects, views and actions -->
+<dialog id="pal" class="pal" aria-label="Schnellzugriff" data-t-attr="aria-label:palTitle">
+  <input id="palInput" type="search" role="combobox" aria-expanded="true" aria-controls="palList" aria-autocomplete="list"
+    aria-label="Schnellzugriff" placeholder="Kennung, Stichwort, Projekt oder Ansicht …" autocomplete="off" autocapitalize="off"
+    spellcheck="false" enterkeyhint="go" data-t-attr="aria-label:palTitle;placeholder:palPh">
+  <ul id="palList" class="pal-list" role="listbox" aria-label="Schnellzugriff" data-t-attr="aria-label:palTitle"></ul>
+  <p class="pal-foot" data-t="palFoot">↑↓ wählen · ↵ öffnen · Esc schließen</p>
+</dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -1189,6 +1225,11 @@ const STRINGS = {
     stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
     // Board: Kompakt-Ansicht, erledigte Voraussetzungen
     sourceOpen: "öffnen ↗",
+    // Schnellzugriff, Direktlinks
+    palTitle: "Schnellzugriff", palPh: "Kennung, Stichwort, Projekt oder Ansicht …", palItems: "Punkte", palRecent: "Zuletzt geändert",
+    palActions: "Ansichten und Aktionen", palNone: "Nichts gefunden.", palFoot: "↑↓ wählen · ↵ öffnen · Esc schließen",
+    palOpen: (n) => `${n} offen`, menuPal: "🔎 Schnellzugriff: Punkte in allen Projekten finden", palKey: "Strg+K",
+    openRef: (ref) => `${ref} öffnen`, copyLink: "Link zu diesem Punkt kopieren", linkCopied: "Link kopiert",
     // Fälligkeiten
     dueOver: (n) => (n === 1 ? "seit gestern überfällig" : `${n} Tage überfällig`), dueToday: "heute", dueTomorrow: "morgen",
     dueIn: (n) => `in ${n} Tagen`, nextDue: (t) => `Fällig ${t}`,
@@ -1396,6 +1437,11 @@ const STRINGS = {
     stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
     // Board: compact view, prerequisites that are done
     sourceOpen: "open ↗",
+    // Quick access, links to items
+    palTitle: "Quick access", palPh: "Reference, keyword, project or view …", palItems: "Items", palRecent: "Recently changed",
+    palActions: "Views and actions", palNone: "Nothing found.", palFoot: "↑↓ select · ↵ open · Esc close",
+    palOpen: (n) => `${n} open`, menuPal: "🔎 Quick access: find items in all projects", palKey: "Ctrl+K",
+    openRef: (ref) => `Open ${ref}`, copyLink: "Copy the link to this item", linkCopied: "Link copied",
     // Due dates
     dueOver: (n) => (n === 1 ? "overdue since yesterday" : `${n} days overdue`), dueToday: "today", dueTomorrow: "tomorrow",
     dueIn: (n) => `in ${n} days`, nextDue: (t) => `Due ${t}`,
@@ -1442,9 +1488,16 @@ const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · N
 const SORTS = ["num", "changed", "created", "due"];
 const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
 const SORT_SYM = { num: "#", changed: "↻", created: "+", due: "◷" };
+// The address: "#slug" selects a project, "#slug/A14" also opens that item – a link to one item, e.g. from a chat.
+function hashTarget() {
+  let raw = "";
+  try { raw = decodeURIComponent(location.hash.slice(1)); } catch {}
+  const n = raw.indexOf("/"), ref = n > 0 ? raw.slice(n + 1).toUpperCase() : "";
+  return { slug: n > 0 ? raw.slice(0, n) : raw, ref: /^[A-Z]{1,4}\d{1,6}$/.test(ref) ? ref : "" };
+}
 const state = {
   token: store.get("cotrack.token"),
-  project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
+  project: hashTarget().slug || store.get("cotrack.project") || "",
   // Next: deferred items ("Später", this page only), the item picked from the list, unsent outcomes per item
   nextLater: [], nextPick: null, nextDraft: {},
   nextTime: ["5", "30", "120"].includes(store.get("cotrack.nextTime")) ? store.get("cotrack.nextTime") : "", // Next: time filter in minutes
@@ -1512,7 +1565,9 @@ async function boot() {
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
     renderKindSeg();
+    const linked = hashTarget(); // before the first refresh: selecting the project rewrites the address
     await refresh(true);
+    openHashItem(linked);
     if (!boot.started) {
       boot.started = true;
       setInterval(poll, 4000);
@@ -2011,13 +2066,13 @@ function renderItem(it, k, before) {
   const waits = closed ? [] : waitKeys(it).filter((k) => stillOpen(it, k));
   for (const k of waitKeys(it)) {
     meta.push(closed || waits.includes(k)
-      ? h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + keyRef(k))
-      : h("span", { class: "pill freed", title: tr("waitDone") }, "✓ " + keyRef(k)));
+      ? h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ ", refLink(k))
+      : h("span", { class: "pill freed", title: tr("waitDone") }, "✓ ", refLink(k)));
   }
   const next = successors.get(itemKey(it));
-  if (next) meta.push(h("span", { class: "pill follows", title: tr("followedBy") }, "▶ " + next.map((k) => keyRef(k)).join(", ")));
+  if (next) meta.push(h("span", { class: "pill follows", title: tr("followedBy") }, "▶ ", refLinks(next)));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
-  if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ " + it.converted_to));
+  if (it.converted_to) meta.push(h("span", { class: "pill" }, "→ ", refLink(it.project_slug + ":" + it.converted_to)));
   if (k.actionable && it.owner && it.owner !== k.default_owner) meta.push(h("span", { class: "pill" }, (it.owner === "ai" ? "🤖 " : "👤 ") + ownerLabel(it.owner)));
   const checks = itemChecks(it);
   if (checks.length) meta.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
@@ -2046,7 +2101,7 @@ function renderItem(it, k, before) {
     // (the project is already in the reference: "WEB:A4" in "Alle Projekte" and for items shown from another project)
     if (age) mini.push(age);
     if (waits.length) mini.push(h("span", { class: "pill wait", title: `${tr("waitingFor")}: ${waits.map((k) => keyRef(k)).join(", ")}` },
-      "⏸ " + (waits.length > 1 ? waits.length : state.project === ALL ? "" : keyRef(waits[0]))));
+      "⏸ ", waits.length > 1 ? waits.length : state.project === ALL ? "" : refLink(waits[0])));
     if (it.status === "doing" || it.status === "blocked") mini.push(h("span", { class: "dot st-" + it.status, role: "img", title: STATUS_LABELS[it.status], "aria-label": STATUS_LABELS[it.status] }));
     else if (it.status === "dropped") mini.push(h("span", { class: "pill" }, STATUS_LABELS[it.status]));
     if (checks.length) mini.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
@@ -3703,7 +3758,32 @@ document.addEventListener("keydown", (e) => {
 const copyFooter = async () => copy((await api(P(state.project) + "/footer?lang=" + LANG)).footer, tr("footerCopied"));
 $("#copyFooter").addEventListener("click", () => copyFooter().catch((err) => toast(tr("error", err.message))));
 $("#menuBtn").addEventListener("click", openMenu);
-window.addEventListener("hashchange", () => { const s = decodeURIComponent(location.hash.slice(1)); if (s && s !== state.project) selectProject(s); });
+window.addEventListener("hashchange", () => {
+  const t = hashTarget();
+  if (t.slug && t.slug !== state.project) selectProject(t.slug);
+  openHashItem(t);
+});
+// Opens the item an address names ("#slug/A14"); the address then goes back to the project, so a reload shows the board.
+async function openHashItem(t) {
+  if (!t.ref || !t.slug || t.slug === ALL) return;
+  history.replaceState(null, "", "#" + encodeURIComponent(t.slug));
+  await openItemKey(t.slug + ":" + t.ref);
+}
+const itemUrl = (it) => `${location.origin}/#${encodeURIComponent(it.project_slug)}/${it.ref}`;
+// Opens an item by its key ("slug:A4") without leaving the view: from the loaded list, otherwise fetched.
+async function openItemKey(key) {
+  const loaded = state.items.find((i) => itemKey(i) === key);
+  if (loaded) return openEdit(loaded);
+  const n = key.indexOf(":");
+  try {
+    const { item } = await api(P(key.slice(0, n)) + "/items/" + encodeURIComponent(key.slice(n + 1)));
+    openEdit(item);
+  } catch (e) { if (e.message !== "unauthorized") toast(tr("histGone", keyRef(key))); }
+}
+// A reference inside a pill: a tap opens that item instead of the card it sits on.
+const refLink = (key) => h("button", { type: "button", class: "reflink", title: tr("openRef", keyRef(key)),
+  onclick: (e) => { e.stopPropagation(); openItemKey(key); } }, keyRef(key));
+const refLinks = (keys) => keys.map((k, n) => [n ? ", " : "", refLink(k)]);
 
 function selectProject(slug) {
   state.project = slug; state.version = -1; state.nextPick = null;
@@ -3802,6 +3882,116 @@ function choosePicker(i) {
   if (p.slug !== state.project) selectProject(p.slug);
 }
 
+/* ---------------------------------------------------------- quick access (Ctrl/⌘+K) */
+// One field for everything: an item of any project by reference ("A14", "WEB:A14") or by words, a project, a view or an
+// action. The items (all projects, open and closed) are loaded once per opening and matched here; an item opens in its
+// dialog without leaving the current view.
+const pal = { items: [], rows: [], active: 0, req: 0 };
+const PAL_KEY = matchMedia("(hover: hover)").matches ? (/Mac|iPhone|iPad/.test(navigator.platform) ? "⌘K" : tr("palKey")) : "";
+function palCommands() {
+  const mode = (m) => () => $(`#modeSwitch [data-mode="${m}"]`).click();
+  return [
+    { icon: "▦", label: tr("modeBoard"), words: "board", run: mode("board") },
+    { icon: "▶", label: tr("viewNextTitle"), words: "next weiter", run: mode("next") },
+    { icon: "⛓", label: tr("modeDepsTitle"), words: "ketten chains abhängigkeiten dependencies", run: mode("deps") },
+    { icon: "↺", label: tr("hist"), words: "verlauf history änderungen changes", run: openHist },
+    { icon: "📊", label: tr("stTitle"), words: "statistiken statistics zahlen", run: openStats },
+    ...($("#fab").hidden ? [] : [{ icon: "+", label: tr("addOpen"), words: "neu new anlegen add punkt item", run: () => setAddOpen(true) }]),
+    { icon: "☰", label: tr("menu"), words: "menü menu einstellungen settings sprache darstellung", run: openMenu },
+  ];
+}
+function palMatches(query) {
+  const q = fold(query).trim(), terms = q.split(/\s+/).filter(Boolean), tight = q.replace(/[\s:]+/g, "");
+  const here = state.project;
+  const items = [];
+  for (const it of pal.items) {
+    const code = fold(codeOf(it.project_slug)), ref = fold(it.ref);
+    let score = 0;
+    if (!terms.length) score = isOpen(it) ? 1 : 0; // nothing typed: what changed last
+    else if (tight === ref || tight === code + ref) score = 100;
+    else if (/^[a-z]{1,4}\d+$/.test(tight) && (ref.startsWith(tight) || (code + ref).startsWith(tight))) score = 80;
+    else {
+      const text = fold(`${it.title} ${it.short || ""} ${it.ref} ${codeOf(it.project_slug)}`);
+      if (terms.every((t) => text.includes(t))) score = 50 + (fold(it.title).split(/[^\p{L}\p{N}]+/u).some((w) => w.startsWith(terms[0])) ? 10 : 0);
+    }
+    if (!score) continue;
+    items.push({ type: "item", it, score: score + (isOpen(it) ? 5 : 0) + (it.project_slug === here ? 3 : 0) });
+  }
+  items.sort((a, b) => b.score - a.score || String(b.it.updated_at || "").localeCompare(String(a.it.updated_at || "")));
+  const projects = (terms.length ? projectMatches(query, state.projects) : state.projects.filter((p) => p.slug !== here))
+    .slice(0, terms.length ? 5 : 4).map((p) => ({ type: "project", p }));
+  const cmds = palCommands().filter((c) => !terms.length || terms.every((t) => fold(c.label + " " + c.words).includes(t))).map((c) => ({ type: "cmd", c }));
+  return [[tr(terms.length ? "palItems" : "palRecent"), items.slice(0, terms.length ? 8 : 5)], [tr("projects"), projects], [tr("palActions"), cmds]];
+}
+function renderPal() {
+  const groups = palMatches($("#palInput").value).filter(([, rows]) => rows.length);
+  pal.rows = groups.flatMap(([, rows]) => rows);
+  pal.active = Math.min(pal.active, Math.max(pal.rows.length - 1, 0));
+  let n = 0;
+  const row = (r) => {
+    const i = n++;
+    const attrs = { role: "option", id: "pal-" + i, class: "pal-row", "aria-selected": String(i === pal.active), onclick: () => choosePal(i) };
+    if (r.type === "item") {
+      const it = r.it, k = kindBy(it.kind), pr = state.projects.find((p) => p.slug === it.project_slug);
+      return h("li", { ...attrs, class: "pal-row" + (isOpen(it) ? "" : " is-done"), style: `--kc:${k?.color || "#6b7280"}` },
+        h("span", { class: "ref" }, refLabel(it)), h("span", { class: "pal-t" }, it.title),
+        h("span", { class: "pal-x" }, isOpen(it) ? (it.project_slug === state.project ? "" : pr?.name || it.project_slug) : STATUS_LABELS[it.status]));
+    }
+    if (r.type === "project") {
+      return h("li", attrs, h("span", { class: "psel-code" }, r.p.code || "–"), h("span", { class: "pal-t" }, r.p.name),
+        h("span", { class: "pal-x" }, r.p.open_count ? tr("palOpen", r.p.open_count) : ""));
+    }
+    return h("li", attrs, h("span", { class: "pal-ic", "aria-hidden": "true" }, r.c.icon), h("span", { class: "pal-t" }, r.c.label));
+  };
+  $("#palList").replaceChildren(...(groups.length
+    ? groups.flatMap(([label, rows]) => [h("li", { class: "pal-head", role: "presentation" }, label), ...rows.map(row)])
+    : [h("li", { class: "psel-empty", role: "presentation" }, tr("palNone"))]));
+  $("#palInput").setAttribute("aria-activedescendant", pal.rows.length ? "pal-" + pal.active : "");
+}
+function setPalActive(i) {
+  if (!pal.rows.length) return;
+  pal.active = (i + pal.rows.length) % pal.rows.length;
+  for (const el of $("#palList").querySelectorAll('[role="option"]')) el.setAttribute("aria-selected", String(el.id === "pal-" + pal.active));
+  $("#palInput").setAttribute("aria-activedescendant", "pal-" + pal.active);
+  document.getElementById("pal-" + pal.active)?.scrollIntoView({ block: "nearest" });
+}
+function choosePal(i) {
+  const r = pal.rows[i];
+  if (!r) return;
+  $("#pal").close();
+  if (r.type === "item") openItemKey(itemKey(r.it));
+  else if (r.type === "project") { if (r.p.slug !== state.project) selectProject(r.p.slug); }
+  else r.c.run();
+}
+async function openPal() {
+  const d = $("#pal");
+  if (d.open || !state.token || !state.projects.length) return;
+  $("#palInput").value = ""; pal.active = 0;
+  renderPal();
+  d.showModal();
+  $("#palInput").focus();
+  const req = ++pal.req;
+  try {
+    const { items } = await api("/items?status=all");
+    if (req !== pal.req) return;
+    pal.items = items;
+    if (d.open) renderPal();
+  } catch {}
+}
+$("#palInput").addEventListener("input", () => { pal.active = 0; renderPal(); });
+$("#palInput").addEventListener("keydown", (e) => {
+  if (e.isComposing) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setPalActive(pal.active + (e.key === "ArrowDown" ? 1 : -1)); }
+  else if (e.key === "Enter") { e.preventDefault(); choosePal(pal.active); }
+});
+// Ctrl+K / ⌘K from anywhere – but not over another dialog (its changes would be at stake).
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "k" || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.isComposing) return;
+  if ($("#dlg").open || $("#ask").open) return;
+  e.preventDefault();
+  if ($("#pal").open) $("#pal").close(); else openPal();
+});
+
 $("#projectBtn").addEventListener("click", () => (picker.open ? closePicker(true) : openPicker()));
 // While open, a click on the button only closes (Safari does not focus buttons, so focusout would close and reopen).
 $("#projectBtn").addEventListener("mousedown", (e) => { if (picker.open) e.preventDefault(); });
@@ -3887,6 +4077,7 @@ function onBackdrop(d, fn) {
 }
 onBackdrop($("#dlg"), dismissDialog);
 onBackdrop($("#ask"), () => $("#ask").close());
+onBackdrop($("#pal"), () => $("#pal").close());
 $("#dlg").addEventListener("cancel", (e) => { e.preventDefault(); dismissDialog(); });
 // Browsers may close a modal on a repeated Escape without a cancelable cancel event (Chrome does without a click
 // in between). If that dialog had to stay (login) or holds changes, bring it back and ask.
@@ -4154,7 +4345,11 @@ function openEdit(it) {
     } catch (err) { toast(tr("error", err.message)); }
   };
   const d = openDialogQuiet(
-    h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, refLabel(it)), k.name),
+    h("h3", { style: `--kc:${k.color}` }, h("span", { class: "kbadge" }, refLabel(it)), k.name,
+      h("button", { type: "button", class: "link-copy", title: tr("copyLink"), "aria-label": tr("copyLink"), onclick: () => copy(itemUrl(it), tr("linkCopied")) },
+        svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" },
+          svg("path", { d: "M10 13.5a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2" }),
+          svg("path", { d: "M14 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2" })))),
     h("label", null, tr("fTitle"), f.title, titleCount),
     h("label", null, tr("fBody"), f.body, bodyCount),
     checkBox,
@@ -4198,6 +4393,7 @@ function openMenu() {
     installRow(),
     sec(tr("secProjects")),
     h("div", { class: "menu-list" },
+      h("button", { type: "button", class: "btn", onclick: go(openPal) }, tr("menuPal"), PAL_KEY ? h("kbd", null, PAL_KEY) : null),
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md?lang=" + LANG), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,

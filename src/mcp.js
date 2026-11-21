@@ -596,7 +596,7 @@ const titleHint = (it, M) => ([...it.title].length >= TITLE_HINT_AT ? "\n" + M.t
 const bodyHint = (it, M) => ([...(it.body || "")].length >= BODY_HINT_AT ? "\n" + M.bodyHint([...it.body].length) : "");
 const projectTitle = (p) => `${p.slug}${p.code ? ` [${p.code}]` : ""} – ${p.name}${p.repo ? ` (${p.repo})` : ""}`;
 
-async function callTool(name, args, db, actor, lang) {
+async function callTool(name, args, db, actor, lang, origin = "") {
   const M = MSG[lang] || MSG.de;
   switch (name) {
     case "cotrack_projects": {
@@ -671,6 +671,8 @@ async function callTool(name, args, db, actor, lang) {
       if (it.source) lines.push(`${M.source}: ${it.source}`);
       if (it.converted_to) lines.push(`${M.convertedTo}: ${it.converted_to}`);
       lines.push(M.history(it));
+      // Opens this item in the web app – for a link in the chat.
+      if (origin) lines.push(`Link: ${origin}/#${encodeURIComponent(it.project_slug)}/${it.ref}`);
       return lines.join("\n");
     }
     case "cotrack_add": {
@@ -741,7 +743,7 @@ function describeChange(e) {
 
 /* ---------------------------------------------------------- JSON-RPC */
 
-async function handleMessage(msg, db, actor, lang) {
+async function handleMessage(msg, db, actor, lang, origin = "") {
   const { id, method, params = {} } = msg || {};
   const isNotification = id === undefined || id === null;
   const reply = (result) => ({ jsonrpc: "2.0", id, result });
@@ -766,7 +768,7 @@ async function handleMessage(msg, db, actor, lang) {
       return reply({ tools: TOOLS[lang] });
     case "tools/call": {
       try {
-        const text = await callTool(params.name, params.arguments || {}, db, actor, lang);
+        const text = await callTool(params.name, params.arguments || {}, db, actor, lang, origin);
         return reply({ content: [{ type: "text", text }] });
       } catch (err) {
         // Tool errors go back to the AI as readable text so it can correct itself.
@@ -814,10 +816,10 @@ export async function handleMcp(request, env, url) {
   }
   const lang = await serverLang(env.DB);
   if (Array.isArray(body)) {
-    const answers = (await Promise.all(body.map((m) => handleMessage(m, env.DB, actor, lang)))).filter(Boolean);
+    const answers = (await Promise.all(body.map((m) => handleMessage(m, env.DB, actor, lang, url.origin)))).filter(Boolean);
     return answers.length ? rpcResponse(answers) : new Response(null, { status: 202, headers: CORS });
   }
-  const answer = await handleMessage(body, env.DB, actor, lang);
+  const answer = await handleMessage(body, env.DB, actor, lang, url.origin);
   return answer ? rpcResponse(answer) : new Response(null, { status: 202, headers: CORS });
 }
 
