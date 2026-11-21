@@ -469,10 +469,13 @@ const PROLOGUE = (slugs) => [
   `DELETE FROM counters WHERE project_slug IN (${slugs});`,
   `DELETE FROM projects WHERE slug IN (${slugs});`,
 ];
-// Renumber the whole change log by time (ties keep their order), so it reads in order next to copied projects.
+// Renumber the whole change log by time (ties keep their order), so it reads in order next to copied projects. The new
+// numbers start above every number handed out so far: browsers keep cursors into the log (Verlauf, badges, "new" in the
+// overview), and a number that went down again would hide later changes from them.
 const EPILOGUE = [
   "DROP TABLE IF EXISTS demo_event_order;",
-  "CREATE TABLE demo_event_order AS SELECT id AS old_id, ROW_NUMBER() OVER (ORDER BY at, id) AS new_id FROM events;",
+  "CREATE TABLE demo_event_order AS SELECT id AS old_id, (SELECT MAX(COALESCE((SELECT seq FROM sqlite_sequence WHERE name = 'events'), 0), " +
+    "COALESCE((SELECT MAX(id) FROM events), 0))) + ROW_NUMBER() OVER (ORDER BY at, id) AS new_id FROM events;",
   "UPDATE events SET id = -(SELECT new_id FROM demo_event_order WHERE old_id = events.id);",
   "UPDATE events SET id = -id;",
   "DROP TABLE demo_event_order;",
