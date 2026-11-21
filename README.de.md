@@ -71,6 +71,10 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   Verhältnis zum Aufwand (ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet), Entscheidungen vor Aufgaben,
   älteste zuerst. Ein Zeit-Filter (5 Min. · 30 Min. · 2 Std.) zeigt nur, was hineinpasst. Aufwand und Nutzen setzt oder bestätigst
   du direkt auf der Karte. *Erledigt* (Entscheidungen mit optionalem Ergebnis), *Später*, Rückgängig im Toast.
+- **Rückgängig** – nach deinen eigenen Änderungen in der Web-App (erledigt oder wieder geöffnet, im Bearbeiten-Dialog
+  gespeichert, gelöscht, schnell angelegt, Aufwand und Nutzen gesetzt) bietet der Toast *Rückgängig* an, solange er zu sehen
+  ist auch mit Strg+Z / ⌘Z. Zurückgesetzt wird nur, was seitdem niemand anders geändert hat. Löschen fragt nicht mehr nach:
+  Ein gelöschter Punkt lässt sich auch später im Verlauf wiederherstellen, unter seiner eigenen Kennung.
 - **Ketten** – die dritte Ansicht (oben umschaltbar: Board · Next · Ketten) zeigt, was worauf wartet: Pfeile von der
   Voraussetzung zum wartenden Punkt, erledigte Voraussetzungen gestrichelt, frei gewordene Punkte hervorgehoben, Kreise und
   unbekannte Kennungen rot; dazu „Auffällig“ (frei geworden, hält am meisten auf, du bist dran). Filter und Suche falten
@@ -216,7 +220,8 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/code-suggestion?slug=` | erstes freies Kürzel für einen Slug (Initialen, dann die ersten 2–4 Buchstaben) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | Punkte auflisten (`format=text`: eine kompakte Zeile je Punkt, für KI-Assistenten); mit den Punkten anderer Projekte, die hier mit angezeigt werden (`also_in`, dazu `ext_open`/`ext_next` für Verknüpfungen außerhalb der Liste), außer mit `shared=0` |
 | POST | `/api/projects/:slug/items` | anlegen `{kind, title, short?, body?, owner?, status?, waiting_on?, also_in?, source?, due?, effort?, benefit?, seq?}` – `waiting_on` darf Punkte anderer Projekte nennen (`"IMM:A2"`), `also_in` nennt weitere Projekte, die den Punkt mit anzeigen (`"IMM"`); `effort` `XS\|S\|M\|L\|XL`, `benefit` `low\|medium\|high`, nur für A und I; `sized_by` hält fest, wer sie gesetzt hat (`ai` = Schätzung); `confirmed: true` markiert Werte, die der Nutzer im Chat genannt oder bestätigt hat |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben; `PATCH {effort, benefit}` setzt sie – unverändert erneut gesendet, bestätigt das eine Schätzung |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben; `PATCH {effort, benefit}` setzt sie – unverändert erneut gesendet, bestätigt das eine Schätzung (mit dem Nutzer-Token hält `sized_by: "ai"` sie als Schätzung, für Rückgängig) |
+| POST | `/api/projects/:slug/items/:ref/restore` | einen gelöschten Punkt unter seiner eigenen Kennung zurückholen, aus dem Schnappschuss in seinem letzten Ereignis (nur solange das Löschen sein jüngstes Ereignis ist) |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang`: `neu / erledigt` oder `new / done`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
