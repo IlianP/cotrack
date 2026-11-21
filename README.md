@@ -67,6 +67,10 @@ warnings – a one-glance status that survives across conversations.
   (an item is worth at least as much as what waits for it), decisions before actions, oldest first. A time filter
   (5 min · 30 min · 2 h) shows only what fits. Set or confirm effort and benefit right on the card. *Done* (decisions with an
   optional outcome), *Later*, undo in the toast.
+- **Undo** – after your own changes in the web app (done or reopened, saved in the edit dialog, deleted, quickly added,
+  effort and benefit set) the toast offers *Undo*, also with Ctrl+Z / ⌘Z while it is shown. Only fields nobody else changed
+  since are put back. Deleting asks no question any more: a deleted item can also be restored later in the history panel,
+  under its own reference.
 - **Chains** – the third view (switch at the top: Board · Next · Chains) shows what waits for what: arrows from the
   prerequisite to the waiting item, done prerequisites dashed, freed-up items highlighted, cycles and unknown references in
   red; plus "Worth a look" (freed up, holds up the most, your turn). Filters and search only fold items away ("⋯ 2"), the
@@ -205,7 +209,8 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | list items (`format=text`: one compact line per item, for AI assistants); includes items of other projects shown here (`also_in`, with `ext_open`/`ext_next` for links outside the list) unless `shared=0` |
 | POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, also_in?, source?, due?, effort?, benefit?, seq?}` – `waiting_on` may name items of other projects (`"IMM:A2"`), `also_in` lists further projects that show the item (`"IMM"`); `effort` `XS\|S\|M\|L\|XL`, `benefit` `low\|medium\|high`, only for A and I; `sized_by` records who set them (`ai` = estimate); `confirmed: true` marks values the user named or confirmed in a chat |
-| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body; `PATCH {effort, benefit}` sets them – sending them again unchanged confirms an estimate |
+| GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body; `PATCH {effort, benefit}` sets them – sending them again unchanged confirms an estimate (with the user token, `sized_by: "ai"` keeps them an estimate, used by undo); `expect: {status: "done", …}` writes only if the item still holds these values, otherwise 409 `conflict` |
+| POST | `/api/projects/:slug/items/:ref/restore` | bring a deleted item back under its own reference, from the snapshot in its last event (only while the deletion is its latest event) |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
 | GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `new: … · done: …`; `lang`: `new / done` or `neu / erledigt`) |
 | GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
