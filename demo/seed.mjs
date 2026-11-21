@@ -36,6 +36,10 @@ function when(days, hm) {
   jitter++;
   return local - offsetMin(local) * 60000 + ((jitter * 37) % 60) * 1000 + ((jitter * 131) % 1000);
 }
+// due(3) = the date three days from today, due(-2) = two days ago (YYYY-MM-DD, as the API stores it).
+function due(days) {
+  return new Date(Date.UTC(Number(TODAY.year), Number(TODAY.month) - 1, Number(TODAY.day) + days)).toISOString().slice(0, 10);
+}
 function stamp(s) {
   const m = s.match(/^(user|ai)@(\d+) (\d{1,2}:\d{2})$/);
   if (!m) throw new Error(`bad stamp: ${s}`);
@@ -181,12 +185,12 @@ project("umzug", { name: "Umzug nach Leipzig", code: "UZ", created: "user@35 19:
   later("A7",
     ["user@16 21:00", { status: "done", body: "Stand: beides verkauft, zusammen 340 €." }]),
   it("A8", "ai@12 09:00", { title: "Alte Wohnung übergeben: Protokoll und Schlüssel", short: "Übergabe", owner: "user", effort: "M",
-    benefit: "high", due: "2026-11-30" },
+    benefit: "high", due: due(9) },
     ["user@11 21:30", { effort: "M", benefit: "high", confirmed: true }]),
   it("W1", "ai@12 09:05", { title: "Kaution: Rückzahlung kann bis zu sechs Monate dauern", short: "Kaution",
     body: "Folge: 2.400 € fehlen eine Weile in der Kasse.\nGegenmaßnahme: Übergabe sorgfältig protokollieren, Frist im Kalender notieren." }),
   it("A9", "ai@11 18:40", { title: "Techniker-Termin für Glasfaser wahrnehmen", short: "Techniker", owner: "user", effort: "S",
-    benefit: "high", waiting_on: "A6", due: "2026-12-02" }),
+    benefit: "high", waiting_on: "A6", due: due(11) }),
   it("I2", "ai@4 20:00", { title: "Kleine Einweihungsfeier im Dezember", short: "Einweihung", effort: "S", benefit: "low" }),
 );
 
@@ -218,11 +222,11 @@ project("adventskonzert", { name: "Adventskonzert Musikverein", code: "AK", crea
   it("D3", "ai@12 21:20", { title: "Programmfolge freigeben", short: "Programm freigeben", waiting_on: "A3", source: "Programm_v2.pdf",
     body: "Entwurf: 9 Stücke, 75 Minuten, Pause nach Stück 5.\nOffen: Zugabe „Feliz Navidad“ oder „Stille Nacht“ mit Publikum?" }),
   it("A4", "ai@12 21:25", { title: "Plakat und Flyer gestalten", short: "Plakat", owner: "ai", effort: "M", benefit: "high",
-    waiting_on: "D3", due: "2026-11-24" }),
+    waiting_on: "D3", due: due(1) }),
   it("A5", "ai@12 21:30", { title: "Flyer (200) und Plakate (30) drucken lassen", short: "Druck", owner: "user", effort: "S",
-    benefit: "high", waiting_on: "A4", due: "2026-11-27" }),
+    benefit: "high", waiting_on: "A4", due: due(6) }),
   it("A6", "ai@11 08:15", { title: "Pressemitteilung für die Lokalzeitung", short: "Pressemitteilung", owner: "ai", effort: "S",
-    benefit: "medium", waiting_on: "D3", due: "2026-11-30" }),
+    benefit: "medium", waiting_on: "D3", due: due(9) }),
   it("A7", "ai@10 20:00", { title: "Helfer einteilen: Einlass, Garderobe, Glühwein, Abbau", short: "Helfer", owner: "user",
     effort: "M", benefit: "high",
     body: "Liste im Vereinschat, je Station zwei Personen.\n- [ ] Einlass und Programmhefte\n- [ ] Garderobe\n- [ ] Glühweinstand\n- [ ] Spendenkörbe\n- [ ] Abbau" },
@@ -235,9 +239,9 @@ project("adventskonzert", { name: "Adventskonzert Musikverein", code: "AK", crea
   it("A9", "ai@9 18:05", { title: "Budget aufstellen: Druck, Glühwein, Deko", short: "Budget", owner: "ai", effort: "S", benefit: "high",
     waiting_on: "A8" }),
   it("A10", "ai@8 19:00", { title: "Notenständer und Licht von der Musikschule leihen", short: "Leihen", owner: "user", effort: "S",
-    benefit: "medium", due: "2026-12-11" }),
+    benefit: "medium", due: due(20) }),
   it("A11", "ai@8 19:05", { title: "Konzert bei der GEMA anmelden", short: "GEMA", owner: "user", effort: "S", benefit: "high",
-    due: "2026-12-01" },
+    due: due(-2) },
     ["user@7 07:45", { effort: "S", benefit: "high", confirmed: true }]),
   later("I2",
     ["ai@5 18:30", { convert: { ref: "A12", kind: "A", owner: "ai", title: "Drei Instagram-Beiträge vorbereiten", short: "Instagram",

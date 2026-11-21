@@ -167,6 +167,13 @@ function toolList(lang) {
     "Link oder Datei mit den Details (Dokument, PR, Recherche), aus der der Punkt stammt",
     "Link or file with the details (document, PR, research) the item comes from",
   );
+  const dueParam = {
+    type: "string",
+    description: t(
+      "Fällig am (JJJJ-MM-TT) – nur bei einem echten Termin (Frist, Veranstaltung, Zusage), nie geschätzt; leer löscht",
+      "Due on (YYYY-MM-DD) – only for a real date (deadline, event, commitment), never estimated; empty clears it",
+    ),
+  };
   const effortParam = {
     type: "string",
     enum: ["XS", "S", "M", "L", "XL", ""],
@@ -336,6 +343,7 @@ function toolList(lang) {
           waiting_on: waitingParam,
           also_in: alsoInParam,
           source: { type: "string", description: sourceText },
+          due: dueParam,
           effort: effortParam,
           benefit: benefitParam,
           confirmed: confirmedParam,
@@ -376,6 +384,7 @@ function toolList(lang) {
           waiting_on: waitingParam,
           also_in: alsoInParam,
           source: { type: "string", description: sourceText },
+          due: dueParam,
           check: {
             type: "string",
             description: t(
@@ -502,6 +511,7 @@ const MSG = {
     followedBy: "Danach folgt",
     alsoIn: "Auch angezeigt in",
     source: "Quelle",
+    due: "Fällig",
     convertedTo: "Umgewandelt in",
     history: (it) => `Angelegt ${it.created_at} (${it.created_by}), geändert ${it.updated_at} (${it.updated_by})`,
     created: "angelegt",
@@ -537,6 +547,7 @@ const MSG = {
     followedBy: "Followed by",
     alsoIn: "Also shown in",
     source: "Source",
+    due: "Due",
     convertedTo: "Converted to",
     history: (it) => `Created ${it.created_at} (${it.created_by}), changed ${it.updated_at} (${it.updated_by})`,
     created: "created",
@@ -656,6 +667,7 @@ async function callTool(name, args, db, actor, lang) {
       if (it.effort || it.benefit) lines.push(M.sizing(it));
       const next = await successorsOf(db, it.project_slug, it.ref);
       if (next.length) lines.push(`${M.followedBy}: ▶${next.map(lbl).join(",")}`);
+      if (it.due) lines.push(`${M.due}: ${it.due}`);
       if (it.source) lines.push(`${M.source}: ${it.source}`);
       if (it.converted_to) lines.push(`${M.convertedTo}: ${it.converted_to}`);
       lines.push(M.history(it));
@@ -663,7 +675,7 @@ async function callTool(name, args, db, actor, lang) {
     }
     case "cotrack_add": {
       const project = await getProject(db, args.project);
-      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "effort", "benefit"]),
+      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "due", "effort", "benefit"]),
         ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
       const size = sizeText(it, lang);
@@ -672,7 +684,7 @@ async function callTool(name, args, db, actor, lang) {
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
       const item = await getItemByRef(db, project.slug, ref);
-      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "check", "uncheck", "effort", "benefit"]);
+      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "due", "check", "uncheck", "effort", "benefit"]);
       if (args.confirmed === true) fields.confirmed = true;
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);

@@ -304,6 +304,9 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .pill.wait { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
 /* not ".next": that is the Next view's class (a grid up to 1080px wide) */
 .pill.follows { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+/* due date: red once it has passed, amber from two days before */
+.pill.due-over { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); font-weight: 600; }
+.pill.due-soon { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
 /* a prerequisite that is done: the item does not wait for it any more */
 .pill.freed { color: var(--muted); border-style: dashed; }
 .pill.st-doing { color: var(--accent); }
@@ -990,8 +993,8 @@ const STRINGS = {
     view: "Ansicht", viewOpen: "Offen", viewClosed: "Erledigt", viewAll: "Alle",
     search: "Suchen", searchTitle: "Suchen (Taste /)", searchPh: "Suchen …", searchClose: "Suche schließen",
     sort: "Sortieren", sortBy: (name) => `Sortierung: ${name}`, sortNote: "Gilt fürs Board · auf diesem Gerät gespeichert",
-    sortNames: { num: "Nummer", changed: "Zuletzt geändert", created: "Zuletzt angelegt" },
-    sortHints: { num: "D1, D2 … in der Reihenfolge der Anlage", changed: "Jüngste Änderung oben – wie im Verlauf", created: "Neue Punkte oben" },
+    sortNames: { num: "Nummer", changed: "Zuletzt geändert", created: "Zuletzt angelegt", due: "Fälligkeit" },
+    sortHints: { num: "D1, D2 … in der Reihenfolge der Anlage", changed: "Jüngste Änderung oben – wie im Verlauf", created: "Neue Punkte oben", due: "Was zuerst fällig ist, steht oben" },
     ageNow: "gerade eben", ageMin: (n) => `vor ${n} Min.`, ageHours: (n) => `vor ${n} Std.`, ageYesterday: "gestern",
     ageDays: (n) => `vor ${n} Tagen`, ageOn: (d) => `am ${d}`,
     ageTitle: { changed: (at, who) => `Zuletzt geändert: ${at} von ${who}`, created: (at, who) => `Angelegt: ${at} von ${who}` },
@@ -1060,7 +1063,7 @@ const STRINGS = {
     nextAge: (d) => (d <= 0 ? "Seit heute offen" : d === 1 ? "Seit gestern offen" : `Seit ${d} Tagen offen`),
     nextEmpty: "Nichts für dich offen 🎉", nextWaiting: (n) => `${n === 1 ? "1 weiterer Punkt wartet" : n + " weitere warten"} noch auf andere.`,
     nextAi: (n) => `Bei der KI: ${n} offen.`, nextHint: "„Später“ schiebt den Punkt ans Ende, ohne ihn zu ändern.",
-    nextOrder: "Reihenfolge: in Arbeit zuerst, dann Nutzen im Verhältnis zum Aufwand. Ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen zählen als S. Bei Gleichstand: Entscheidungen vor Aufgaben, älteste zuerst.",
+    nextOrder: "Reihenfolge: in Arbeit zuerst, dann was überfällig oder in den nächsten zwei Tagen fällig ist, dann Nutzen im Verhältnis zum Aufwand. Ein Punkt ist mindestens so viel wert wie das, was auf ihn wartet; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen zählen als S. Bei Gleichstand: Entscheidungen vor Aufgaben, älteste zuerst.",
     // Aufwand und Nutzen (D21, Methodik v2.10)
     effort: "Aufwand", benefit: "Nutzen", sizeNone: "– keine Angabe –",
     effortLabels: { XS: "≤ 5 Min.", S: "≤ 30 Min.", M: "≤ 2 Std.", L: "≤ 1 Tag", XL: "mehr als 1 Tag" },
@@ -1182,6 +1185,9 @@ const STRINGS = {
     stWaitStill: (t) => `seit ${t} · noch offen`, stWaitFreed: (t, d) => `${t} · frei seit ${d}`,
     stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
     // Board: Kompakt-Ansicht, erledigte Voraussetzungen
+    // Fälligkeiten
+    dueOver: (n) => (n === 1 ? "seit gestern überfällig" : `${n} Tage überfällig`), dueToday: "heute", dueTomorrow: "morgen",
+    dueIn: (n) => `in ${n} Tagen`, nextDue: (t) => `Fällig ${t}`,
     denseOn: "Kompakt: eine Zeile je Punkt", denseOff: "Ausführlich: Karten mit Beschreibung", waitDone: "Voraussetzung erledigt – wartet nicht mehr darauf",
   },
   en: {
@@ -1193,8 +1199,8 @@ const STRINGS = {
     view: "View", viewOpen: "Open", viewClosed: "Done", viewAll: "All",
     search: "Search", searchTitle: "Search (key /)", searchPh: "Search …", searchClose: "Close search",
     sort: "Sort", sortBy: (name) => `Sort: ${name}`, sortNote: "Applies to the board · saved on this device",
-    sortNames: { num: "Number", changed: "Recently changed", created: "Recently added" },
-    sortHints: { num: "D1, D2 … in the order they were added", changed: "Latest change on top – like the history", created: "New items on top" },
+    sortNames: { due: "Due date", num: "Number", changed: "Recently changed", created: "Recently added" },
+    sortHints: { num: "D1, D2 … in the order they were added", changed: "Latest change on top – like the history", created: "New items on top", due: "What is due first comes first" },
     ageNow: "just now", ageMin: (n) => `${n} min ago`, ageHours: (n) => `${n} h ago`, ageYesterday: "yesterday",
     ageDays: (n) => `${n} days ago`, ageOn: (d) => `on ${d}`,
     ageTitle: { changed: (at, who) => `Last changed: ${at} by ${who}`, created: (at, who) => `Added: ${at} by ${who}` },
@@ -1263,7 +1269,7 @@ const STRINGS = {
     nextAge: (d) => (d <= 0 ? "Open since today" : d === 1 ? "Open since yesterday" : `Open for ${d} days`),
     nextEmpty: "Nothing open for you 🎉", nextWaiting: (n) => `${n === 1 ? "1 more item is" : n + " more are"} still waiting for others.`,
     nextAi: (n) => `With the AI: ${n} open.`, nextHint: "“Later” moves the item to the end without changing it.",
-    nextOrder: "Order: in progress first, then benefit relative to effort. An item is worth at least as much as what waits for it; without an estimate it counts as “medium” or M, decisions count as S. On a tie: decisions before actions, oldest first.",
+    nextOrder: "Order: in progress first, then what is overdue or due within two days, then benefit relative to effort. An item is worth at least as much as what waits for it; without an estimate it counts as “medium” or M, decisions count as S. On a tie: decisions before actions, oldest first.",
     // Effort and benefit (D21, methodology v2.10)
     effort: "Effort", benefit: "Benefit", sizeNone: "– not set –",
     effortLabels: { XS: "≤ 5 min", S: "≤ 30 min", M: "≤ 2 h", L: "≤ 1 day", XL: "more than a day" },
@@ -1385,6 +1391,9 @@ const STRINGS = {
     stWaitStill: (t) => `for ${t} · still open`, stWaitFreed: (t, d) => `${t} · free since ${d}`,
     stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
     // Board: compact view, prerequisites that are done
+    // Due dates
+    dueOver: (n) => (n === 1 ? "overdue since yesterday" : `${n} days overdue`), dueToday: "today", dueTomorrow: "tomorrow",
+    dueIn: (n) => `in ${n} days`, nextDue: (t) => `Due ${t}`,
     denseOn: "Compact: one line per item", denseOff: "Detailed: cards with description", waitDone: "Prerequisite done – no longer waiting for it",
   },
 };
@@ -1425,9 +1434,9 @@ const ALL = "*";
 const VIEWS = ["open", "closed", "all"];
 const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · Next (A53) · Ketten (A55)
 // Board order within a column (A81): "num" = by number (the server's order), otherwise newest first by that time.
-const SORTS = ["num", "changed", "created"];
+const SORTS = ["num", "changed", "created", "due"];
 const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
-const SORT_SYM = { num: "#", changed: "↻", created: "+" };
+const SORT_SYM = { num: "#", changed: "↻", created: "+", due: "◷" };
 const state = {
   token: store.get("cotrack.token"),
   project: decodeURIComponent(location.hash.slice(1)) || store.get("cotrack.project") || "",
@@ -1981,7 +1990,7 @@ function renderItem(it, k, before) {
   if (checks.length) meta.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
   const size = sizePill(it);
   if (size) meta.push(size);
-  if (it.due) meta.push(h("span", { class: "pill" }, "📅 " + it.due));
+  if (it.due) meta.push(duePill(it));
   if (it.source) meta.push(h("span", { class: "pill" }, /^https?:\/\//.test(it.source)
     ? h("a", { href: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + tr("source"))
     : "📄 " + it.source));
@@ -2007,7 +2016,7 @@ function renderItem(it, k, before) {
     if (it.status === "doing" || it.status === "blocked") mini.push(h("span", { class: "dot st-" + it.status, role: "img", title: STATUS_LABELS[it.status], "aria-label": STATUS_LABELS[it.status] }));
     else if (it.status === "dropped") mini.push(h("span", { class: "pill" }, STATUS_LABELS[it.status]));
     if (checks.length) mini.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
-    if (it.due) mini.push(h("span", { class: "pill" }, "📅 " + shortDate(it.due + "T12:00")));
+    if (it.due) mini.push(duePill(it, true));
     if (k.actionable && it.owner && it.owner !== k.default_owner) mini.push(h("span", { class: "pill", title: ownerLabel(it.owner) }, it.owner === "ai" ? "🤖" : "👤"));
     return h("li", { class: cls + " dense" + (waits.length ? " waits" : ""), title: it.title }, check,
       h("div", { class: "main", onclick: () => openEdit(it) },
@@ -2022,8 +2031,29 @@ function renderItem(it, k, before) {
       meta.length ? h("div", { class: "meta" }, meta) : null));
 }
 
+/* Due dates: days until the date (negative = overdue). Open items say how far away it is and turn amber from DUE_SOON
+   days before, red once the date has passed; closed items only show the date. */
+const DUE_SOON = 2;
+const dueDate = (it) => { const [y, m, d] = it.due.split("-").map(Number); return new Date(y, m - 1, d); };
+const dueDays = (it) => (it.due ? Math.round((dueDate(it).getTime() - dayStart(new Date())) / 864e5) : null);
+const dueRel = (days) => (days < 0 ? tr("dueOver", -days) : days === 0 ? tr("dueToday") : days === 1 ? tr("dueTomorrow") : tr("dueIn", days));
+const dueUrgent = (it) => { const d = isOpen(it) ? dueDays(it) : null; return d != null && d <= DUE_SOON; };
+function duePill(it, short) {
+  const days = dueDays(it), open = isOpen(it), date = dueDate(it);
+  const day = date.toLocaleDateString(LOCALE, short ? { day: "numeric", month: "numeric" } : { weekday: "short", day: "numeric", month: "numeric" });
+  const rel = open && days <= 14 ? dueRel(days) : "";
+  const text = short ? (rel && days >= 0 && days <= 1 ? rel : day) : day + (rel ? " · " + rel : "");
+  return h("span", { class: "pill due" + (!open ? "" : days < 0 ? " due-over" : days <= DUE_SOON ? " due-soon" : ""),
+    title: `${tr("fDue")}: ${date.toLocaleDateString(LOCALE, { dateStyle: "full" })}${rel ? " – " + rel : ""}` }, "📅 " + text);
+}
+
 // Newest first by the chosen time; Array.prototype.sort is stable, so equal times keep the number order.
 function sortItems(list) {
+  // By due date: the soonest first, items without a date after them in number order.
+  if (state.sort === "due") {
+    const d = (i) => i.due || "9999-12-31";
+    return list.slice().sort((a, b) => (d(a) < d(b) ? -1 : d(a) > d(b) ? 1 : 0));
+  }
   const [at] = SORT_FIELD[state.sort] || [];
   return at ? list.slice().sort((a, b) => String(b[at] || "").localeCompare(String(a[at] || ""))) : list;
 }
@@ -2111,7 +2141,7 @@ function nextQueue() {
     const holds = Math.min((waiters.get(itemKey(i)) || []).length, 3) * 0.5;
     return Math.round(((chainBenefit(i)[0] || BENEFIT_PTS.medium) + holds) / cost(i) * 1000) / 1000;
   };
-  const rank = (i) => [i.status === "doing" ? 0 : 1, -score(i), kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
+  const rank = (i) => [i.status === "doing" ? 0 : 1, dueUrgent(i) ? 0 : 1, dueUrgent(i) ? i.due : "", -score(i), kindBy(i.kind)?.sort_order ?? 99, i.created_at || ""];
   mine.sort((a, b) => {
     const x = rank(a), y = rank(b);
     for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] < y[n] ? -1 : 1;
@@ -2127,6 +2157,8 @@ function nextQueue() {
   const why = (i) => {
     const parts = [];
     if (i.status === "doing") parts.push(tr("nextDoing"));
+    const days = dueDays(i);
+    if (days != null && days <= 14) parts.push(days < 0 ? dueRel(days) : tr("nextDue", dueRel(days)));
     const w = waiters.get(itemKey(i));
     if (w?.length) parts.push(tr("nextBlocks", w.map((k) => keyRef(k)).join(", ")));
     const freed = waitKeys(i).filter((k) => !blocks(i, k));
