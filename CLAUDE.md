@@ -59,7 +59,9 @@
 - Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
   scrolls, columns fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`),
   `fit` (portrait with room for two columns: the board fills the screen, `fitPlan` spreads the categories over the columns by
-  item count, each scrolls on its own) and `swipe` (phones: one category per screen; the category toggles jump there
+  item count, each scrolls on its own) and `swipe` (phones: one category per screen, one swipe = exactly one category (`scroll-snap-stop`); the
+  neighbours are only hinted – faded, their items take no taps, a tap there jumps to them (class `cur`, `syncLaneChips`);
+  the item lists contain only vertical overscroll, otherwise the sideways swipe is swallowed; the category toggles jump there
   instead of filtering). Column scroll positions survive live updates (`boardSig`).
 - Installable app (PWA): manifest and icons in `src/pwa.js`, served publicly by `src/worker.js`; no service worker (not needed
   for installing, and the app only works online anyway). Install entry: ☰ → Dieses Gerät, shown when the browser offers it.
