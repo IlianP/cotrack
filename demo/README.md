@@ -4,7 +4,15 @@ A separate cotrack instance with invented data, for showing the app without touc
 
 - Author's instance: https://cotrack-demo.ilianos1.workers.dev – worker `cotrack-demo`, D1 database `cotrack-demo-db`
   (`[env.demo]` in `wrangler.toml`). Own tokens (`TOKEN_USER`, `TOKEN_AI`), unrelated to the live instance.
-- Content: four invented projects from `demo/seed.mjs` (German) plus a copy of a real project (Patchwerk) taken from the
+- **Open to everyone** (`DEMO_OPEN = "1"` in `[env.demo.vars]`): without a token a visitor is a guest. Guests may change the
+  items of the four demo projects – nothing else: no settings, no projects, the copied Patchwerk is view-only, and AI
+  assistants still need the token (OAuth). Each address gets 120 units a minute (reads 1, writes 5; rate limiting binding
+  `GUEST_LIMIT`), and the web app polls every 15 s instead of 4 s, because the demo shares the account's daily limits with
+  the live instance. Signing in with `TOKEN_USER` works as before (☰ → "Mit Token anmelden").
+- **Nightly reset**: the cron `41 2 * * *` (`[env.demo.triggers]`) runs `resetDemo` in `src/worker.js` – the same data as
+  `demo/seed.mjs`, in one D1 batch (one transaction; the guard below stops it on any other database). Test it locally with
+  `npx wrangler dev --env demo --test-scheduled` and `curl "http://localhost:8787/__scheduled?cron=41+2+*+*+*"`.
+- Content: four invented projects from `demo/data.mjs` (German) plus a copy of a real project (Patchwerk) taken from the
   live database once. The seed covers what the views need: open/done/dropped items, a history of several weeks by you and
   the AI, dependency chains (also across projects, plus one deliberate cycle for "Auffällig"), sub-items, effort and benefit
   (estimated and confirmed), converted ideas, an item shown in two projects, due dates, blocked and reopened items.
@@ -47,4 +55,5 @@ table once before the first reset:
 npx wrangler d1 execute cotrack-demo-db --env demo --remote --command "CREATE TABLE demo_instance (note TEXT NOT NULL)"
 ```
 
-When the event format in `src/worker.js` changes (`createItem`, `updateItem`, `convertItem`), change `demo/seed.mjs` with it.
+When the event format in `src/worker.js` changes (`createItem`, `updateItem`, `convertItem`), change `demo/data.mjs` with it.
+`demo/data.mjs` is the data and its simulation (pure, bundled into the Worker); `demo/seed.mjs` only writes it as an SQL file.

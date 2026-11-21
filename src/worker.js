@@ -8,6 +8,7 @@ import UI_HTML from "./ui.html";
 import { pwaResponse } from "./pwa.js";
 import { handleMcp } from "./mcp.js";
 import { handleOAuth } from "./oauth.js";
+import { DEMO_SLUGS, seedStatements } from "../demo/data.mjs";
 
 const STATUSES = ["open", "doing", "blocked", "done", "dropped"];
 const OPEN = ["open", "doing", "blocked"];
@@ -126,8 +127,14 @@ export default {
       if (url.pathname === "/api/health") return json({ ok: true, service: "cotrack" });
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
         const actor = await authenticate(request, env);
-        if (!actor) return json({ error: "unauthorized", hint: "Send 'Authorization: Bearer <token>'" }, 401);
-        return await route(request, env.DB, url, actor);
+        // Open demo (DEMO_OPEN, A114): a request without any token is a guest – acts as "user", within the limits of guestGuard.
+        // A wrong token stays 401, so signing in with the real one still works.
+        const guest = !actor && openDemo(env) && !request.headers.has("authorization");
+        if (!actor && !guest) return json({ error: "unauthorized", hint: "Send 'Authorization: Bearer <token>'" }, 401);
+        if (guest && !(await guestAllowed(request, env))) {
+          return json({ error: "rate_limited", hint: "Too many requests from this address, try again in a minute" }, 429);
+        }
+        return await route(request, env.DB, url, actor || "user", { guest });
       }
       return json({ error: "not_found" }, 404);
     } catch (err) {
@@ -136,7 +143,38 @@ export default {
       return json({ error: "internal_error" }, 500);
     }
   },
+
+  // Cron (only the demo worker has one, [env.demo.triggers]): every night back to the demo data.
+  async scheduled(event, env, ctx) {
+    if (openDemo(env)) ctx.waitUntil(resetDemo(env.DB));
+  },
 };
+
+/* ------------------------------------------------------------ open demo */
+// The demo worker sets DEMO_OPEN = "1" ([env.demo.vars]): visitors try it without a token. Guests may change items of the demo
+// projects only – no settings, no projects, no other projects (e.g. a copied one) – and the cron resets those every night.
+const openDemo = (env) => env.DEMO_OPEN === "1";
+
+// Per address, with the Rate Limiting binding GUEST_LIMIT (if configured): reads count 1, writes 5.
+async function guestAllowed(request, env) {
+  if (!env.GUEST_LIMIT) return true;
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const write = !["GET", "HEAD"].includes(request.method);
+  const { success } = await env.GUEST_LIMIT.limit({ key: ip, delta: write ? 5 : 1 });
+  return success;
+}
+
+function guestGuard(seg, method, project) {
+  if (method === "GET" || method === "HEAD") return;
+  if (seg[0] === "projects" && seg[2] === "items" && project && DEMO_SLUGS.includes(project.slug)) return;
+  throw new HttpError(403, "demo_guest", project ? "this project is read-only in the demo" : "not available in the demo without a token");
+}
+
+// One batch = one transaction: if anything fails, the data stays as it was. The first statement only works on a demo
+// database (table demo_instance), so this can never wipe a live one.
+export async function resetDemo(db) {
+  await db.batch(seedStatements(Date.now()).map((sql) => db.prepare(sql)));
+}
 
 /* ------------------------------------------------------------------ auth */
 
@@ -165,12 +203,14 @@ async function safeEqual(a, b) {
 
 /* ---------------------------------------------------------------- router */
 
-async function route(req, db, url, actor) {
+async function route(req, db, url, actor, { guest = false } = {}) {
   const seg = url.pathname.replace(/^\/api\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   const method = req.method;
   const q = url.searchParams;
+  // Guests write only items of demo projects: everything else that writes stops here; items are checked once the project is known.
+  if (guest && !(seg[0] === "projects" && seg[2] === "items")) guestGuard(seg, method, null);
 
-  if (seg.length === 1 && seg[0] === "me" && method === "GET") return json({ actor });
+  if (seg.length === 1 && seg[0] === "me" && method === "GET") return json({ actor, ...(guest ? { guest: true } : {}) });
 
   // Instance settings: everyone may read them (the AI gets their effect through the footer), only the human changes them.
   if (seg.length === 1 && seg[0] === "settings") {
@@ -241,6 +281,7 @@ async function route(req, db, url, actor) {
       if (method === "POST") return json({ project: await createProject(db, await readJson(req), actor) }, 201);
     }
     const project = await getProject(db, seg[1]);
+    if (guest) guestGuard(seg, method, project);
     if (seg.length === 2) {
       if (method === "GET") return json({ project });
       if (method === "PATCH") return json({ project: await updateProject(db, project, await readJson(req), actor) });

@@ -900,6 +900,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
   transform: translateX(-50%) translateY(20px);
   background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 14px;
   opacity: 0; pointer-events: none; transition: .2s; z-index: 20; max-width: calc(100vw - 32px);
+  width: max-content; /* left: 50% would otherwise cap a long toast at half the screen */
   display: flex; align-items: center; gap: 10px;
 }
 #toast.show { opacity: 1; transform: translateX(-50%); }
@@ -1119,6 +1120,11 @@ const STRINGS = {
     secDevice: "Dieses Gerät", secProjects: "Projekte", secFooter: "Chat-Fußzeile", secAccess: (who) => "Zugang · angemeldet als " + who,
     footerCopy: "Kopieren", footerCopyTitle: "Fußzeile kopieren", footerCustomize: "Anpassen …", menuApi: "API-Doku ↗",
     apiDocs: "https://github.com/IlianP/cotrack/blob/main/README.de.md#api",
+    demoWelcome: "Öffentliche Demo: Probier alles aus – jede Nacht wird alles zurückgesetzt.", demoSignIn: "Mit Token anmelden",
+    secAccessGuest: "Zugang · Demo ohne Token",
+    demoInfo: "Du siehst die öffentliche Demo. Die Punkte der vier Demo-Projekte kannst du frei ändern; jede Nacht wird alles auf den Ausgangsstand zurückgesetzt. Einstellungen und neue Projekte gehen nur mit Token.",
+    demoReadOnly: "Dieses Projekt ist in der Demo nur zum Ansehen.", demoNotAvailable: "Das geht in der Demo ohne Token nicht.",
+    demoRateLimited: "Zu viele Anfragen – bitte einen Moment warten.",
     signOut: "Abmelden", menuToken: "🔑 Token anzeigen", tokenDialog: "Dein Token",
     tokenInfo: "Damit meldest du dich auf einem weiteren Gerät an. Er gilt wie ein Passwort: nur in den Passwort-Manager, nicht in Chats oder Nachrichten. Er ist nur hier auf diesem Gerät gespeichert – Cloudflare zeigt ihn nicht wieder an.",
     tokenShow: "Anzeigen", tokenHide: "Verbergen", tokenCopied: "Token kopiert",
@@ -1344,6 +1350,11 @@ const STRINGS = {
     secDevice: "This device", secProjects: "Projects", secFooter: "Chat footer", secAccess: (who) => "Access · signed in as " + who,
     footerCopy: "Copy", footerCopyTitle: "Copy footer", footerCustomize: "Customize …", menuApi: "API docs ↗",
     apiDocs: "https://github.com/IlianP/cotrack#api",
+    demoWelcome: "Public demo: try anything – everything is reset every night.", demoSignIn: "Sign in with token",
+    secAccessGuest: "Access · demo without a token",
+    demoInfo: "This is the public demo. Change the items of the four demo projects as you like; every night everything is reset to the starting point. Settings and new projects need the token.",
+    demoReadOnly: "This project is view-only in the demo.", demoNotAvailable: "Not available in the demo without a token.",
+    demoRateLimited: "Too many requests – please wait a moment.",
     signOut: "Sign out", menuToken: "🔑 Show token", tokenDialog: "Your token",
     tokenInfo: "Use it to sign in on another device. Treat it like a password: into your password manager only, never into chats or messages. It is stored only here on this device – Cloudflare never shows it again.",
     tokenShow: "Show", tokenHide: "Hide", tokenCopied: "Token copied",
@@ -1576,6 +1587,7 @@ function hashTarget() {
 }
 const state = {
   token: store.get("cotrack.token"),
+  guest: false, // open demo without a token (A114), set by boot
   project: hashTarget().slug || store.get("cotrack.project") || "",
   // Next: deferred items ("Später", this page only), the item picked from the list, unsent outcomes per item
   nextLater: [], nextPick: null, nextDraft: {},
@@ -1601,15 +1613,20 @@ function h(tag, attrs, ...kids) {
   return el;
 }
 
+// With a token, or as a guest of the open demo (A114).
+const signedIn = () => Boolean(state.token || state.guest);
 async function api(path, { method = "GET", body } = {}) {
   const res = await fetch("/api" + path, {
     method,
-    headers: { authorization: "Bearer " + state.token, ...(body ? { "content-type": "application/json" } : {}) },
+    // A demo guest (A114) sends no token at all.
+    headers: { ...(state.token ? { authorization: "Bearer " + state.token } : {}), ...(body ? { "content-type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 401) { showLogin(tr("tokenInvalid")); throw new Error("unauthorized"); }
   const isJson = (res.headers.get("content-type") || "").includes("json");
   const data = isJson ? await res.json() : await res.text();
+  if (data?.error === "demo_guest") throw new Error(tr(/read-only/.test(data.detail || "") ? "demoReadOnly" : "demoNotAvailable"));
+  if (data?.error === "rate_limited") throw new Error(tr("demoRateLimited"));
   if (!res.ok) throw new Error((data && data.error ? data.error + (data.detail ? ": " + data.detail : "") : res.status));
   return data;
 }
@@ -1705,7 +1722,12 @@ const ownerLabel = (o) => OWNER_LABELS[o] || o || "–";
 
 /* ---------------------------------------------------------- loading */
 async function boot() {
-  if (!state.token) return showLogin();
+  // Without a token: the open demo lets guests in (A114), any other instance asks for the token.
+  if (!state.token) {
+    const me = await fetch("/api/me").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (!me?.guest) return showLogin();
+    state.guest = true;
+  }
   try {
     // Global version is read before the project list, so a project created in between is picked up by the next poll.
     const [me, kinds, ver] = await Promise.all([api("/me"), api("/kinds?all=1"), api("/version")]);
@@ -1720,10 +1742,14 @@ async function boot() {
     openHashItem(linked);
     if (!boot.started) {
       boot.started = true;
-      setInterval(poll, 4000);
+      setInterval(poll, state.guest ? 15000 : 4000); // guests poll less: the demo shares its account's daily limits
       document.addEventListener("visibilitychange", poll);
     }
     poll();
+    if (state.guest && !store.get("cotrack.demoSeen")) {
+      store.set("cotrack.demoSeen", "1");
+      toast(tr("demoWelcome"), { label: tr("signIn"), onclick: () => showLogin(null, true) });
+    }
   } catch (e) { if (e.message !== "unauthorized") toast(tr("error", e.message)); }
 }
 
@@ -1763,7 +1789,7 @@ async function refresh(force) {
 }
 
 async function poll() {
-  if (document.hidden || !state.token) return;
+  if (document.hidden || !signedIn()) return;
   const project = state.project;
   try {
     const v = await api(!project || project === ALL ? "/version" : P(project) + "/version");
@@ -2798,7 +2824,7 @@ const home = { items: null, events: [], req: 0, since: null };
 state.home = false;
 const homeSeen = () => { try { const m = JSON.parse(store.get("cotrack.homeSeen") || "null"); return m && Number.isFinite(m.id) ? m : null; } catch { return null; } };
 function openHome() {
-  if (!state.token || !state.projects.length || state.home) return;
+  if (!signedIn() || !state.projects.length || state.home) return;
   if (state.stats) closeStats();
   state.home = true;
   home.since = homeSeen();
@@ -4289,7 +4315,7 @@ function choosePal(i) {
 }
 async function openPal() {
   const d = $("#pal");
-  if (d.open || !state.token || !state.projects.length) return;
+  if (d.open || !signedIn() || !state.projects.length) return;
   $("#palInput").value = ""; pal.active = 0;
   renderPal();
   d.showModal();
@@ -4721,25 +4747,33 @@ function openMenu() {
     h("h3", null, tr("menu"), h("button", { class: "close-x", "aria-label": tr("close"), title: tr("close") }, "×")),
     sec(tr("secDevice")),
     themeRow(),
-    langRow(),
+    state.guest ? null : langRow(), // saved on the server for everyone
     installRow(),
     sec(tr("secProjects")),
     h("div", { class: "menu-list" },
       h("button", { type: "button", class: "btn", onclick: go(openPal) }, tr("menuPal"), PAL_KEY ? h("kbd", null, PAL_KEY) : null),
-      h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
-      inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
+      state.guest ? null : h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
+      inProject && !state.guest && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md?lang=" + LANG), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
       state.projects.length ? h("button", { type: "button", class: "btn", onclick: go(openHome) }, tr("menuHome")) : null,
       state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
     sec(tr("secFooter")),
     h("div", { class: "menu-row" },
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
-      h("button", { type: "button", class: "btn", onclick: go(openFooterSettings) }, tr("footerCustomize"))),
-    sec(tr("secAccess", ownerLabel(state.actor))),
-    h("div", { class: "menu-list" }, h("button", { type: "button", class: "btn", onclick: go(openToken) }, tr("menuToken"))),
-    h("div", { class: "menu-row" },
-      h("a", { class: "btn", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
-      h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, tr("signOut"))),
+      state.guest ? null : h("button", { type: "button", class: "btn", onclick: go(openFooterSettings) }, tr("footerCustomize"))),
+    ...(state.guest ? [
+      sec(tr("secAccessGuest")),
+      h("p", { class: "small" }, tr("demoInfo")),
+      h("div", { class: "menu-row" },
+        h("a", { class: "btn", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
+        h("button", { type: "button", class: "btn", onclick: go(() => showLogin(null, true)) }, tr("demoSignIn"))),
+    ] : [
+      sec(tr("secAccess", ownerLabel(state.actor))),
+      h("div", { class: "menu-list" }, h("button", { type: "button", class: "btn", onclick: go(openToken) }, tr("menuToken"))),
+      h("div", { class: "menu-row" },
+        h("a", { class: "btn", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
+        h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, tr("signOut"))),
+    ]),
   );
 }
 
@@ -4790,7 +4824,7 @@ function langRow() {
       location.reload();
     } catch (err) { toast(tr("error", err.message)); }
   };
-  const canEdit = state.actor === "user";
+  const canEdit = state.actor === "user" && !state.guest;
   if (!canEdit) note.textContent = tr("settingsAiToken");
   return [h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("language")), h("span", { class: "spacer" }),
     h("div", { class: "seg txt", role: "group", "aria-label": tr("language") }, opts.map(([value, label, title]) =>
@@ -4817,7 +4851,7 @@ async function openFooterSettings() {
   let data;
   try { data = await api("/settings"); } catch (err) { return toast(tr("error", err.message)); }
   const { settings: s, defaults: d, available } = data;
-  const canEdit = available && state.actor === "user";
+  const canEdit = available && state.actor === "user" && !state.guest;
   const layout = h("select", { disabled: !canEdit },
     h("option", { value: "multi", selected: s.footer_layout === "multi" }, tr("layoutMulti")),
     h("option", { value: "single", selected: s.footer_layout === "single" }, tr("layoutSingle")));
@@ -4937,7 +4971,8 @@ function openNewProject() {
   });
 }
 
-function showLogin(msg) {
+// optional: a demo guest signing in can also cancel (the demo stays usable without a token).
+function showLogin(msg, optional = false) {
   const input = h("input", { type: "password", required: true, autocomplete: "current-password", placeholder: tr("token") });
   const d = openDialog(
     h("h3", null, "co", h("b", { style: "color:var(--accent)" }, "track"), tr("signInTitle")),
@@ -4947,12 +4982,15 @@ function showLogin(msg) {
       h("a", { href: tr("repoUrl"), target: "_blank", rel: "noopener", style: "color:var(--accent)" }, tr("repoLink"))),
     h("p", { class: "small" }, tr("tokenHelp")),
     field(tr("token"), input),
-    h("div", { class: "actions" }, h("button", { class: "primary" }, tr("signIn"))),
+    h("div", { class: "actions" },
+      optional ? h("button", { type: "button", class: "btn", onclick: () => closeDialog() }, tr("cancel")) : null,
+      h("button", { class: "primary" }, tr("signIn"))),
   );
-  d.dataset.locked = "1";
+  if (!optional) d.dataset.locked = "1";
   input.focus(); // the repo link above comes first, but the token field is what the owner needs
   d.querySelector("form").addEventListener("submit", (e) => {
-    e.preventDefault(); state.token = input.value.trim(); store.set("cotrack.token", state.token); closeDialog(); boot();
+    e.preventDefault(); state.token = input.value.trim(); store.set("cotrack.token", state.token); closeDialog();
+    if (state.guest) location.reload(); else boot(); // a guest's page polls slowly and hides settings: start afresh
   });
 }
 

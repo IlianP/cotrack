@@ -10,6 +10,9 @@ per project**. You edit it in a responsive web app; your AI assistants read and 
 an [MCP server](docs/MCP.en.md) (or the HTTP API). Every item has a stable reference like `A4` or `D2` that is
 **never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
 
+**Try it:** the [public demo](https://cotrack-demo.ilianos1.workers.dev) needs no sign-in – invented projects (in German) you
+may change as you like; it is reset every night.
+
 ```
 👤 D5 Lizenz wählen · A13 Prompt einspielen
 🤖 A6 Token-sparen · A7 README überarbeiten (+1)

@@ -11,6 +11,9 @@ Liste über einen [MCP-Server](docs/MCP.md) (oder die HTTP-API). Jeder Punkt hat
 die **nie neu vergeben** wird – du kannst dich also in jedem Chat darauf beziehen, und jede neue Session beginnt mit
 demselben Stand.
 
+**Ausprobieren:** Die [öffentliche Demo](https://cotrack-demo.ilianos1.workers.dev) braucht keine Anmeldung – erfundene
+Projekte, die du nach Belieben ändern darfst; jede Nacht wird alles zurückgesetzt.
+
 ```
 👤 D5 Lizenz wählen · A13 Prompt einspielen
 🤖 A6 Token-sparen · A7 README überarbeiten (+1)
