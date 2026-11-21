@@ -1495,12 +1495,15 @@ async function revertChange(before, after) {
       body[f] = before[f] ?? "";
     }
     // Effort and benefit go together, with who stood behind them (an AI estimate stays an estimate).
-    // A value someone else changed meanwhile is sent as it is now.
+    // A value someone else changed meanwhile is sent as it is now – and then with their attribution, so an AI estimate
+    // never turns into a confirmed value.
     if ("effort" in body || "benefit" in body || "sized_by" in body) {
       const val = (f) => (f in body ? before[f] : cur[f]) ?? "";
+      const othersSized = ["effort", "benefit", "sized_by"].some((f) => v(cur, f) !== v(after, f));
       body.effort = val("effort"); body.benefit = val("benefit");
       delete body.sized_by;
-      if (before.sized_by) body.sized_by = before.sized_by;
+      const by = othersSized ? cur.sized_by : before.sized_by;
+      if (by) body.sized_by = by;
     }
     if (Object.keys(body).length) await api(path, { method: "PATCH", body });
     toast(kept ? tr("undoPartial", label, kept) : tr("undone", label));
