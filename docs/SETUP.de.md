@@ -112,6 +112,9 @@ Den angezeigten Wert in einem **Passwort-Manager** speichern. Wer ihn kennt, kan
 Token austauschen (z. B. weil er irgendwo sichtbar war): neuen Wert würfeln und wie in Schritt 7 erneut hinterlegen; danach
 in der Web-App mit dem neuen Wert anmelden. Verbundene KI-Assistenten bleiben verbunden.
 
+Token vergessen? Cloudflare zeigt ein Secret nie wieder an, aber ein angemeldetes Gerät hat ihn noch: dort ☰ →
+*Token anzeigen* – verdeckt, auf Wunsch sichtbar, mit Kopieren. Ohne ein solches Gerät: wie oben austauschen.
+
 ## 7. Veröffentlichen und Token hinterlegen
 
 ```bash

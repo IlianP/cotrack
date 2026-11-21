@@ -106,6 +106,8 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
 - **Als App installierbar** – Chrome/Edge auf Android und am Desktop: ☰ → *Als App installieren*; cotrack läuft dann in
   einem eigenen Fenster mit eigenem Eintrag in der App-Übersicht, und unter Android öffnen Links darauf die App. iOS: Teilen →
   *Zum Home-Bildschirm*.
+- **Token für ein weiteres Gerät** – ☰ → *Token anzeigen* zeigt den Token, mit dem dieses Gerät angemeldet ist (verdeckt, auf
+  Wunsch sichtbar), und kopiert ihn; Cloudflare zeigt ein Secret nie wieder an.
 - Responsiv (Smartphone, Tablet, Desktop), Dark Mode (folgt dem System oder per ☰ hell/dunkel), **kein Build-Schritt, keine Abhängigkeiten** (reiner Cloudflare Worker + D1).
 - **Deutsch und Englisch – für dich und deine KI** – ☰ → *Sprache* stellt eine Sprache für die Web-App auf allen Geräten und
   für das ein, was cotrack Claude, ChatGPT & Co. sagt (Anweisungen, Werkzeugbeschreibungen, Antworten, Fußzeile). Ohne Wahl
