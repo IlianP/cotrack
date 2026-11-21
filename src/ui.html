@@ -304,6 +304,8 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .pill.wait { color: #b45309; border-color: color-mix(in srgb, #d97706 40%, var(--line)); }
 /* not ".next": that is the Next view's class (a grid up to 1080px wide) */
 .pill.follows { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+/* a prerequisite that is done: the item does not wait for it any more */
+.pill.freed { color: var(--muted); border-style: dashed; }
 .pill.st-doing { color: var(--accent); }
 .pill.st-blocked { color: var(--danger); }
 .pill a { color: inherit; }
@@ -311,6 +313,19 @@ body.board-fill:not(.stats-mode) { padding-bottom: 0; }
 .pill.size { color: var(--text); }
 .pill.age { color: var(--text); }
 .pill.size.est { border-style: dashed; color: var(--muted); }
+
+/* compact board (density toggle): one line per item – reference, title, a few signs; the description stays in the dialog */
+.sort-btn[hidden] { display: none; }
+.sort-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.item.dense { padding: 5px 12px; align-items: center; }
+.item.dense .check { width: 18px; height: 18px; margin-top: 0; font-size: 10px; }
+.item.dense .l1 { align-items: center; }
+.item.dense .title { flex: 1 1 0; min-width: 3em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item.dense.waits .title { color: var(--muted); }
+.mini { flex: none; display: flex; gap: 4px; align-items: center; }
+.mini .pill { flex: none; padding: 0 6px; font-size: 11.5px; line-height: 18px; }
+.mini .dot { flex: none; width: 9px; height: 9px; margin: 0 2px; border-radius: 50%; background: var(--accent); }
+.mini .dot.st-blocked { background: var(--danger); }
 
 /* footer line */
 .footline {
@@ -879,6 +894,9 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
           d="M13.5 15.5L17 19l3.5-3.5"/></svg></button>
         <div id="sortPop" class="sort-pop" hidden></div>
       </div>
+      <!-- density: full cards or one line per item; label and title are set by syncDenseBtn() -->
+      <button type="button" id="denseBtn" class="sort-btn" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path
+        d="M4 6h16"/><path d="M4 10.5h16"/><path d="M4 15h16"/><path d="M4 19.5h16"/></svg></button>
     </div>
     <div class="bar-filter" id="filterBar">
       <div class="tgs" id="kindChips" role="group" aria-label="Nach Kategorie filtern" data-t-attr="aria-label:kindsGroup"></div>
@@ -1163,6 +1181,8 @@ const STRINGS = {
     stWaitTitle: "Warten aufeinander", stWaitsFor: "wartet auf", stWaitedFor: "wartete auf",
     stWaitStill: (t) => `seit ${t} · noch offen`, stWaitFreed: (t, d) => `${t} · frei seit ${d}`,
     stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
+    // Board: Kompakt-Ansicht, erledigte Voraussetzungen
+    denseOn: "Kompakt: eine Zeile je Punkt", denseOff: "Ausführlich: Karten mit Beschreibung", waitDone: "Voraussetzung erledigt – wartet nicht mehr darauf",
   },
   en: {
     owners: { user: "You", ai: "AI" },
@@ -1364,6 +1384,8 @@ const STRINGS = {
     stWaitTitle: "Waiting for each other", stWaitsFor: "waits for", stWaitedFor: "waited for",
     stWaitStill: (t) => `for ${t} · still open`, stWaitFreed: (t, d) => `${t} · free since ${d}`,
     stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
+    // Board: compact view, prerequisites that are done
+    denseOn: "Compact: one line per item", denseOff: "Detailed: cards with description", waitDone: "Prerequisite done – no longer waiting for it",
   },
 };
 const lookup = (dict, key) => key.split(".").reduce((o, k) => (o == null ? o : o[k]), dict);
@@ -1416,6 +1438,7 @@ const state = {
   sort: SORTS.includes(store.get("cotrack.sort")) ? store.get("cotrack.sort") : "num",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
+  dense: store.get("cotrack.dense") === "1", // board: one line per item (this device)
 };
 
 /* tiny DOM helper: never uses innerHTML, so user text cannot inject markup */
@@ -1578,8 +1601,13 @@ function renderKindSeg() {
 
 // ref -> open items waiting for it (reverse of waiting_on, computed from what is on screen)
 let successors = new Map();
+// Keys of the open items in the list: with ext_open (open blockers outside it) this tells whether an item still waits.
+let openKeys = new Set();
+const isOpen = (i) => i.status !== "done" && i.status !== "dropped";
+const stillOpen = (it, key) => openKeys.has(key) || (it.ext_open || []).includes(key);
 function render(before) {
   successors = new Map();
+  openKeys = new Set(state.items.filter(isOpen).map(itemKey));
   for (const i of state.items) {
     if (i.status === "done" || i.status === "dropped") continue;
     for (const key of waitKeys(i)) successors.set(key, [...(successors.get(key) || []), itemKey(i)]);
@@ -1593,6 +1621,7 @@ function render(before) {
   board.hidden = mode !== "board"; $("#next").hidden = mode !== "next"; $("#deps").hidden = mode !== "deps";
   $("#bar").hidden = mode === "next"; // Next has neither filters nor Offen/Erledigt/Alle
   $("#sortBox").hidden = mode !== "board"; // Next and Ketten have an order of their own
+  $("#denseBtn").hidden = mode !== "board";
   if (mode !== "board") setSortOpen(false);
   if (mode !== "deps") deps.chains = [];
   document.body.classList.toggle("on-board", mode === "board");
@@ -1936,7 +1965,13 @@ function renderItem(it, k, before) {
   // On its home board: where else it is shown (only then – nothing is added for items that are not shared).
   const alsoIn = refList(it.also_in).filter((slug) => slug !== state.project);
   if (alsoIn.length && it.project_slug === state.project) meta.push(h("span", { class: "pill shared", title: tr("alsoInTitle") }, "⇄ " + alsoIn.map(codeOf).join(", ")));
-  for (const k of waitKeys(it)) meta.push(h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + keyRef(k)));
+  // What it waits for: ⏸ while the prerequisite is open, ✓ once it is done (then nothing holds the item up any more).
+  const waits = closed ? [] : waitKeys(it).filter((k) => stillOpen(it, k));
+  for (const k of waitKeys(it)) {
+    meta.push(closed || waits.includes(k)
+      ? h("span", { class: "pill wait", title: tr("waitingFor") }, "⏸ " + keyRef(k))
+      : h("span", { class: "pill freed", title: tr("waitDone") }, "✓ " + keyRef(k)));
+  }
   const next = successors.get(itemKey(it));
   if (next) meta.push(h("span", { class: "pill follows", title: tr("followedBy") }, "▶ " + next.map((k) => keyRef(k)).join(", ")));
   if (it.status !== "open" && it.status !== "done") meta.push(h("span", { class: "pill st-" + it.status }, STATUS_LABELS[it.status]));
@@ -1956,15 +1991,33 @@ function renderItem(it, k, before) {
   // Sorted by time, each card says when (who: in the tooltip) – the order alone would not tell.
   const [at, by] = SORT_FIELD[state.sort] || [];
   const recent = at && it[at] && Date.now() - new Date(it[at]) < 864e5;
-  if (at && it[at]) meta.unshift(h("span", { class: "pill age", title: tr("ageTitle." + state.sort, fmt(it[at]), actorLabel(it[by])) },
-    SORT_SYM[state.sort] + " " + ageText(it[at])));
-  return h("li", { class: `item${closed ? " is-done" : ""}${changed ? " flash" : ""}${recent ? " recent" : ""}` },
-    h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
-      onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : ""),
+  const age = at && it[at] ? h("span", { class: "pill age", title: tr("ageTitle." + state.sort, fmt(it[at]), actorLabel(it[by])) },
+    SORT_SYM[state.sort] + " " + ageText(it[at])) : null;
+  const cls = `item${closed ? " is-done" : ""}${changed ? " flash" : ""}${recent ? " recent" : ""}`;
+  const check = h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
+    onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : "");
+  const ref = h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${refLabel(it)} ${it.title}`); } }, refLabel(it));
+  if (state.dense) {
+    // One line: what is needed to pick an item – does it wait, is someone on it, how far, for whom. Everything else in the dialog.
+    const mini = [];
+    // (the project is already in the reference: "WEB:A4" in "Alle Projekte" and for items shown from another project)
+    if (age) mini.push(age);
+    if (waits.length) mini.push(h("span", { class: "pill wait", title: `${tr("waitingFor")}: ${waits.map((k) => keyRef(k)).join(", ")}` },
+      "⏸ " + (waits.length > 1 ? waits.length : state.project === ALL ? "" : keyRef(waits[0]))));
+    if (it.status === "doing" || it.status === "blocked") mini.push(h("span", { class: "dot st-" + it.status, role: "img", title: STATUS_LABELS[it.status], "aria-label": STATUS_LABELS[it.status] }));
+    else if (it.status === "dropped") mini.push(h("span", { class: "pill" }, STATUS_LABELS[it.status]));
+    if (checks.length) mini.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
+    if (it.due) mini.push(h("span", { class: "pill" }, "📅 " + shortDate(it.due + "T12:00")));
+    if (k.actionable && it.owner && it.owner !== k.default_owner) mini.push(h("span", { class: "pill", title: ownerLabel(it.owner) }, it.owner === "ai" ? "🤖" : "👤"));
+    return h("li", { class: cls + " dense" + (waits.length ? " waits" : ""), title: it.title }, check,
+      h("div", { class: "main", onclick: () => openEdit(it) },
+        h("div", { class: "l1" }, ref, h("span", { class: "title" }, it.title), mini.length ? h("span", { class: "mini" }, mini) : null)));
+  }
+  if (age) meta.unshift(age);
+  return h("li", { class: cls },
+    check,
     h("div", { class: "main", onclick: () => openEdit(it) },
-      h("div", { class: "l1" },
-        h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${refLabel(it)} ${it.title}`); } }, refLabel(it)),
-        h("span", { class: "title" }, it.title)),
+      h("div", { class: "l1" }, ref, h("span", { class: "title" }, it.title)),
       preview ? h("p", { class: "desc" }, preview.length > 160 ? preview.slice(0, 160) + " …" : preview) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
 }
@@ -3527,6 +3580,19 @@ $("#sortPop").addEventListener("keydown", (e) => {
   } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); opts[e.key === "Home" ? 0 : opts.length - 1]?.focus(); }
   else if (e.key === "Escape") { e.preventDefault(); setSortOpen(false, true); }
   else if (e.key === "Tab") setSortOpen(false);
+});
+/* density: full cards or one line per item (board only); remembered on this device */
+function syncDenseBtn() {
+  const b = $("#denseBtn"), label = tr(state.dense ? "denseOff" : "denseOn");
+  b.title = label; b.setAttribute("aria-label", label);
+  b.setAttribute("aria-pressed", String(state.dense));
+}
+syncDenseBtn();
+$("#denseBtn").addEventListener("click", () => {
+  state.dense = !state.dense;
+  store.set("cotrack.dense", state.dense ? "1" : null);
+  syncDenseBtn();
+  render();
 });
 // Sorted by time, "vor 5 Min." and the 24-hour tint depend on the clock, not only on data: poll() re-renders only when
 // something changed, so a quiet board is redrawn every minute while visible, and right away when it comes back.
