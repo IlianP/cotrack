@@ -259,6 +259,10 @@ async function route(req, db, url, actor) {
         }
         if (method === "POST") return json({ item: await createItem(db, project, await readJson(req), actor) }, 201);
       }
+      // Undo a deletion (web app: toast "Rückgängig" and Verlauf → "Wiederherstellen"); the item is gone, so before getItemByRef.
+      if (seg.length === 5 && seg[4] === "restore" && method === "POST") {
+        return json({ item: await restoreItem(db, project, seg[3], actor) }, 201);
+      }
       const item = await getItemByRef(db, project.slug, seg[3]);
       if (seg.length === 4) {
         if (method === "GET") return json({ item });
@@ -353,11 +357,11 @@ export async function linkedScope(db, slug) {
       .all();
     for (const r of results) if (waitKeys(r).some((k) => shownHere.has(k))) keys.add(itemKey(r));
   }
-  // A removed dependency – or a deleted item that had one – is gone from the items and only left in its event:
+  // A removed dependency – or a deleted (or restored) item that had one – is only (or also) left in its event:
   // waiting_on_was (or the deleted item's snapshot). Match it against ours ("slug:A1" from other projects) and against
   // the items shown here ("A1" from their home project), so the version still moves and cotrack_changes reports it.
   const was = `(CASE WHEN json_valid(events.data) THEN ',' || COALESCE(json_extract(events.data, '$.waiting_on_was'),
-    CASE WHEN events.action = 'deleted' THEN json_extract(events.data, '$.waiting_on') END) || ',' END)`;
+    CASE WHEN events.action IN ('deleted', 'restored') THEN json_extract(events.data, '$.waiting_on') END) || ',' END)`;
   const where = [
     "events.project_slug = ?",
     "(events.data LIKE '%\"also_in%' AND events.data LIKE ?)",
@@ -1228,6 +1232,44 @@ async function deleteItem(db, project, item, actor) {
   return item.ref;
 }
 
+// Brings a deleted item back under its own reference, from the snapshot in its "deleted" event. Only while that event is
+// the item's latest one (nothing was restored or created under the reference since); refs are never reused, so the
+// reference is still free. Items that waited on it keep their waiting_on, so the links come back by themselves.
+const RESTORE_COLS = ["kind", "seq", "title", "short", "body", "owner", "status", "waiting_on", "source", "due", "converted_to",
+  "created_by", "created_at", "closed_at", "effort", "benefit", "sized_by", "also_in"];
+export async function restoreItem(db, project, ref, actor) {
+  const { qualifier, ref: plainRef } = splitRef(ref);
+  if (qualifier && (await getProject(db, qualifier)).slug !== project.slug) {
+    throw new HttpError(400, "ref_project_mismatch", `${ref} does not belong to ${project.slug}`);
+  }
+  const { kind, seq } = parseRef(plainRef);
+  const key = `${kind}${seq}`;
+  const exists = await db
+    .prepare("SELECT 1 FROM items WHERE project_slug = ? AND kind = ? AND seq = ?")
+    .bind(project.slug, kind, seq)
+    .first();
+  if (exists) throw new HttpError(409, "item_exists", key);
+  const last = await db
+    .prepare("SELECT action, data FROM events WHERE project_slug = ? AND item_ref = ? ORDER BY id DESC LIMIT 1")
+    .bind(project.slug, key)
+    .first();
+  if (!last || last.action !== "deleted" || !last.data) throw new HttpError(404, "item_not_found", key);
+  const snap = JSON.parse(last.data);
+  const t = now();
+  const row = { id: crypto.randomUUID(), project_slug: project.slug, updated_by: actor, updated_at: t };
+  for (const c of RESTORE_COLS) if (snap[c] !== undefined) row[c] = snap[c];
+  Object.assign(row, { kind, seq }); // the reference wins over the snapshot
+  if (!row.title || !row.created_by || !row.created_at) throw new HttpError(409, "snapshot_incomplete", key);
+  const cols = Object.keys(row);
+  await batchSharing(db, [
+    db.prepare(`INSERT INTO items (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`).bind(...cols.map((c) => row[c])),
+    eventStmt(db, project.slug, key, "restored", actor,
+      { title: row.title, status: row.status, ...(row.waiting_on ? { waiting_on: row.waiting_on } : {}) }, t),
+    touchProject(db, project.slug, t),
+  ]);
+  return getItemByRef(db, project.slug, key);
+}
+
 // Idea accepted -> becomes a task/to-do with a NEW ref; the idea is closed and points to it.
 export async function convertItem(db, project, item, input, actor) {
   if (item.converted_to) throw new HttpError(409, "already_converted", item.converted_to);
@@ -1809,7 +1851,9 @@ function normBenefit(v) {
 
 // Who stands behind effort and benefit: the actor, or the human when the AI passes `confirmed: true` because the user named or
 // confirmed the values in the conversation (the change log still shows the AI as the one who wrote it).
-const sizer = (input, actor) => (input.confirmed === true ? "user" : actor);
+// The user token may also name who stood behind the values (undo in the web app puts back an AI estimate as an estimate).
+const sizer = (input, actor) =>
+  actor === "user" && ["user", "ai"].includes(input.sized_by) ? input.sized_by : input.confirmed === true ? "user" : actor;
 
 function assertSizable(kind) {
   if (!SIZED_KINDS.includes(kind)) {
