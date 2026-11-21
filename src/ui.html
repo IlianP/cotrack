@@ -777,6 +777,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 .hev .what .ref { margin-right: 6px; }
 .hev .det { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
 .hev time { flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.hev .hev-restore { flex: none; height: auto; padding: 3px 9px; font-size: 12.5px; }
 .hist-more { display: block; margin: 12px auto 0; }
 /* History per item in the edit dialog (D22): unobtrusive line, opens into a compact table */
 .ihist > summary { cursor: pointer; list-style: none; }
@@ -998,7 +999,6 @@ const STRINGS = {
     askSave: "Änderungen speichern?", askSaveText: "Du hast in diesem Fenster etwas geändert.", discard: "Verwerfen",
     keepEditing: "Weiter bearbeiten", save: "Speichern", cancel: "Abbrechen", close: "Schließen", del: "Löschen",
     shortPh: "1–3 Wörter für die Fußzeile", nobody: "– niemand –", waitingPh: "z. B. D2, A1, IMM:A2", sourcePh: "Link oder Datei",
-    confirmDelete: (ref) => `${ref} endgültig löschen? Die Kennung wird nicht neu vergeben.`,
     fTitle: "Titel", fBody: "Beschreibung", fShort: "Kurzlabel", fStatus: "Status", fWaiting: "Wartet auf", fSource: "Quelle", fDue: "Fällig",
     history: (c, by, u, uby) => `Angelegt ${c} von ${by}` + (u ? ` · geändert ${u} von ${uby}` : ""),
     accept: "Zusagen →", asKind: (code, name) => `als ${code} (${name})`,
@@ -1056,6 +1056,8 @@ const STRINGS = {
     nextTimeOpts: { "": "beliebig", 5: "5 Min.", 30: "30 Min.", 120: "2 Std." },
     nextTimeHidden: (n) => `${n} ${n === 1 ? "Punkt" : "Punkte"} ohne Aufwand ausgeblendet.`, nextTimeEmpty: "Nichts passt in diese Zeit.",
     doneToast: (ref) => `${ref} erledigt`, decidedToast: (ref) => `${ref} entschieden`, undo: "Rückgängig",
+    undone: (ref) => `${ref}: rückgängig gemacht`, restoredToast: (ref) => `${ref} wiederhergestellt`, restore: "Wiederherstellen",
+    undoPartial: (ref, n) => `${ref}: rückgängig gemacht – ${n === 1 ? "ein Feld wurde inzwischen anders geändert und bleibt" : `${n} Felder wurden inzwischen anders geändert und bleiben`} so`,
     // Ketten (A55)
     modeBoard: "Board", modeDeps: "Ketten", modeDepsTitle: "Ketten: was wartet worauf",
     depsHead: (n, scope) => `${n === 1 ? "1 Kette" : n + " Ketten"} · ${scope}`,
@@ -1088,7 +1090,7 @@ const STRINGS = {
     checksTitle: "Teilpunkte erledigt", checksFull: (n) => `Höchstens ${n} Teilpunkte – größere Schritte als eigene Punkte anlegen.`,
     ev: {
       created: "angelegt", done: "erledigt", dropped: "verworfen", reopened: "wieder geöffnet", updated: "geändert",
-      deleted: "gelöscht", converted: (to) => `umgewandelt in ${to}`, projectCreated: "Projekt angelegt",
+      deleted: "gelöscht", itemRestored: "wiederhergestellt", converted: (to) => `umgewandelt in ${to}`, projectCreated: "Projekt angelegt",
       projectUpdated: "Projekt geändert", archived: "Projekt archiviert", restored: "Projekt zurückgeholt",
       titleChanged: "Titel geändert", bodyChanged: "Beschreibung geändert", sourceChanged: "Quelle geändert",
       checked: "abgehakt", unchecked: "Häkchen entfernt",
@@ -1199,7 +1201,6 @@ const STRINGS = {
     askSave: "Save changes?", askSaveText: "You changed something in this window.", discard: "Discard",
     keepEditing: "Keep editing", save: "Save", cancel: "Cancel", close: "Close", del: "Delete",
     shortPh: "1–3 words for the footer", nobody: "– nobody –", waitingPh: "e.g. D2, A1, IMM:A2", sourcePh: "Link or file",
-    confirmDelete: (ref) => `Delete ${ref} permanently? The reference will not be reused.`,
     fTitle: "Title", fBody: "Description", fShort: "Short label", fStatus: "Status", fWaiting: "Waiting for", fSource: "Source", fDue: "Due",
     history: (c, by, u, uby) => `Created ${c} by ${by}` + (u ? ` · changed ${u} by ${uby}` : ""),
     accept: "Accept →", asKind: (code, name) => `as ${code} (${name})`,
@@ -1257,6 +1258,8 @@ const STRINGS = {
     nextTimeOpts: { "": "any", 5: "5 min", 30: "30 min", 120: "2 h" },
     nextTimeHidden: (n) => `${n} ${n === 1 ? "item" : "items"} without effort hidden.`, nextTimeEmpty: "Nothing fits into this time.",
     doneToast: (ref) => `${ref} done`, decidedToast: (ref) => `${ref} decided`, undo: "Undo",
+    undone: (ref) => `${ref}: undone`, restoredToast: (ref) => `${ref} restored`, restore: "Restore",
+    undoPartial: (ref, n) => `${ref}: undone – ${n === 1 ? "one field was" : `${n} fields were`} changed otherwise meanwhile and stay${n === 1 ? "s" : ""}`,
     // Chains (A55)
     modeBoard: "Board", modeDeps: "Chains", modeDepsTitle: "Chains: what waits for what",
     depsHead: (n, scope) => `${n === 1 ? "1 chain" : n + " chains"} · ${scope}`,
@@ -1289,7 +1292,7 @@ const STRINGS = {
     checksTitle: "Sub-items done", checksFull: (n) => `At most ${n} sub-items – create bigger steps as items of their own.`,
     ev: {
       created: "created", done: "done", dropped: "dropped", reopened: "reopened", updated: "changed",
-      deleted: "deleted", converted: (to) => `converted to ${to}`, projectCreated: "Project created",
+      deleted: "deleted", itemRestored: "restored", converted: (to) => `converted to ${to}`, projectCreated: "Project created",
       projectUpdated: "Project changed", archived: "Project archived", restored: "Project restored",
       titleChanged: "Title changed", bodyChanged: "Description changed", sourceChanged: "Source changed",
       checked: "checked", unchecked: "unchecked",
@@ -1446,14 +1449,85 @@ async function api(path, { method = "GET", body } = {}) {
 }
 const P = (slug) => "/projects/" + encodeURIComponent(slug);
 
-// action: optional { label, onclick } – shown as a button; such toasts stay longer.
+// action: optional { label, onclick, undo } – shown as a button; such toasts stay longer and wait while the pointer or the
+// focus is on them. Only the latest toast counts: a new one replaces the old, and with it its "Rückgängig".
 function toast(msg, action) {
   const t = $("#toast");
-  const hide = () => t.classList.remove("show");
-  t.replaceChildren(h("span", null, msg), ...(action ? [h("button", { type: "button", onclick: () => { hide(); action.onclick(); } }, action.label)] : []));
+  const ms = action ? 8000 : msg.length > 40 ? 4000 : 1800;
+  toast.action = action || null;
+  toast.ms = ms;
+  t.replaceChildren(h("span", null, msg), ...(action ? [h("button", { type: "button", onclick: () => runToastAction() }, action.label)] : []));
   t.classList.toggle("has-action", !!action);
   t.classList.add("show");
-  clearTimeout(toast.t); toast.t = setTimeout(hide, action ? 6000 : 1800);
+  clearTimeout(toast.t); toast.t = setTimeout(hideToast, ms);
+}
+function hideToast() { $("#toast").classList.remove("show"); toast.action = null; }
+function runToastAction() {
+  const a = toast.action;
+  hideToast();
+  a?.onclick();
+}
+// Undo (decision D33): your own change, offered in the toast; Ctrl+Z / ⌘Z does the same while the toast is shown.
+const undoToast = (msg, onclick) => toast(msg, { label: tr("undo"), onclick, undo: true });
+{
+  const t = $("#toast");
+  const hold = () => clearTimeout(toast.t);
+  const resume = () => { if (toast.action && !t.matches(":hover") && !t.contains(document.activeElement)) { clearTimeout(toast.t); toast.t = setTimeout(hideToast, toast.ms); } };
+  t.addEventListener("mouseenter", hold); t.addEventListener("focusin", hold);
+  t.addEventListener("mouseleave", resume); t.addEventListener("focusout", () => setTimeout(resume));
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() !== "z" || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.defaultPrevented || e.isComposing) return;
+  if (!toast.action?.undo || !$("#toast").classList.contains("show")) return;
+  // In a text field Ctrl+Z belongs to the field.
+  if (e.target.closest?.("input, textarea, select, [contenteditable]")) return;
+  e.preventDefault();
+  runToastAction();
+});
+
+// Puts back what one of your own changes set (D33): before = the item before it, after = the server's answer. Only fields
+// still as that change left them are reverted – what someone else (e.g. the AI) changed since stays and is reported.
+const UNDO_FIELDS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by"];
+async function revertChange(before, after) {
+  const path = P(before.project_slug) + "/items/" + before.ref;
+  const label = refLabel(before);
+  const v = (x, f) => x[f] ?? null;
+  // The PATCH carries what it read (expect): if someone changes the item in between, the server answers 409 and undo
+  // reads again instead of overwriting their change.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const { item: cur } = await api(path);
+      const body = {};
+      let kept = 0;
+      for (const f of UNDO_FIELDS) {
+        if (v(before, f) === v(after, f)) continue;
+        if (v(cur, f) !== v(after, f)) { kept++; continue; }
+        body[f] = before[f] ?? "";
+      }
+      // Effort and benefit go together, with who stood behind them (an AI estimate stays an estimate).
+      // A value someone else changed meanwhile is sent as it is now – and then with their attribution, so an AI estimate
+      // never turns into a confirmed value.
+      if ("effort" in body || "benefit" in body || "sized_by" in body) {
+        const val = (f) => (f in body ? before[f] : cur[f]) ?? "";
+        const othersSized = ["effort", "benefit", "sized_by"].some((f) => v(cur, f) !== v(after, f));
+        body.effort = val("effort"); body.benefit = val("benefit");
+        delete body.sized_by;
+        const by = othersSized ? cur.sized_by : before.sized_by;
+        if (by) body.sized_by = by;
+      }
+      const fields = Object.keys(body);
+      if (fields.length) {
+        body.expect = Object.fromEntries([...fields, "sized_by"].filter((f) => f in cur).map((f) => [f, v(cur, f)]));
+        await api(path, { method: "PATCH", body });
+      }
+      toast(kept ? tr("undoPartial", label, kept) : tr("undone", label));
+    } catch (e) {
+      if (attempt < 2 && /^conflict/.test(e.message)) continue;
+      toast(tr("error", e.message));
+    }
+    break;
+  }
+  await refresh(false);
 }
 async function copy(text, label = tr("copied")) {
   try { await navigator.clipboard.writeText(text); toast(label); }
@@ -1921,8 +1995,8 @@ function sizePill(it) {
 // One tap in Next sets a value; sending both values (also unchanged) records the human behind them, i.e. confirms.
 async function saveSize(it, body, confirmOnly) {
   try {
-    await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
-    toast(tr(confirmOnly ? "sizeConfirmed" : "sizeSaved", refLabel(it)));
+    const { item } = await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
+    undoToast(tr(confirmOnly ? "sizeConfirmed" : "sizeSaved", refLabel(it)), () => revertChange(it, item));
   } catch (err) { toast(tr("error", err.message)); }
   refresh(false);
 }
@@ -2198,16 +2272,13 @@ async function finishNext(it, resultEl) {
   const body = text ? (it.body ? it.body.replace(/\s+$/, "") + "\n\n" : "") + tr("nextResultLine", new Date().toLocaleDateString(LOCALE), text) : null;
   const path = P(it.project_slug) + "/items/" + it.ref;
   try {
-    await api(path, { method: "PATCH", body: { status: "done", ...(body != null ? { body } : {}) } });
+    const { item } = await api(path, { method: "PATCH", body: { status: "done", ...(body != null ? { body } : {}) } });
     delete state.nextDraft[key];
     if (state.nextPick === key) state.nextPick = null;
-    toast(tr(it.kind === "D" ? "decidedToast" : "doneToast", refLabel(it)), { label: tr("undo"), onclick: async () => {
-      try {
-        await api(path, { method: "PATCH", body: { status: it.status, ...(body != null ? { body: it.body || "" } : {}) } });
-        if (text) state.nextDraft[key] = text;
-        await refresh(false);
-      } catch (e) { toast(tr("error", e.message)); }
-    } });
+    undoToast(tr(it.kind === "D" ? "decidedToast" : "doneToast", refLabel(it)), () => {
+      if (text) state.nextDraft[key] = text;
+      return revertChange(it, item);
+    });
     await refresh(false);
   } catch (e) { toast(tr("error", e.message)); }
 }
@@ -2307,8 +2378,9 @@ function histDetails(e) {
   const parts = [];
   if (e.action === "created") parts.push(ev.created);
   else if (e.action === "converted") parts.push(ev.converted(c.to));
+  else if (e.action === "restored") parts.push(ev.itemRestored);
   else if (ev[e.action] && e.action !== "updated" && e.action !== "checked") parts.push(ev[e.action]);
-  if (e.action === "created" || e.action === "deleted" || e.action === "converted") {
+  if (e.action === "created" || e.action === "deleted" || e.action === "converted" || e.action === "restored") {
     if (e.action === "created" && c.owner) parts.push(`${tr("responsible")}: ${ownerLabel(c.owner)}`);
     return parts;
   }
@@ -2349,9 +2421,22 @@ function histEntry(e) {
     h("time", { datetime: e.at }, new Date(e.at).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" })),
   ];
   const cls = "hev" + (fresh ? " new" : "");
+  // A deletion that is still the item's latest event can be undone here (D33) – the safety net once the toast is gone.
+  if (e.action === "deleted" && !hist.events.some((x) => x.id > e.id && x.project_slug === e.project_slug && x.item_ref === e.item_ref)) {
+    kids.splice(2, 0, h("button", { type: "button", class: "btn hev-restore", onclick: () => restoreItem(e.project_slug, e.item_ref) }, tr("restore")));
+  }
   // Items that still exist open like on the board.
   if (!e.item_ref || e.action === "deleted") return h("div", { class: cls }, kids);
   return h("button", { type: "button", class: cls + " link", onclick: () => openHistItem(e) }, kids);
+}
+// Brings a deleted item back under its own reference (POST …/restore, from the snapshot in its "deleted" event).
+async function restoreItem(slug, ref) {
+  try {
+    const { item } = await api(P(slug) + "/items/" + encodeURIComponent(ref) + "/restore", { method: "POST" });
+    toast(tr("restoredToast", refLabel(item)));
+  } catch (e) { toast(tr("error", e.message)); }
+  await refresh(false);
+  histChanged(); // the restore button goes away right away, not only with the next poll
 }
 async function openHistItem(e) {
   try {
@@ -2365,13 +2450,14 @@ async function openHistItem(e) {
    from a conversion also shows the history of the idea/warning it came from, below a divider. Loaded on first open. */
 const ITEM_HIST_GROUP_MS = 5 * 60 * 1000;
 const ITEM_HIST_ORDER = ["created", "converted", "status", "owner", "title", "body", "checked", "unchecked", "short",
-  "waiting_on", "also_in", "due", "effort", "benefit", "sized", "source", "deleted", "updated"];
+  "waiting_on", "also_in", "due", "effort", "benefit", "sized", "source", "deleted", "restored", "updated"];
 // The parts of one event, keyed so a group can merge them: [key, text, count?]
 function itemHistParts(e) {
   const ev = tr("ev"), c = e.data || {};
   if (e.action === "created") return [["created", ev.created]];
   if (e.action === "converted") return [["converted", ev.converted(c.to)]];
   if (e.action === "deleted") return [["deleted", ev.deleted]];
+  if (e.action === "restored") return [["restored", ev.itemRestored]];
   const out = [];
   if ("status" in c) out.push(["status", `${tr("fStatus")}: ${STATUS_LABELS[c.status] || c.status}`]);
   if ("owner" in c) out.push(["owner", `${tr("responsible")}: ${c.owner ? ownerLabel(c.owner) : "–"}`]);
@@ -3421,8 +3507,9 @@ NARROW.addEventListener("change", () => { if (state.mode === "deps" && state.pro
 /* ---------------------------------------------------------- actions */
 async function setStatus(it, status) {
   try {
-    await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body: { status } });
-    toast(`${it.ref} ${STATUS_LABELS[status]}`);
+    const { item } = await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body: { status } });
+    const msg = status === "done" ? tr(it.kind === "D" ? "decidedToast" : "doneToast", refLabel(it)) : `${refLabel(it)} ${STATUS_LABELS[status]}`;
+    undoToast(msg, () => revertChange(it, item));
     await refresh(false);
   } catch (e) { toast(tr("error", e.message)); }
 }
@@ -3455,7 +3542,12 @@ $("#add").addEventListener("submit", async (e) => {
   try {
     const { item } = await api(P(state.project) + "/items", { method: "POST", body: { kind, title, ...(needsOwner(kindBy(kind)) ? { owner: state.addOwner } : {}) } });
     $("#addTitle").value = "";
-    toast(tr("created", item.ref));
+    // Undo removes it again; its reference stays used (references are never reused).
+    undoToast(tr("created", item.ref), async () => {
+      try { await api(P(item.project_slug) + "/items/" + item.ref, { method: "DELETE" }); toast(tr("deleted", item.ref)); }
+      catch (e) { toast(tr("error", e.message)); }
+      await refresh(false);
+    });
     await refresh(false);
   } catch (err) { toast(tr("error", err.message)); }
 });
@@ -4001,14 +4093,19 @@ function openEdit(it) {
       body.effort = sz.effort.value; body.benefit = sz.benefit.value;
     }
     try {
-      await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
-      closeDialog(); toast(tr("saved", it.ref)); refresh(false);
+      const { item } = await api(P(it.project_slug) + "/items/" + it.ref, { method: "PATCH", body });
+      closeDialog(); refresh(false);
+      // Nothing changed: nothing to undo.
+      if (UNDO_FIELDS.some((x) => (it[x] ?? null) !== (item[x] ?? null))) undoToast(tr("saved", it.ref), () => revertChange(it, item));
+      else toast(tr("saved", it.ref));
     } catch (err) { toast(tr("error", err.message)); }
   };
+  // No confirmation (D33): the toast offers to undo, and Verlauf can restore it later.
   const del = async () => {
-    if (!confirm(tr("confirmDelete", it.ref))) return;
-    try { await api(P(it.project_slug) + "/items/" + it.ref, { method: "DELETE" }); closeDialog(); toast(tr("deleted", it.ref)); refresh(false); }
-    catch (err) { toast(tr("error", err.message)); }
+    try {
+      await api(P(it.project_slug) + "/items/" + it.ref, { method: "DELETE" });
+      closeDialog(); undoToast(tr("deleted", it.ref), () => restoreItem(it.project_slug, it.ref)); refresh(false);
+    } catch (err) { toast(tr("error", err.message)); }
   };
   const convertTargets = state.kinds.filter((x) => x.actionable && !k.actionable);
   const convert = async (code) => {
