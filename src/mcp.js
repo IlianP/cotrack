@@ -99,6 +99,7 @@ L ≤ 1 Tag, XL mehr. benefit = wie sehr es das Projektziel voranbringt: low, me
 geschätzt (in Listen mit „?“, z. B. „⏱S·★hoch?“), bis der Nutzer sie bestätigt oder ändert; bestätigte Werte änderst du nur auf seinen Wunsch.
 Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
 Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.
+Termine: Hat ein Punkt einen echten Termin (Frist, Veranstaltung, Zusage), setze due (JJJJ-MM-TT); schätze nie einen. In Listen steht er als 📅.
 Punkte, die mehrere Projekte betreffen: Jeder Punkt hat genau ein Heimatprojekt und behält dort seine Kennung. Betrifft er ein weiteres
 Projekt, setze also_in (z. B. "IMM"): Dann erscheint er auch dort in Status, Listen und Fußzeile, mit Kürzel („FIN:W3“). Nicht doppelt
 anlegen und nicht umziehen. waiting_on darf auf Punkte anderer Projekte zeigen ("IMM:A2"). In Antworten schreibe Kennungen anderer
@@ -137,6 +138,7 @@ M ≤ 2 h, L ≤ 1 day, XL more. benefit = how much it moves the project goal: l
 estimates (marked "?" in lists, e.g. "⏱S·★high?") until the user confirms or changes them; change confirmed values only when they ask.
 When they name or confirm them in the conversation, send them with confirmed true.
 Decisions and warnings get no values; a decision inherits the benefit of the items waiting for it.
+Dates: if an item has a real date (deadline, event, commitment), set due (YYYY-MM-DD); never estimate one. Lists show it as 📅.
 Items that concern several projects: every item has exactly one home project and keeps its reference there. If it concerns another
 project as well, set also_in (e.g. "IMM"): it then also appears there in status, lists and footer, with the code ("FIN:W3"). Do not
 add it twice and do not move it. waiting_on may point to items of other projects ("IMM:A2"). In answers, always write references of

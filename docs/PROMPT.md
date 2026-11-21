@@ -1,4 +1,4 @@
-# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.13 (Prompt-Text zuletzt geändert am 20.11.2026)
+# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.14 (Prompt-Text zuletzt geändert am 20.11.2026)
 
 [English](PROMPT.en.md) · **Deutsch**
 
@@ -46,6 +46,8 @@ Diese Teile in den persönlichen Einstellungen beider Programme ersetzen (Teil 1
 T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤“/„🤖“; Entscheidungen (D) sind eine eigene Kategorie;
 Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
 v2.3: Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben.
+v2.14: **Fälligkeiten** (echte Termine im Feld „Fällig“, Next zieht Überfälliges vor) – keine Änderung am Prompt, nichts
+neu einzuspielen. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
 v2.13 (20.11.2026): Im Fußzeilen-Beispiel von Teil 1 stehen „👤“ und „🤖“ **ohne Doppelpunkt**, wie 💡 und ⚠️ (der Mittelpunkt
 trennt die Gruppen). Nur ohne cotrack relevant – mit cotrack kommt die Fußzeile vom Server. Neu einspielen lohnt sich, ist aber nicht nötig.
 v2.12: **Knappe Beschreibungen** (etwa fünf Zeilen, Details per Link in der Quelle, Stand ersetzen statt anhängen) – keine

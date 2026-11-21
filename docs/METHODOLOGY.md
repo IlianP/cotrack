@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.13 (as of 17 November 2026)
+## Current: Methodology v2.14 (as of 21 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -71,7 +71,7 @@
     with `confirmed`). The AI changes confirmed values only when you ask.
   - **Decisions** get no values: they inherit the benefit of the items waiting for them (computed, not stored). Warnings stay
     out. With `/convert` the values move along into an action.
-  - **Next** sorts by them: in progress first, then benefit relative to effort – an item is worth at least as much as what waits
+  - **Next** sorts by them: in progress first, then (since v2.14) what is overdue or due soon, then benefit relative to effort – an item is worth at least as much as what waits
     for it, plus a little for each item it holds up; without an estimate it counts as "medium" or M, decisions count as S. Plus a
     time filter (5 min · 30 min · 2 h). The statistics show a benefit × effort matrix, benefit done per week, lead time per effort
     class and a rough forecast.
@@ -110,6 +110,15 @@
     once, in the block of its home project.
   - The AI keeps the "Also shown in" field; in the edit dialog it only appears when it is set. To add a project yourself,
     use "⇄ Also show in another project": type name, code or repository and pick from the suggestions (up to 5 projects).
+- **Due dates (v2.14, decision D34):** If an item has a **real date** (deadline, event, commitment), it goes into the
+  "Due" field (`due`, YYYY-MM-DD). The AI sets it when adding or changing the item – and **never estimates** a date;
+  without a real date the field stays empty. Notes on the deadline may still go into the description.
+  - The web app shows the weekday and how far away it is ("Thu, 19/11 · 2 days overdue"), amber from two days before, red
+    after. The board can be sorted by due date, the overview counts what is overdue across all projects. In the item
+    lists the date reads `📅2026-11-24`.
+  - **Next** brings forward what is overdue or due within two days – right after what is in progress and before benefit
+    relative to effort.
+  - Footer and prompt stay unchanged; the rule lives in the server's instructions and in the tool description.
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
@@ -117,6 +126,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.14 does not change the prompt (due dates live in the server's instructions).
   v2.13 does not change the prompt (sharing items lives in the server's instructions).
   v2.12 does not change the prompt (the rule for brief descriptions lives in the server's instructions).
   v2.11 does not change the prompt (the title rule lives in the server's instructions).

@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.13 (Stand 17. November 2026)
+## Gültig: Methodik v2.14 (Stand 21. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -42,7 +42,7 @@
     `confirmed`). Bestätigte Werte ändert die KI nur auf deinen Wunsch.
   - **Entscheidungen** bekommen keine Werte: Sie erben den Nutzen der Punkte, die auf sie warten (berechnet, nicht gespeichert).
     Warnungen bleiben außen vor. Bei `/convert` wandern die Werte in eine Aufgabe mit.
-  - **Next** sortiert danach: in Arbeit zuerst, dann Nutzen im Verhältnis zum Aufwand – ein Punkt ist mindestens so viel wert
+  - **Next** sortiert danach: in Arbeit zuerst, dann (seit v2.14) was überfällig oder bald fällig ist, dann Nutzen im Verhältnis zum Aufwand – ein Punkt ist mindestens so viel wert
     wie das, was auf ihn wartet, plus etwas für jeden Punkt, den er aufhält; ohne Schätzung zählt „mittel“ bzw. M, Entscheidungen
     zählen als S. Dazu ein Zeit-Filter (5 Min. · 30 Min. · 2 Std.). Die Statistiken zeigen die Matrix Nutzen × Aufwand,
     erledigten Nutzen je Woche, Liegezeit je Aufwandsklasse und eine grobe Prognose.
@@ -109,6 +109,15 @@
 - **Mehrere Projekte in einem Gespräch (v2.4):** Kennungen im Text mit Kürzel (`CT:A14`); die Fußzeile bekommt je Projekt einen Block:
   einzeilig `CT ▸ 👤 … · 🤖 …`, mehrzeilig eine Zeile `CT ▸` und darunter die Gruppenzeilen. Bei Änderungen nur Projekte mit Änderungen. Neue Punkte gehören zum Projekt des Repos,
   an dem gerade gearbeitet wird; bei Unklarheit fragen. Abhängigkeiten über Projektgrenzen gibt es vorerst nicht.
+- **Fälligkeiten (v2.14, Entscheidung D34):** Hat ein Punkt einen **echten Termin** (Frist, Veranstaltung, Zusage), steht
+  er im Feld „Fällig“ (`due`, JJJJ-MM-TT). Die KI setzt es beim Anlegen oder Ändern mit – und **schätzt nie** einen Termin;
+  ohne echten Termin bleibt das Feld leer. Erläuterungen zur Frist dürfen weiter in der Beschreibung stehen.
+  - Die Web-App zeigt Wochentag und Abstand („Do., 19.11. · 2 Tage überfällig“), gelb ab zwei Tagen vorher, rot danach.
+    Das Board lässt sich nach Fälligkeit sortieren, die Übersicht zählt Überfälliges über alle Projekte. In den Punktlisten
+    steht der Termin als `📅2026-11-24`.
+  - **Next** zieht vor, was überfällig oder in den nächsten zwei Tagen fällig ist – direkt nach dem, was in Arbeit ist,
+    und vor Nutzen im Verhältnis zum Aufwand.
+  - Fußzeile und Prompt bleiben unverändert; die Regel steht in der Server-Anweisung und in der Werkzeugbeschreibung.
 - **PrioFlow (optional, Skill):** Statt selbst aus der Liste auszuwählen, rufst du den Skill `prioflow` auf. Das Modell
   bewertet die offenen Punkte (macht andere frei, schnell erledigt, Frist und Alter, Wirkung aufs Projektziel; Warnungen
   als Gewicht), schlägt die drei nächsten vor und führt dich der Reihe nach durch, bis du „Stopp“ sagst. Die Bewertung
@@ -117,6 +126,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.14 ändert den Prompt nicht (Fälligkeiten stehen in der Server-Anweisung).
   v2.13 ändert den Prompt nicht (die Mitanzeige steht in der Server-Anweisung).
   v2.12 ändert den Prompt nicht (die Regel für knappe Beschreibungen steht in der Server-Anweisung).
   v2.11 ändert den Prompt nicht (die Titelregel steht in der Server-Anweisung).
