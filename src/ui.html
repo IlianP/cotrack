@@ -56,7 +56,7 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
-.brand { font-weight: 700; letter-spacing: -.02em; font-size: 18px; white-space: nowrap; }
+.brand { font-weight: 700; letter-spacing: -.02em; font-size: 18px; white-space: nowrap; border: 0; background: none; padding: 0; flex: none; border-radius: 8px; }
 .brand b { color: var(--accent); }
 /* project picker: a button that opens a searchable list (name, code, repository, slug) */
 .psel { position: relative; min-width: 0; flex: 1 1 auto; max-width: 340px; }
@@ -233,8 +233,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
    screens, the board fills the screen and every category scrolls on its own; "swipe" = phones, one category per screen.
    --board-h = the height left below the bars and above the footer line (setBoardHeight). */
 .board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; margin-inline: auto; }
-body.on-board:not(.stats-mode) main { max-width: none; }
-body.board-fill:not(.stats-mode) { padding-bottom: 0; }
+body.on-board:not(.stats-mode):not(.home-mode) main { max-width: none; }
+body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
 /* a single category (filter): one readable column instead of a narrow first cell */
 .board.solo { grid-template-columns: minmax(0, 760px); }
 /* more categories than columns (page): rows of 2px, packBoard() puts each extra category under the shortest column;
@@ -584,6 +584,49 @@ dialog.pal[open] { display: flex; flex-direction: column; }
 }
 .stats-mode #bar, .stats-mode #board, .stats-mode #next, .stats-mode #deps, .stats-mode #fab, .stats-mode #add { display: none !important; }
 .stats[hidden] { display: none; }
+/* overview (the logo): all projects at a glance – replaces bar and board while open, like the statistics */
+.home-mode #bar, .home-mode #board, .home-mode #next, .home-mode #deps, .home-mode #stats, .home-mode #fab, .home-mode #add, .home-mode .footline { display: none !important; }
+.home[hidden] { display: none; }
+.home { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+.home > * { min-width: 0; }
+.hm-tiles { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.hm-tile {
+  display: grid; gap: 1px; align-content: start; text-align: left; padding: 13px 16px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow);
+}
+.hm-tile:hover, .hm-tile:focus-visible { border-color: var(--accent); }
+.hm-tile .l { font-size: 13px; font-weight: 650; color: var(--muted); }
+.hm-tile b { font-size: 30px; line-height: 1.15; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.hm-tile.alert b { color: var(--danger); }
+.hm-tile .s { font-size: 12.5px; color: var(--muted); }
+.hm-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); align-items: start; }
+.hm-card { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.hm-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; width: 100%; padding: 12px 14px 10px; border: 0; background: none; text-align: left; }
+.hm-top:hover, .hm-top:focus-visible { background: var(--surface-2); outline: none; }
+.hm-code { grid-row: span 2; display: grid; place-items: center; min-width: 40px; height: 40px; padding: 0 6px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-weight: 700; font-size: 13px; }
+.hm-name { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-open { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hm-last { grid-column: 2 / -1; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-new { color: var(--accent); font-weight: 650; }
+.hm-kinds { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 0 14px 10px; }
+.hm-kinds .st-split { height: 6px; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--muted); }
+.hm-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 2px; background: var(--kc); }
+.hm-sec { border-top: 1px solid var(--line); padding: 9px 8px 8px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.hm-sec > .hd { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; padding: 0 6px 3px; font-size: 13px; }
+.hm-sec > .hd b { font-weight: 650; }
+.hm-sec > .hd span { color: var(--muted); font-size: 12.5px; }
+.hm-item { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 5px 6px; border: 0; border-radius: 8px; background: none; text-align: left; }
+.hm-item:hover, .hm-item:focus-visible { background: var(--surface-2); outline: none; }
+.hm-item .ref { cursor: inherit; }
+.hm-item .t { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-item .pill, .hm-item .dot { flex: none; }
+.hm-item .dot { align-self: center; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.hm-more { justify-self: start; margin: 2px 6px 0; padding: 0; border: 0; background: none; color: var(--accent); font-size: 13px; }
+.hm-more:hover { text-decoration: underline; }
+.hm-none { margin: 0; padding: 2px 6px 4px; font-size: 13px; color: var(--muted); }
+.hm-due { border-top: 1px solid var(--line); padding: 8px 14px 10px; font-size: 12.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.hm-due .over { color: var(--danger); font-weight: 650; }
 .stats { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
 .st-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .stats > * { min-width: 0; }
@@ -692,6 +735,10 @@ dialog.pal[open] { display: flex; flex-direction: column; }
 .st-wait .track i { display: block; border-radius: 4px; }
 @media (max-width: 560px) {
   .st-head h1 { font-size: 21px; }
+  .hm-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .hm-tile { padding: 11px 13px; }
+  .hm-tile b { font-size: 25px; }
+  .hm-grid { grid-template-columns: minmax(0, 1fr); }
   .st-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .st-card { padding: 12px; }
   .st-big { font-size: 26px; }
@@ -868,8 +915,9 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 </head>
 <body>
 <header class="top">
-  <div class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path
-    d="M9 16.5l4.5 4.5L23 11.5"/></svg><span>co<b>track</b></span></div>
+  <button type="button" class="brand" id="homeBtn" aria-label="Übersicht: alle Projekte" title="Übersicht: alle Projekte"
+    data-t-attr="aria-label:homeOpen;title:homeOpen"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8"/><path
+    d="M9 16.5l4.5 4.5L23 11.5"/></svg><span>co<b>track</b></span></button>
   <div class="psel" id="psel">
     <button type="button" id="projectBtn" class="psel-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="projectPop">
       <span id="projectLabel"></span><span class="psel-caret" aria-hidden="true">▼</span>
@@ -946,6 +994,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
   <div id="board" class="board"></div>
   <div id="next" class="next" hidden></div>
   <section id="stats" class="stats" hidden aria-labelledby="statsHead"></section>
+  <section id="home" class="home" hidden aria-labelledby="homeHead"></section>
   <div id="deps" class="deps" hidden></div>
 </main>
 
@@ -1225,6 +1274,16 @@ const STRINGS = {
     stWaitNone: "Gerade wartet nichts aufeinander.", stWaitAvg: (t) => `Im Schnitt warten Punkte ${t} auf ihre Voraussetzung.`,
     // Board: Kompakt-Ansicht, erledigte Voraussetzungen
     sourceOpen: "öffnen ↗",
+    // Übersicht
+    homeOpen: "Übersicht: alle Projekte", homeTitle: "Übersicht", menuHome: "⌂ Übersicht über alle Projekte", homeLoading: "Wird geladen …",
+    homeScope: (p, n) => `${p === 1 ? "1 Projekt" : p + " Projekte"} · ${n} offen`,
+    homeMine: "Du bist dran", homeMineNone: "Gerade nichts für dich", homeMineN: (n) => `Du bist dran · ${n}`,
+    homeOver: "Überfällig", homeSoon: (n) => (n ? `${n} in den nächsten 7 Tagen fällig` : "nichts in den nächsten 7 Tagen"),
+    homeOther: (who) => `Bei ${who}`, homeDoing: (n) => (n ? `${n} in Arbeit` : "nichts in Arbeit"), homeOtherN: (who, n) => `${n} bei ${who}`,
+    homeNews: "Neu für dich", homeSince: (t) => `seit deinem letzten Blick (${t})`, homeDay: "in den letzten 24 Stunden",
+    homeLast: (t, who) => `zuletzt ${t} von ${who}`, homeNewN: (n) => `${n} neu`, homeWaiting: (n) => `⏸ ${n} ${n === 1 ? "wartet" : "warten"}`,
+    homeMore: (n) => `+ ${n} weitere in Next →`, homeOverN: (n) => `${n} überfällig`, homeMoreN: (n) => `(+${n})`,
+    homeOpenProject: (name) => `${name} öffnen`,
     // Schnellzugriff, Direktlinks
     palTitle: "Schnellzugriff", palPh: "Kennung, Stichwort, Projekt oder Ansicht …", palItems: "Punkte", palRecent: "Zuletzt geändert",
     palActions: "Ansichten und Aktionen", palNone: "Nichts gefunden.", palFoot: "↑↓ wählen · ↵ öffnen · Esc schließen",
@@ -1437,6 +1496,16 @@ const STRINGS = {
     stWaitNone: "Nothing is waiting for anything right now.", stWaitAvg: (t) => `On average items wait ${t} for their prerequisite.`,
     // Board: compact view, prerequisites that are done
     sourceOpen: "open ↗",
+    // Overview
+    homeOpen: "Overview: all projects", homeTitle: "Overview", menuHome: "⌂ Overview of all projects", homeLoading: "Loading …",
+    homeScope: (p, n) => `${p === 1 ? "1 project" : p + " projects"} · ${n} open`,
+    homeMine: "Your turn", homeMineNone: "Nothing for you right now", homeMineN: (n) => `Your turn · ${n}`,
+    homeOver: "Overdue", homeSoon: (n) => (n ? `${n} due within 7 days` : "nothing due within 7 days"),
+    homeOther: (who) => `With ${who}`, homeDoing: (n) => (n ? `${n} in progress` : "nothing in progress"), homeOtherN: (who, n) => `${n} with ${who}`,
+    homeNews: "New for you", homeSince: (t) => `since you last looked (${t})`, homeDay: "in the last 24 hours",
+    homeLast: (t, who) => `last change ${t} by ${who}`, homeNewN: (n) => `${n} new`, homeWaiting: (n) => `⏸ ${n} waiting`,
+    homeMore: (n) => `+ ${n} more in Next →`, homeOverN: (n) => `${n} overdue`, homeMoreN: (n) => `(+${n})`,
+    homeOpenProject: (name) => `Open ${name}`,
     // Quick access, links to items
     palTitle: "Quick access", palPh: "Reference, keyword, project or view …", palItems: "Items", palRecent: "Recently changed",
     palActions: "Views and actions", palNone: "Nothing found.", palFoot: "↑↓ select · ↵ open · Esc close",
@@ -1623,6 +1692,7 @@ async function poll() {
     if (global !== state.globalVersion) {
       if (state.globalVersion !== -1) await loadProjects(true);
       state.globalVersion = global;
+      if (state.home) loadHome();
     }
     // The list changed the selection (first project appeared, current one archived): poll the new one.
     // null (unlike -1 from selectProject) means its board has not been loaded yet.
@@ -2186,9 +2256,10 @@ function keyRef(key, from = state.project) {
 }
 const refLabel = (i) => keyRef(itemKey(i));
 
-function nextQueue() {
+// plain (the overview): the ranked items as they are – no "Später", no time filter, nothing remembered.
+function nextQueue(items = state.items, plain = false) {
   const me = state.actor === "ai" ? "ai" : "user";
-  const open = state.items.filter((i) => i.status !== "done" && i.status !== "dropped");
+  const open = items.filter((i) => i.status !== "done" && i.status !== "dropped");
   const openKeys = new Set(open.map(itemKey));
   const waiters = new Map(); // key -> keys of open items waiting for it (also from other projects, ext_next)
   for (const i of open) for (const k of waitKeys(i)) waiters.set(k, [...(waiters.get(k) || []), itemKey(i)]);
@@ -2236,6 +2307,7 @@ function nextQueue() {
     for (let n = 0; n < x.length; n++) if (x[n] !== y[n]) return x[n] < y[n] ? -1 : 1;
     return 0;
   });
+  if (plain) return { queue: mine, waiting, others };
   state.nextLater = state.nextLater.filter((k) => mine.some((i) => itemKey(i) === k));
   const limit = Number(state.nextTime) || 0;
   const minutes = (i) => (i.kind === "D" ? EFFORT_MIN.S : isSizable(i) && i.effort ? EFFORT_MIN[i.effort] : null);
@@ -2623,6 +2695,155 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && hist.open && !e.defaultPrevented && !document.querySelector("dialog[open]")) closeHist(true);
 });
 
+/* ---------------------------------------------------------- overview (the logo) */
+// All projects at a glance: where it is your turn, what is due, what the other side works on and what changed since
+// you last looked – one card per project, those that need you first. Built here from the open items of all projects
+// (ranked like Next) and the newest events. Replaces bar and board while open (like the statistics), follows the live
+// poll. "New" = changes by the other side since you last left the overview (remembered on this device; the first time:
+// the last 24 hours).
+const home = { items: null, events: [], req: 0, since: null };
+state.home = false;
+const homeSeen = () => { try { const m = JSON.parse(store.get("cotrack.homeSeen") || "null"); return m && Number.isFinite(m.id) ? m : null; } catch { return null; } };
+function openHome() {
+  if (!state.token || !state.projects.length || state.home) return;
+  if (state.stats) closeStats();
+  state.home = true;
+  home.since = homeSeen();
+  document.body.classList.add("home-mode");
+  $("#home").hidden = false;
+  closeHist(); setAddOpen(false);
+  window.scrollTo(0, 0);
+  renderHome();
+  loadHome();
+  updateMetrics();
+}
+function closeHome() {
+  if (!state.home) return;
+  state.home = false;
+  // what was shown as new counts as seen from now on
+  if (home.events.length) store.set("cotrack.homeSeen", JSON.stringify({ id: home.events[0].id, at: new Date().toISOString() }));
+  document.body.classList.remove("home-mode");
+  $("#home").hidden = true;
+  updateMetrics();
+}
+async function loadHome() {
+  const req = ++home.req;
+  try {
+    const [{ items }, { events }] = await Promise.all([api("/items?status=open"), api("/events?limit=300")]);
+    if (req !== home.req || !state.home) return;
+    home.items = items; home.events = events;
+    renderHome();
+  } catch (e) { if (e.message !== "unauthorized") toast(tr("error", e.message)); }
+}
+$("#homeBtn").addEventListener("click", () => (state.home ? homeGo(state.project) : openHome()));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && state.home && !e.defaultPrevented && !hist.open && !document.querySelector("dialog[open]")) homeGo(state.project);
+});
+// From the overview to a project (or "Alle Projekte"), optionally in a certain view.
+function homeGo(slug, mode) {
+  closeHome();
+  if (mode && state.mode !== mode) { state.mode = mode; state.nextPick = null; store.set("cotrack.mode", mode); syncModes(); }
+  if (slug && slug !== state.project) selectProject(slug); else refresh(true);
+  window.scrollTo(0, 0);
+}
+function homeModel() {
+  const items = home.items || [];
+  const other = state.actor === "ai" ? "user" : "ai";
+  const { queue, waiting } = nextQueue(items, true);
+  const per = new Map(state.projects.map((p) => [p.slug, { p, open: 0, kinds: new Map(), ready: [], waiting: 0, other: 0, otherDoing: 0, over: [], soon: [], news: 0, last: null }]));
+  for (const i of items) {
+    const c = per.get(i.project_slug);
+    if (!c) continue;
+    c.open++;
+    c.kinds.set(i.kind, (c.kinds.get(i.kind) || 0) + 1);
+    const k = kindBy(i.kind);
+    if (k?.actionable && (i.owner || k.default_owner) === other) { c.other++; if (i.status === "doing") c.otherDoing++; }
+    const days = dueDays(i);
+    if (days != null && days < 0) c.over.push(i); else if (days != null && days <= 7) c.soon.push(i);
+  }
+  for (const i of queue) per.get(i.project_slug)?.ready.push(i);
+  for (const i of waiting) { const c = per.get(i.project_slug); if (c) c.waiting++; }
+  const dayAgo = Date.now() - 864e5;
+  const isNew = (e) => e.actor !== state.actor && (home.since ? e.id > home.since.id : new Date(e.at).getTime() > dayAgo);
+  for (const e of home.events) {
+    const c = per.get(e.project_slug);
+    if (!c) continue;
+    c.last = c.last || e;
+    if (isNew(e)) c.news++;
+  }
+  const cards = [...per.values()];
+  for (const c of cards) for (const l of [c.over, c.soon]) l.sort((a, b) => (a.due < b.due ? -1 : a.due > b.due ? 1 : 0));
+  // Those that need you first: something overdue, then your turn, then the latest change.
+  const at = (c) => c.last?.at || c.p.updated_at || "";
+  cards.sort((a, b) => b.over.length - a.over.length || Math.sign(b.ready.length) - Math.sign(a.ready.length)
+    || Math.sign(b.open) - Math.sign(a.open) || at(b).localeCompare(at(a)));
+  return { cards, queue, other, items };
+}
+function renderHome() {
+  const box = $("#home");
+  const head = h("div", { class: "st-head" },
+    h("button", { type: "button", class: "btn", onclick: () => homeGo(state.project) }, tr("stBack")),
+    h("h1", { id: "homeHead" }, tr("homeTitle")),
+    h("span", { class: "scope" }, home.items ? tr("homeScope", state.projects.length, home.items.length) : ""));
+  if (!home.items) return box.replaceChildren(head, h("p", { class: "st-note" }, tr("homeLoading")));
+  const { cards, queue, other, items } = homeModel();
+  const sum = (f) => cards.reduce((n, c) => n + f(c), 0);
+  const over = sum((c) => c.over.length), soon = sum((c) => c.soon.length), news = sum((c) => c.news);
+  const byKind = (code) => queue.filter((i) => i.kind === code).length;
+  const mineParts = state.kinds.filter((k) => k.actionable && byKind(k.code)).map((k) => `${k.name} ${byKind(k.code)}`);
+  const since = home.since ? tr("homeSince", ageText(home.since.at)) : tr("homeDay");
+  const tile = (cls, label, n, sub, onclick) => h("button", { type: "button", class: "hm-tile" + cls, onclick },
+    h("span", { class: "l" }, label), h("b", null, n), h("span", { class: "s" }, sub));
+  const tiles = h("div", { class: "hm-tiles" },
+    tile("", tr("homeMine"), queue.length, mineParts.join(" · ") || tr("homeMineNone"), () => homeGo(ALL, "next")),
+    tile(over ? " alert" : "", tr("homeOver"), over, tr("homeSoon", soon), () => {
+      state.sort = "due"; store.set("cotrack.sort", "due"); syncSortBtn();
+      state.view = "open"; store.set("cotrack.view", "open"); syncViewChips();
+      state.owner = ""; state.kind = "";
+      homeGo(ALL, "board");
+    }),
+    tile("", tr("homeOther", actorLabel(other)), sum((c) => c.other), tr("homeDoing", sum((c) => c.otherDoing)), () => {
+      state.view = "open"; store.set("cotrack.view", "open"); syncViewChips();
+      state.owner = other; state.kind = "";
+      homeGo(ALL, "board");
+    }),
+    tile("", tr("homeNews"), news, since, () => { homeGo(ALL); openHist(); }));
+  box.replaceChildren(head, tiles, h("div", { class: "hm-grid" }, cards.map((c) => homeCard(c, other))));
+}
+function homeCard(c, other) {
+  const p = c.p;
+  const kinds = [...state.kinds, ...state.allKinds.filter((k) => !k.active)].filter((k) => c.kinds.get(k.code));
+  const last = c.last ? tr("homeLast", ageText(c.last.at), actorLabel(c.last.actor)) : "";
+  const itemRow = (it) => {
+    const days = dueDays(it);
+    return h("button", { type: "button", class: "hm-item", style: `--kc:${kindBy(it.kind)?.color || "#6b7280"}`, title: it.title, onclick: () => openItemKey(itemKey(it)) },
+      h("span", { class: "ref" }, it.ref), h("span", { class: "t" }, it.title),
+      it.status === "doing" ? h("span", { class: "dot", role: "img", title: STATUS_LABELS.doing, "aria-label": STATUS_LABELS.doing }) : null,
+      days != null && days <= 7 ? duePill(it, true) : null);
+  };
+  const dueLine = [];
+  if (c.over.length) dueLine.push(h("span", { class: "over" }, tr("homeOverN", c.over.length)));
+  const nextDue = c.soon[0];
+  if (nextDue) dueLine.push(h("span", null, `📅 ${nextDue.ref} ${dueRel(dueDays(nextDue))}${c.soon.length > 1 ? " " + tr("homeMoreN", c.soon.length - 1) : ""}`));
+  return h("article", { class: "hm-card" },
+    h("button", { type: "button", class: "hm-top", title: tr("homeOpenProject", p.name), onclick: () => homeGo(p.slug, "board") },
+      h("span", { class: "hm-code" }, p.code || p.name.slice(0, 2).toUpperCase()),
+      h("span", { class: "hm-name" }, p.name),
+      h("span", { class: "hm-open" }, c.open ? tr("palOpen", c.open) : ""),
+      h("span", { class: "hm-last" }, c.news ? h("span", { class: "hm-new" }, "● " + tr("homeNewN", c.news)) : null, c.news && last ? " · " : "", last)),
+    c.open ? h("div", { class: "hm-kinds" },
+      splitBar(kinds.map((k) => [c.kinds.get(k.code), k.color || "#6b7280", `${k.name} ${c.kinds.get(k.code)}`])),
+      h("div", { class: "hm-legend" }, kinds.map((k) => h("span", { style: `--kc:${k.color || "#6b7280"}` }, h("i"), `${k.name} ${c.kinds.get(k.code)}`)))) : null,
+    c.open ? h("div", { class: "hm-sec" },
+      h("div", { class: "hd" }, h("b", null, tr("homeMineN", c.ready.length)),
+        c.waiting ? h("span", null, tr("homeWaiting", c.waiting)) : null,
+        c.other ? h("span", null, `${other === "ai" ? "🤖" : "👤"} ${tr("homeOtherN", actorLabel(other), c.other)}`) : null),
+      c.ready.slice(0, 3).map(itemRow),
+      c.ready.length > 3 ? h("button", { type: "button", class: "hm-more", onclick: () => homeGo(p.slug, "next") }, tr("homeMore", c.ready.length - 3)) : null,
+      c.ready.length ? null : h("p", { class: "hm-none" }, tr("homeMineNone"))) : h("div", { class: "hm-sec" }, h("p", { class: "hm-none" }, tr("nothingOpen"))),
+    dueLine.length ? h("div", { class: "hm-due" }, dueLine) : null);
+}
+
 /* ---------------------------------------------------------- statistics (A58) */
 // Three views on the counts the server builds (GET /api/stats): an overview dashboard, a weekly report and flow/age.
 // Hidden in ☰ → Projekte → Statistiken; replaces bar and board while open and follows the live poll.
@@ -2656,6 +2877,7 @@ const statRef = (o) => refLabel({ project_slug: o.project_slug, ref: o.ref });
 const openRef = (o) => openHistItem({ project_slug: o.project_slug, item_ref: o.ref });
 
 function openStats() {
+  closeHome();
   state.stats = true;
   document.body.classList.add("stats-mode");
   $("#stats").hidden = false;
@@ -3649,6 +3871,7 @@ syncModes();
 $("#modeSwitch").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   if (state.stats) closeStats(); // a view button leaves the statistics
+  if (state.home) { closeHome(); if (b.dataset.mode === state.mode) refresh(true); } // … and the overview
   if (b.dataset.mode === state.mode) return;
   state.mode = b.dataset.mode; state.nextPick = null;
   store.set("cotrack.mode", state.mode);
@@ -3786,6 +4009,7 @@ const refLink = (key) => h("button", { type: "button", class: "reflink", title: 
 const refLinks = (keys) => keys.map((k, n) => [n ? ", " : "", refLink(k)]);
 
 function selectProject(slug) {
+  closeHome();
   state.project = slug; state.version = -1; state.nextPick = null;
   store.set("cotrack.project", slug);
   history.replaceState(null, "", "#" + encodeURIComponent(slug));
@@ -3891,6 +4115,7 @@ const PAL_KEY = matchMedia("(hover: hover)").matches ? (/Mac|iPhone|iPad/.test(n
 function palCommands() {
   const mode = (m) => () => $(`#modeSwitch [data-mode="${m}"]`).click();
   return [
+    { icon: "⌂", label: tr("homeOpen"), words: "übersicht overview home start projekte projects cockpit", run: openHome },
     { icon: "▦", label: tr("modeBoard"), words: "board", run: mode("board") },
     { icon: "▶", label: tr("viewNextTitle"), words: "next weiter", run: mode("next") },
     { icon: "⛓", label: tr("modeDepsTitle"), words: "ketten chains abhängigkeiten dependencies", run: mode("deps") },
@@ -4397,6 +4622,7 @@ function openMenu() {
       h("button", { type: "button", class: "btn", onclick: go(openNewProject) }, tr("menuNewProject")),
       inProject && !currentProject()?.code ? h("button", { type: "button", class: "btn", onclick: go(openSetCode) }, tr("menuSetCode")) : null,
       inProject ? h("button", { type: "button", class: "btn", onclick: go(async () => copy(await api(P(state.project) + "/status.md?lang=" + LANG), tr("statusMdCopied"))) }, tr("menuStatusMd")) : null,
+      state.projects.length ? h("button", { type: "button", class: "btn", onclick: go(openHome) }, tr("menuHome")) : null,
       state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
     sec(tr("secFooter")),
     h("div", { class: "menu-row" },
