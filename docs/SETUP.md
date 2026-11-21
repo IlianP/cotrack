@@ -111,6 +111,9 @@ Store the value in a **password manager**. Anyone who knows it can read and chan
 Replacing the token (e.g. because it was visible somewhere): generate a new value and store it again as in step 7; then sign
 in to the web app with the new value. Connected AI assistants stay connected.
 
+Forgot the token? Cloudflare never shows a secret again, but a device that is signed in still has it: there, ☰ →
+*Show token* shows it (hidden until asked) and copies it. Without such a device: replace it as just described.
+
 ## 7. Publish and store the token
 
 ```bash

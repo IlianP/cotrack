@@ -98,6 +98,8 @@ warnings – a one-glance status that survives across conversations.
   (a benefit × effort matrix with quick wins and time sinks, benefit done per week, lead time per effort class, a rough forecast).
 - **Installable as an app** – Chrome/Edge on Android and the desktop: ☰ → *Install as app*; cotrack then runs in its own
   window with its own entry in the app switcher, and on Android links to it open in the app. iOS: Share → *Add to Home Screen*.
+- **Token for another device** – ☰ → *Show token* shows the token this device signed in with (hidden until asked) and copies
+  it; Cloudflare never shows a secret again.
 - Responsive (phone, tablet, desktop), dark mode (follows the system, or set light/dark in ☰), **no build step, no dependencies** (plain Cloudflare Worker + D1).
 - **German and English – for you and your AI** – ☰ → *Language* sets one language for the web app on every device and for
   what cotrack tells Claude, ChatGPT & co. (instructions, tool descriptions, answers, footer). Without a choice ("Auto") the

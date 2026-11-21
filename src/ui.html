@@ -402,6 +402,7 @@ dialog.pal[open] { display: flex; flex-direction: column; }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
 .title-count { color: color-mix(in srgb, #d97706 70%, var(--text)); }
 .menu-list { display: grid; gap: 6px; }
+.menu-list + .menu-row { margin-top: 6px; }
 .menu-list button { text-align: left; }
 /* menu: sections by scope (this device · projects · chat footer · access) */
 .dlg h4.sec {
@@ -412,6 +413,7 @@ dialog.pal[open] { display: flex; flex-direction: column; }
 .menu-row { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
 /* labels may wrap (long project texts, other languages): the button grows instead of overflowing */
 .menu-list .btn, .menu-row .btn { height: auto; min-height: 38px; padding: 8px 14px; line-height: 1.3; }
+.token-field { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
 .menu-row .btn { display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; }
 .menu-row .btn.danger { color: var(--danger); }
 .close-x { margin: -6px -8px -6px auto; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); font-size: 24px; line-height: 1; }
@@ -1117,7 +1119,9 @@ const STRINGS = {
     secDevice: "Dieses Gerät", secProjects: "Projekte", secFooter: "Chat-Fußzeile", secAccess: (who) => "Zugang · angemeldet als " + who,
     footerCopy: "Kopieren", footerCopyTitle: "Fußzeile kopieren", footerCustomize: "Anpassen …", menuApi: "API-Doku ↗",
     apiDocs: "https://github.com/IlianP/cotrack/blob/main/README.de.md#api",
-    signOut: "Abmelden",
+    signOut: "Abmelden", menuToken: "🔑 Token anzeigen", tokenDialog: "Dein Token",
+    tokenInfo: "Damit meldest du dich auf einem weiteren Gerät an. Er gilt wie ein Passwort: nur in den Passwort-Manager, nicht in Chats oder Nachrichten. Er ist nur hier auf diesem Gerät gespeichert – Cloudflare zeigt ihn nicht wieder an.",
+    tokenShow: "Anzeigen", tokenHide: "Verbergen", tokenCopied: "Token kopiert",
     installApp: "📲 Als App installieren", installIos: "Als App: im Teilen-Menü „Zum Home-Bildschirm“ wählen.", installed: "cotrack ist installiert",
     appearance: "Darstellung", themeLight: "Hell", themeDark: "Dunkel", themeAuto: "Wie das System",
     language: "Sprache", langAuto: "Automatisch – Web-App nach der Sprache des Browsers, KI auf Deutsch",
@@ -1340,7 +1344,9 @@ const STRINGS = {
     secDevice: "This device", secProjects: "Projects", secFooter: "Chat footer", secAccess: (who) => "Access · signed in as " + who,
     footerCopy: "Copy", footerCopyTitle: "Copy footer", footerCustomize: "Customize …", menuApi: "API docs ↗",
     apiDocs: "https://github.com/IlianP/cotrack#api",
-    signOut: "Sign out",
+    signOut: "Sign out", menuToken: "🔑 Show token", tokenDialog: "Your token",
+    tokenInfo: "Use it to sign in on another device. Treat it like a password: into your password manager only, never into chats or messages. It is stored only here on this device – Cloudflare never shows it again.",
+    tokenShow: "Show", tokenHide: "Hide", tokenCopied: "Token copied",
     installApp: "📲 Install as app", installIos: "As an app: Share menu → “Add to Home Screen”.", installed: "cotrack is installed",
     appearance: "Appearance", themeLight: "Light", themeDark: "Dark", themeAuto: "Like the system",
     language: "Language", langAuto: "Automatic – web app in the browser's language, AI in German",
@@ -4730,6 +4736,7 @@ function openMenu() {
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
       h("button", { type: "button", class: "btn", onclick: go(openFooterSettings) }, tr("footerCustomize"))),
     sec(tr("secAccess", ownerLabel(state.actor))),
+    h("div", { class: "menu-list" }, h("button", { type: "button", class: "btn", onclick: go(openToken) }, tr("menuToken"))),
     h("div", { class: "menu-row" },
       h("a", { class: "btn", href: tr("apiDocs"), target: "_blank", rel: "noopener" }, tr("menuApi")),
       h("button", { type: "button", class: "btn danger", onclick: go(() => { store.set("cotrack.token", null); location.reload(); }) }, tr("signOut"))),
@@ -4856,6 +4863,26 @@ async function openFooterSettings() {
     if (!canEdit) return closeDialog();
     save({ footer_layout: layout.value, footer_label_user: user.value.trim() || null, footer_label_ai: ai.value.trim() || null }, tr("settingsSaved"));
   });
+}
+
+// The token this device signed in with (A113): the only copy apart from the password manager, since Cloudflare never shows a
+// secret again. Hidden until asked for; copying needs no reveal.
+function openToken() {
+  const input = h("input", { type: "password", value: state.token || "", readonly: true, autocomplete: "off", spellcheck: false,
+    class: "token-field", "aria-label": tr("tokenDialog") });
+  const toggle = h("button", { type: "button", class: "btn", "aria-pressed": "false", onclick: () => {
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    toggle.textContent = tr(show ? "tokenHide" : "tokenShow");
+    toggle.setAttribute("aria-pressed", String(show));
+  } }, tr("tokenShow"));
+  openDialog(
+    h("h3", null, tr("tokenDialog"), h("button", { class: "close-x", "aria-label": tr("close"), title: tr("close") }, "×")),
+    h("p", { class: "small" }, tr("tokenInfo")),
+    input,
+    h("div", { class: "actions" }, toggle,
+      h("button", { type: "button", class: "primary", onclick: () => copy(state.token, tr("tokenCopied")) }, tr("copy"))),
+  );
 }
 
 function openSetCode() {
