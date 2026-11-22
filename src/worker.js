@@ -1018,9 +1018,9 @@ async function queryItems(db, f) {
     args.push(f.owner);
   }
   if (f.q) {
-    where.push("(i.title LIKE ? OR i.short LIKE ? OR i.body LIKE ?)");
+    where.push("(i.title LIKE ? OR i.short LIKE ? OR i.body LIKE ? OR i.source LIKE ?)");
     const like = `%${f.q}%`;
-    args.push(like, like, like);
+    args.push(like, like, like, like);
   }
   // Within a kind, a project's own items come before those shown from other projects.
   const homeFirst = f.project && f.shared ? "i.project_slug != ?, " : "";
@@ -1120,8 +1120,9 @@ async function getKind(db, code) {
   return k;
 }
 
-// sizedBy: only for conversions, which keep who set the values (an estimate stays an estimate).
-export async function createItem(db, project, input, actor, { sizedBy = null } = {}) {
+// sizedBy, inherit: only for conversions, which keep who set the values (an estimate stays an estimate) and the sessions
+// the idea was worked on in.
+export async function createItem(db, project, input, actor, { sizedBy = null, inherit = null } = {}) {
   const kind = await getKind(db, String(input.kind || "").toUpperCase());
   const t = now();
   const row = {
@@ -1153,6 +1154,10 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
   // Likewise only when given (migration 0010).
   const alsoIn = await normAlsoIn(db, input.also_in, project.slug);
   if (alsoIn) row.also_in = alsoIn;
+  // Where it was created (D35, migration 0011); a conversion keeps where the idea came from.
+  const session = normSession(input.session);
+  const firstSession = inherit?.first_session ?? session, lastSession = session ?? inherit?.last_session ?? null;
+  if ((firstSession || lastSession) && (await sessionColumns(db))) Object.assign(row, { first_session: firstSession, last_session: lastSession });
 
   const stmts = [];
   let seqSql;
@@ -1202,7 +1207,7 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
       )
       .bind(project.slug, actor, JSON.stringify({ title: row.title, owner: row.owner, status: row.status,
         ...(row.sized_by ? { effort: row.effort, benefit: row.benefit, sized_by: row.sized_by } : {}),
-        ...(row.also_in ? { also_in: row.also_in } : {}) }), t, row.id),
+        ...(row.also_in ? { also_in: row.also_in } : {}), ...(session ? { session } : {}) }), t, row.id),
   );
   stmts.push(touchProject(db, project.slug, t));
   await batchSharing(db, stmts);
@@ -1212,6 +1217,7 @@ export async function createItem(db, project, input, actor, { sizedBy = null } =
 // expect (optional, e.g. from undo in the web app): { field: value } the item must still hold when the update is written;
 // compared in the UPDATE itself, so a change by someone else in between is not overwritten (409 conflict instead).
 const EXPECT_COLS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by"];
+const SESSION_COLS = ["first_session", "last_session"];
 function expectPredicate(input, item) {
   const e = input.expect;
   if (e === undefined || e === null) return { sql: "", args: [] };
@@ -1254,6 +1260,20 @@ export async function updateItem(db, project, item, input, actor) {
     }
     if ("source" in input) set("source", text(input.source, "source", 1000));
     if ("due" in input) set("due", normDate(input.due));
+    // The session this change comes from (D35): it becomes the item's last session, and its first while none is known.
+    // Empty clears the link (the field in the web app) – the first one too when it is the same link.
+    let session;
+    if ("session" in input) {
+      session = normSession(input.session);
+      if ((session || item.last_session) && (await sessionColumns(db))) {
+        if (session && session !== item.last_session) changes.last_session = session;
+        if (session && !item.first_session) changes.first_session = session;
+        if (!session) {
+          changes.last_session = null;
+          if (item.first_session === item.last_session) changes.first_session = null;
+        }
+      }
+    }
     if ("effort" in input || "benefit" in input) {
       // Sending the values again (even unchanged) records who stands behind them: the human confirms an estimate that way.
       const effort = "effort" in input ? normEffort(input.effort) : item.effort ?? null;
@@ -1283,12 +1303,15 @@ export async function updateItem(db, project, item, input, actor) {
     if (ticks) {
       const { body, ...rest } = changes;
       data = { ...rest, ...(ticks.checked.length ? { checked: ticks.checked } : {}), ...(ticks.unchecked.length ? { unchecked: ticks.unchecked } : {}) };
-      if (cols.length === 1) action = "checked";
+      if (cols.filter((c) => !SESSION_COLS.includes(c)).length === 1) action = "checked";
     }
     // Where it was shown before, so the projects it leaves notice the change as well (see linkedVersion).
     if ("also_in" in changes) data = { ...data, also_in_was: item.also_in ?? null };
     // Likewise for dependencies: a removed link is otherwise gone from the items (see linkedScope).
     if ("waiting_on" in changes) data = { ...data, waiting_on_was: item.waiting_on ?? null };
+    // The session is a note on the event ("session"), not a field change – null when the link was removed.
+    data = Object.fromEntries(Object.entries(data).filter(([c]) => !SESSION_COLS.includes(c)));
+    if (session || "last_session" in changes) data.session = session ?? null;
 
     const update = db
       .prepare(
@@ -1338,7 +1361,7 @@ async function deleteItem(db, project, item, actor) {
 // the item's latest one (nothing was restored or created under the reference since); refs are never reused, so the
 // reference is still free. Items that waited on it keep their waiting_on, so the links come back by themselves.
 const RESTORE_COLS = ["kind", "seq", "title", "short", "body", "owner", "status", "waiting_on", "source", "due", "converted_to",
-  "created_by", "created_at", "closed_at", "effort", "benefit", "sized_by", "also_in"];
+  "created_by", "created_at", "closed_at", "effort", "benefit", "sized_by", "also_in", "first_session", "last_session"];
 export async function restoreItem(db, project, ref, actor) {
   const { qualifier, ref: plainRef } = splitRef(ref);
   if (qualifier && (await getProject(db, qualifier)).slug !== project.slug) {
@@ -1375,6 +1398,7 @@ export async function restoreItem(db, project, ref, actor) {
 // Idea accepted -> becomes a task/to-do with a NEW ref; the idea is closed and points to it.
 export async function convertItem(db, project, item, input, actor) {
   if (item.converted_to) throw new HttpError(409, "already_converted", item.converted_to);
+  const session = normSession(input.session); // checked before the claim below, which a failure would leave behind
   // Claim the source item atomically so concurrent or double-clicked conversions cannot both succeed.
   const claim = await db
     .prepare("UPDATE items SET converted_to = 'pending' WHERE id = ? AND converted_to IS NULL")
@@ -1383,7 +1407,7 @@ export async function convertItem(db, project, item, input, actor) {
   if (!claim.meta.changes) throw new HttpError(409, "already_converted");
   let target;
   try {
-    target = await createItem(db, project, conversionInput(item, input), actor, { sizedBy: item.sized_by });
+    target = await createItem(db, project, conversionInput(item, input), actor, { sizedBy: item.sized_by, inherit: item });
   } catch (err) {
     await db
       .prepare("UPDATE items SET converted_to = NULL WHERE id = ? AND converted_to = 'pending'")
@@ -1392,13 +1416,15 @@ export async function convertItem(db, project, item, input, actor) {
     throw err;
   }
   const t = now();
+  // The idea was last worked on where it was accepted (D35).
+  const sessionSql = session && (await sessionColumns(db)) ? ", last_session = ?, first_session = COALESCE(first_session, ?)" : "";
   await db.batch([
     db
       .prepare(
-        "UPDATE items SET status = 'done', converted_to = ?, closed_at = ?, updated_at = ?, updated_by = ? WHERE id = ?",
+        `UPDATE items SET status = 'done', converted_to = ?, closed_at = ?, updated_at = ?, updated_by = ?${sessionSql} WHERE id = ?`,
       )
-      .bind(target.ref, t, t, actor, item.id),
-    eventStmt(db, project.slug, item.ref, "converted", actor, { to: target.ref }, t),
+      .bind(target.ref, t, t, actor, ...(sessionSql ? [session, session] : []), item.id),
+    eventStmt(db, project.slug, item.ref, "converted", actor, { to: target.ref, ...(session ? { session } : {}) }, t),
   ]);
   return { from: await getItemByRef(db, project.slug, item.ref), to: target };
 }
@@ -1412,6 +1438,7 @@ function conversionInput(item, input) {
     source: item.source,
     waiting_on: item.waiting_on,
     also_in: item.also_in ?? null,
+    session: input.session,
     // Effort and benefit travel to an action; a decision inherits its benefit instead.
     ...(SIZED_KINDS.includes(String(input.kind || "").toUpperCase()) ? { effort: item.effort, benefit: item.benefit } : {}),
     ...("owner" in input ? { owner: input.owner } : {}),
@@ -1935,6 +1962,29 @@ function normDate(v) {
   if (v === undefined || v === null || v === "") return null;
   if (typeof v !== "string" || !DATE_RE.test(v)) throw new HttpError(400, "invalid_field", "due (YYYY-MM-DD)");
   return v;
+}
+
+// The session a change comes from (decision D35): the address of the chat or coding session, https only (the web app links it).
+const SESSION_MAX = 500;
+function normSession(v) {
+  if (v === undefined || v === null) return null;
+  if (typeof v !== "string") throw new HttpError(400, "invalid_field", "session");
+  const s = v.trim();
+  if (!s) return null;
+  let ok = s.length <= SESSION_MAX && /^https:\/\/[^\s"<>]+$/i.test(s);
+  try { ok = ok && new URL(s).protocol === "https:"; } catch { ok = false; }
+  if (!ok) throw new HttpError(400, "invalid_field", `session (an https address, max ${SESSION_MAX})`);
+  return s;
+}
+
+// The session columns need migration 0011. AIs send a session with nearly every change, so without the migration it is
+// left out of the item (the event still records it) instead of failing the write. Once there, remembered per isolate.
+let sessionColumnsReady = false;
+async function sessionColumns(db) {
+  if (!sessionColumnsReady) {
+    sessionColumnsReady = !!(await db.prepare("SELECT 1 FROM pragma_table_info('items') WHERE name = 'last_session'").first());
+  }
+  return sessionColumnsReady;
 }
 
 function normEffort(v) {

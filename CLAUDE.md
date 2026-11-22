@@ -78,6 +78,14 @@
   = 2 days before, red after), sorts the board (`SORTS` → `due`) and brings items forward in Next (`dueUrgent` in
   `nextQueue`). The AI sets it via `cotrack_add`/`cotrack_update` only for real dates (`dueParam` and the instructions in
   `src/mcp.js`). `demo/seed.mjs` writes due dates relative to today (`due(days)`).
+- Session links (decision D35, methodology v2.15, migration 0011): `first_session`/`last_session` on items. Every write may
+  carry `session` (https address of the chat or coding session, `normSession` in `src/worker.js`): creating sets both, an
+  update sets the last (and the first while none is known), empty clears the last (the first too if it is the same link), a
+  conversion keeps the idea's first. The event data records `session` as a note on where the change was made – never as a
+  field change (`SESSION_COLS` are stripped from it). Without migration 0011 the columns are skipped (`sessionColumns`) and
+  only the events keep it. MCP: `session` on add/update/convert, the rule in `INSTRUCTIONS`, `sourceHint` when a session link
+  lands in `source`. UI: `sessionLink`/`sessionAnchor`, the field in `openEdit` (shown when set, otherwise "🔗 Session-Link
+  eintragen"), a ↗ column in `itemHistTable`. Session links never go into `source`; search (`q`) covers `source` as well.
 - Compact board (D34): `state.dense` (`#denseBtn`, localStorage `cotrack.dense`) renders one line per item in `renderItem`.
   A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
   therefore annotates `ext_open`/`ext_next` like the project lists.

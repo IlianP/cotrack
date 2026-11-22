@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.14 (Stand 21. November 2026)
+## Gültig: Methodik v2.15 (Stand 22. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -118,6 +118,17 @@
   - **Next** zieht vor, was überfällig oder in den nächsten zwei Tagen fällig ist – direkt nach dem, was in Arbeit ist,
     und vor Nutzen im Verhältnis zum Aufwand.
   - Fußzeile und Prompt bleiben unverändert; die Regel steht in der Server-Anweisung und in der Werkzeugbeschreibung.
+- **Session-Link (v2.15, Entscheidung D35):** cotrack merkt sich, **in welcher Session** an einem Punkt gearbeitet wurde – die
+  Adresse des Chats oder der Coding-Session (z. B. `https://claude.ai/code/session_…`). Kennt die KI ihre Adresse, schickt sie
+  sie bei jedem Anlegen, Ändern und Umwandeln als `session` mit. Der Punkt hält die **erste** und die **letzte** Session fest,
+  der Verlauf jede einzelne. So springst du aus dem Punkt direkt zurück in die Session, statt eine neue zu beginnen.
+  - Session-Links gehören **nicht in die Quelle**: Die Quelle sagt, wo die Details stehen (Dokument, PR, Recherche), die
+    Session, wo daran gearbeitet wurde. Landet doch einer in der Quelle, antwortet der MCP-Server mit einem Hinweis.
+  - Nur Claude Code kennt seine Session-Adresse. claude.ai-Chat und ChatGPT geben dem Modell ihre Adresse nicht – dort bleibt
+    das Feld leer, die KI rät nie. Den Link trägst du dann im Bearbeiten-Dialog selbst ein („🔗 Session-Link eintragen“).
+  - Im Bearbeiten-Dialog steht er unter „Session“, benannt nach dem Ziel („Claude Code ↗“, „claude.ai ↗“, „ChatGPT ↗“),
+    darunter die erste Session, wenn es eine andere war; der Verlauf zeigt je Zeile ein ↗. Das Board zeigt ihn nicht.
+  - Fußzeile und Prompt bleiben unverändert; die Regel steht in der Server-Anweisung und in den Werkzeugbeschreibungen.
 - **PrioFlow (optional, Skill):** Statt selbst aus der Liste auszuwählen, rufst du den Skill `prioflow` auf. Das Modell
   bewertet die offenen Punkte (macht andere frei, schnell erledigt, Frist und Alter, Wirkung aufs Projektziel; Warnungen
   als Gewicht), schlägt die drei nächsten vor und führt dich der Reihe nach durch, bis du „Stopp“ sagst. Die Bewertung
@@ -126,6 +137,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.15 ändert den Prompt nicht (der Session-Link steht in der Server-Anweisung).
   v2.14 ändert den Prompt nicht (Fälligkeiten stehen in der Server-Anweisung).
   v2.13 ändert den Prompt nicht (die Mitanzeige steht in der Server-Anweisung).
   v2.12 ändert den Prompt nicht (die Regel für knappe Beschreibungen steht in der Server-Anweisung).

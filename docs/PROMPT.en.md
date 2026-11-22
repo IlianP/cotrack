@@ -1,4 +1,4 @@
-# Custom prompt (Claude & ChatGPT) – Methodology v2.14 (prompt text last changed on 20 Nov 2026)
+# Custom prompt (Claude & ChatGPT) – Methodology v2.15 (prompt text last changed on 20 Nov 2026)
 
 **English** · [Deutsch](PROMPT.md)
 
@@ -82,6 +82,7 @@ Whether a new version needs anything from you is in the last column.
 
 | Version | What's new | Reinstall? |
 |---|---|---|
+| v2.15 | **Session link:** cotrack remembers in which session (Claude Code) an item was worked on and links it in the edit dialog. The rule lives in the MCP server's instructions and the tool descriptions. | No – prompt unchanged |
 | v2.14 | **Due dates:** real dates in the "Due" field, Next brings forward what is overdue. The rule lives in the MCP server's instructions and the tool descriptions. | No – prompt unchanged |
 | v2.13 (20 Nov 2026) | In the footer example of part 1, "👤" and "🤖" have **no colon**, like 💡 and ⚠️ (the middle dot separates the groups). Relevant only without cotrack – with cotrack the footer comes from the server. | Worthwhile, not required |
 | v2.12 | **Brief descriptions:** about five lines, details via a link in the source, replace the status instead of appending. Rule in the MCP server's instructions and tool descriptions. | No – prompt unchanged |
