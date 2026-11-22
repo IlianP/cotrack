@@ -1,4 +1,4 @@
-# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.15 (Prompt-Text zuletzt geändert am 20.11.2026)
+# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.16 (Prompt-Text zuletzt geändert am 20.11.2026)
 
 [English](PROMPT.en.md) · **Deutsch**
 
@@ -83,6 +83,7 @@ Ob du nach einer neuen Version etwas tun musst, steht in der letzten Spalte.
 
 | Version | Was ist neu | Neu einspielen? |
 |---|---|---|
+| v2.16 | **Bis zu drei Quellen:** eine pro Zeile, normalerweise eine; Überholtes ersetzen statt anhängen. Die Regel steht in der Anweisung des MCP-Servers und in der Werkzeugbeschreibung. | Nein – Prompt unverändert |
 | v2.15 | **Session-Link:** cotrack merkt sich, in welcher Session (Claude Code) an einem Punkt gearbeitet wurde, und verlinkt sie im Bearbeiten-Dialog. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen. | Nein – Prompt unverändert |
 | v2.14 | **Fälligkeiten:** echte Termine im Feld „Fällig“, Next zieht Überfälliges vor. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen. | Nein – Prompt unverändert |
 | v2.13 (20.11.2026) | Im Fußzeilen-Beispiel von Teil 1 stehen „👤“ und „🤖“ **ohne Doppelpunkt**, wie 💡 und ⚠️ (der Mittelpunkt trennt die Gruppen). Nur ohne cotrack relevant – mit cotrack kommt die Fußzeile vom Server. | Lohnt sich, nicht nötig |

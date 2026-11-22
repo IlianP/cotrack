@@ -91,7 +91,7 @@ project("website", { name: "Website-Relaunch", code: "WEB", created: "user@40 08
   it("A4", "ai@35 16:25", { title: "Startseite nach Figma-Entwurf umsetzen", short: "Startseite", owner: "ai", effort: "L", benefit: "high",
     waiting_on: "A3,D3", source: "Figma: Startseite v3" },
     ["ai@34 19:20", { status: "doing" }],
-    ["ai@30 17:45", { status: "done", source: "PR #7" }]),
+    ["ai@30 17:45", { status: "done", source: "Figma: Startseite v3\nPR #7" }]),
   it("A5", "ai@35 16:30", { title: "Texte für „Leistungen“ schreiben", short: "Texte Leistungen", owner: "user", effort: "L", benefit: "high",
     body: "Pro Leistung: Nutzen, Ablauf, Preisrahmen – je etwa 150 Wörter.\nDie KI liefert auf Wunsch Entwürfe aus den Stichpunkten.\n- [ ] Beratung\n- [ ] Workshops\n- [ ] Coaching\n- [ ] Preise und Ablauf" },
     ["user@30 18:05", { effort: "XL", benefit: "high", confirmed: true }],

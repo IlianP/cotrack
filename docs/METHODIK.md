@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.15 (Stand 22. November 2026)
+## Gültig: Methodik v2.16 (Stand 22. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -129,6 +129,13 @@
   - Im Bearbeiten-Dialog steht er unter „Session“, benannt nach dem Ziel („Claude Code ↗“, „claude.ai ↗“, „ChatGPT ↗“),
     darunter die erste Session, wenn es eine andere war; der Verlauf zeigt je Zeile ein ↗. Das Board zeigt ihn nicht.
   - Fußzeile und Prompt bleiben unverändert; die Regel steht in der Server-Anweisung und in den Werkzeugbeschreibungen.
+- **Quellen (v2.16, Entscheidung D36):** Ein Punkt hat **normalerweise eine** Quelle – die Stelle, an der die Details stehen.
+  Bis zu **drei** sind möglich, eine pro Zeile, aber nur, wenn sie Verschiedenes enthalten (z. B. das Konzept und der PR, der
+  es umsetzt). Eine überholte Quelle wird **ersetzt statt angehängt**; Session-Links gehören nie in die Quelle (v2.15).
+  - Der Server lehnt mehr als drei ab. Die Karte zeigt jede Quelle als eigenen Link, der Bearbeiten-Dialog hat dafür ein
+    mehrzeiliges Feld; die kompakte Ansicht zeigt weiter keine.
+  - Anlass: Kam eine neue Quelle dazu (Konzept → PR), überschrieb die KI die alte, und der erste Verweis war weg.
+  - Fußzeile und Prompt bleiben unverändert; die Regel steht in der Server-Anweisung und in der Werkzeugbeschreibung.
 - **PrioFlow (optional, Skill):** Statt selbst aus der Liste auszuwählen, rufst du den Skill `prioflow` auf. Das Modell
   bewertet die offenen Punkte (macht andere frei, schnell erledigt, Frist und Alter, Wirkung aufs Projektziel; Warnungen
   als Gewicht), schlägt die drei nächsten vor und führt dich der Reihe nach durch, bis du „Stopp“ sagst. Die Bewertung
@@ -137,6 +144,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.16 ändert den Prompt nicht (die Regel für Quellen steht in der Server-Anweisung).
   v2.15 ändert den Prompt nicht (der Session-Link steht in der Server-Anweisung).
   v2.14 ändert den Prompt nicht (Fälligkeiten stehen in der Server-Anweisung).
   v2.13 ändert den Prompt nicht (die Mitanzeige steht in der Server-Anweisung).

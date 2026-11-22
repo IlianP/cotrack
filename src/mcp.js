@@ -71,7 +71,9 @@ Titel kurz (höchstens 80 Zeichen): was zu tun, zu entscheiden oder zu beachten 
 gehören in die Beschreibung (body), nicht in den Titel; 📝 in Listen zeigt, dass es eine gibt (cotrack_get).
 Beschreibung knapp (etwa fünf Zeilen): nur was man zum Handeln braucht – bei D Optionen mit Empfehlung, bei A Ziel oder Schritte, bei W Folge
 und Gegenmaßnahme. cotrack ist Tracking, keine Wissensablage: Details, Messwerte, Recherche und Verlauf gehören ins Repo, in PRs oder Dokumente;
-verweise mit source darauf. Zwischenstand als eine „Stand:“-Zeile, die du beim nächsten Update ersetzt statt Neues anzuhängen. Änderst du ohnehin
+verweise mit source darauf – normalerweise eine Quelle; bis zu drei, eine pro Zeile, nur wenn sie Verschiedenes enthalten (z. B. Konzept und PR).
+source ersetzt immer das ganze Feld: eine überholte Quelle ersetzen statt anhängen, weitere mitschicken.
+Zwischenstand als eine „Stand:“-Zeile, die du beim nächsten Update ersetzt statt Neues anzuhängen. Änderst du ohnehin
 einen Punkt mit langer Beschreibung, verdichte sie auf das Nötige – lösche aber nichts, was nirgends sonst steht.
 Kennungen wie A4 oder D2 werden nie neu vergeben. Abhängigkeiten: waiting_on, z. B. "D2". Anzeige: "D2 ▶A4" = D2 kommt zuerst,
 A4 folgt (in der Fußzeile bei Paaren nur so); "A4 ⏸D2" = A4 wartet auf D2 (nur wenn D2 nicht in der Zeile steht).
@@ -114,7 +116,9 @@ Keep titles short (at most 80 characters): what to do, decide or watch out for. 
 the description (body), not in the title; 📝 in lists shows that there is one (cotrack_get).
 Keep descriptions brief (about five lines): only what is needed to act – for D the options with a recommendation, for A the goal or steps,
 for W impact and countermeasure. cotrack is tracking, not a knowledge base: details, measurements, research and history belong in the repository,
-PRs or documents; point to them with source. Progress goes into one "Status:" line that you replace on the next update instead of appending.
+PRs or documents; point to them with source – normally one source; up to three, one per line, only when they hold different things (e.g.
+concept and PR). source always replaces the whole field: replace an outdated source instead of appending, and send the others along.
+Progress goes into one "Status:" line that you replace on the next update instead of appending.
 When you change an item with a long description anyway, condense it to what is needed – but never delete anything that exists nowhere else.
 References like A4 or D2 are never reused. Dependencies: waiting_on, e.g. "D2". Display: "D2 ▶A4" = D2 comes first,
 A4 follows (for pairs in the footer, only this way); "A4 ⏸D2" = A4 waits for D2 (only when D2 is not in the same line).
@@ -174,8 +178,8 @@ function toolList(lang) {
   const refParam = { type: "string", description: t("Kennung, z. B. \"A4\"; mit Kürzel qualifiziert: \"CT:A4\"", "Reference, e.g. \"A4\"; qualified with the code: \"CT:A4\"") };
   const ownerText = t("user oder ai", "user or ai");
   const sourceText = t(
-    "Link oder Datei mit den Details (Dokument, PR, Recherche), aus der der Punkt stammt – kein Session-Link (dafür: session)",
-    "Link or file with the details (document, PR, research) the item comes from – not a session link (use session for that)",
+    "Link oder Datei mit den Details (Dokument, PR, Recherche) – normalerweise eine; bis zu 3, eine pro Zeile, nur wenn sie Verschiedenes enthalten. Ersetzt das ganze Feld: Überholtes ersetzen statt anhängen. Kein Session-Link (dafür: session)",
+    "Link or file with the details (document, PR, research) – normally one; up to 3, one per line, only when they hold different things. Replaces the whole field: replace what is outdated instead of appending. Not a session link (use session for that)",
   );
   const sessionParam = {
     type: "string",
@@ -531,6 +535,7 @@ const MSG = {
     followedBy: "Danach folgt",
     alsoIn: "Auch angezeigt in",
     source: "Quelle",
+    sources: "Quellen",
     session: "Session",
     firstSession: "Erste Session",
     due: "Fällig",
@@ -571,6 +576,7 @@ const MSG = {
     followedBy: "Followed by",
     alsoIn: "Also shown in",
     source: "Source",
+    sources: "Sources",
     session: "Session",
     firstSession: "First session",
     due: "Due",
@@ -699,7 +705,10 @@ async function callTool(name, args, db, actor, lang, origin = "") {
       const next = await successorsOf(db, it.project_slug, it.ref);
       if (next.length) lines.push(`${M.followedBy}: ▶${next.map(lbl).join(",")}`);
       if (it.due) lines.push(`${M.due}: ${it.due}`);
-      if (it.source) lines.push(`${M.source}: ${it.source}`);
+      if (it.source) {
+        const srcs = it.source.split("\n");
+        lines.push(srcs.length > 1 ? `${M.sources}:\n${srcs.map((x) => `- ${x}`).join("\n")}` : `${M.source}: ${it.source}`);
+      }
       if (it.last_session) lines.push(`${M.session}: ${it.last_session}`);
       if (it.first_session && it.first_session !== it.last_session) lines.push(`${M.firstSession}: ${it.first_session}`);
       if (it.converted_to) lines.push(`${M.convertedTo}: ${it.converted_to}`);
