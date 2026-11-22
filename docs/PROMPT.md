@@ -13,62 +13,8 @@ Der Prompt hat **zwei Teile**:
 Das Format der Fußzeile kommt bei cotrack vom Server (`cotrack_footer`), nicht aus dem Prompt – so gibt es nur eine Quelle.
 
 **Länge:** Beide Teile zusammen haben rund 4.100 Zeichen. So bleibt in ChatGPT (höchstens 5.000 Zeichen für die eigenen
-Anweisungen) Platz für eigene Regeln, und jeder Chat spart Tokens. Wer kürzt oder ergänzt: Was in der Tabelle unten beim
+Anweisungen) Platz für eigene Regeln, und jeder Chat spart Tokens. Wer kürzt oder ergänzt: Was in der Tabelle „Wer regelt was“ beim
 **Prompt** steht, muss drinbleiben.
-
-## Wozu der Prompt? – Wer regelt was
-
-cotrack ist ein Server: Er speichert, prüft und antwortet – aber nur, wenn die KI ihn fragt. Ob und wann sie fragt, steht
-im Prompt. Deshalb braucht es beides.
-
-| Was | Wo | Warum dort |
-|---|---|---|
-| Ob die KI eine Liste führt; wann sie cotrack aufruft (Start, neue Punkte, Erledigtes); Übergabe | **Prompt** | Der Server kann die KI zu nichts bringen, er antwortet nur. |
-| Wann die Fußzeile erscheint (bei „Stand?“, am Ende größerer Arbeiten, etwa alle vier Antworten; sonst die Kurzzeile) | **Prompt** | Nur die KI weiß, wann eine Antwort endet. |
-| Wie die Fußzeile aussieht (Gruppen, Reihenfolge, höchstens acht Einträge, ▶/⏸, ein- oder mehrzeilig, 👤/🤖) | **Server**, Standard in der **Web-App** (☰ → Chat-Fußzeile → Anpassen) | Eine Quelle für alle Chats und Programme. |
-| Sprache dessen, was cotrack der KI schreibt (Anweisung, Werkzeuge, Antworten, Fußzeile) | **Server**, eingestellt in der **Web-App** (☰ → Sprache, dieselbe wie für die Web-App); `lang` in einer Anfrage geht vor | MCP sagt dem Server nicht, welche Sprache der Nutzer spricht. |
-| Kennungen (nie neu vergeben), Abhängigkeiten, wer was geändert hat | **Server** | Die Datenbank erzwingt es. |
-| Welches Projekt zur Unterhaltung gehört | **KI**, nach `COTRACK.md` bzw. `cotrack_projects` | Der Server sieht das Repository nicht. |
-| Arbeiten ohne cotrack (Rückfall) | **Prompt**, Teil 1 | – |
-
-**Überschreiben die Einstellungen der Web-App den Prompt?** Nicht von selbst. Sie wirken, weil Teil 2 der KI sagt: die
-Fußzeile nie selbst bauen, sondern von cotrack holen und genau so wiedergeben. Mit einem älteren Prompt ohne Teil 2 baut
-die KI die Zeile womöglich selbst – dann gilt, was im Prompt steht. Wer die Kennzeichen ändert, kann sie in Teil 1
-mitändern, damit auch der Rückfall gleich aussieht.
-
-**Und die Anweisung des Servers?** Beim Verbinden schickt cotrack eine kurze Gebrauchsanweisung (`instructions`) mit.
-Claude Code gibt sie an die KI weiter, claude.ai und ChatGPT nicht verlässlich. Der Prompt gilt dagegen in jedem Chat.
-Bei einem Widerspruch gilt: das Aussehen vom Server, das Verhalten aus dem Prompt.
-
-## Einspielen und Versionen
-
-Diese Teile in den persönlichen Einstellungen beider Programme ersetzen (Teil 1 und Teil 2 hintereinander). Änderungen gegenüber v1:
-T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤“/„🤖“; Entscheidungen (D) sind eine eigene Kategorie;
-Ideen erscheinen mit 💡. v2.1: Die Fußzeile erscheint seltener (nur bei Änderungen als Kurzzeile, voll etwa alle vier Antworten).
-v2.3: Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben.
-v2.14: **Fälligkeiten** (echte Termine im Feld „Fällig“, Next zieht Überfälliges vor) – keine Änderung am Prompt, nichts
-neu einzuspielen. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
-v2.13 (20.11.2026): Im Fußzeilen-Beispiel von Teil 1 stehen „👤“ und „🤖“ **ohne Doppelpunkt**, wie 💡 und ⚠️ (der Mittelpunkt
-trennt die Gruppen). Nur ohne cotrack relevant – mit cotrack kommt die Fußzeile vom Server. Neu einspielen lohnt sich, ist aber nicht nötig.
-v2.12: **Knappe Beschreibungen** (etwa fünf Zeilen, Details per Link in der Quelle, Stand ersetzen statt anhängen) – keine
-Änderung am Prompt, nichts neu einzuspielen. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
-v2.11: **Kurze Titel** (höchstens 80 Zeichen, Details in die Beschreibung) – keine Änderung am Prompt, nichts neu einzuspielen.
-Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
-v2.10: **Aufwand und Nutzen** – keine Änderung am Prompt, nichts neu einzuspielen. Die Regel (die KI schätzt beides bei
-Aufgaben und Ideen mit) steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen.
-v2.9: **Kürzer** – gleiche Regeln, knapper formuliert (rund 4.100 statt 5.400 Zeichen), damit der Prompt samt eigener Regeln
-in ChatGPT passt (Grenze 5.000 Zeichen) und weniger Tokens kostet. Keine neue Regel. **Wer v2.8 oder älter eingespielt hat,
-ersetzt beide Teile** (sonst gilt der alte Text weiter – inhaltlich gleich, nur länger).
-v2.8: **Teilpunkte** – eine Aufgabe darf eine kurze Checkliste haben (höchstens fünf, nur auf deinen Wunsch); je ein Absatz in
-Teil 1 und Teil 2 ist neu. **Wer v2.7 eingespielt hat, ersetzt beide Teile.**
-v2.7: Layout (ein-/mehrzeilig) und Kennzeichen der Fußzeile stellst du in der Web-App ein (☰ → Chat-Fußzeile → Anpassen).
-**Der Prompt-Text war von v2.6 bis v2.7 fast unverändert** – einzige Änderung: im Fußzeilen-Beispiel von Teil 1 steht „⚠️“ statt „⚠“
-(nur ohne cotrack relevant; mit cotrack kommt die Fußzeile vom Server). Wer v2.6 eingespielt hat, muss sonst nichts tun.
-v2.6: Die Gruppen der Fußzeile heißen „👤:“ (deine Punkte) und „🤖:“ (die der KI) statt „Du:“ und „🤖KI:“.
-Außerdem ist der Prompt zweiteilig (Basis + cotrack-Zusatz), und die Fußzeile kommt bei cotrack nur noch vom Server.
-v2.5: Die volle Fußzeile ist mehrzeilig (jede Gruppe eine Zeile, Probephase); die Kurzzeile bleibt einzeilig.
-v2.4: Projekt-Zuordnung über `COTRACK.md`, Projekt-Kürzel und qualifizierte Kennungen („CT:A14“), Fußzeile je Projekt bei mehreren Projekten.
-v2.2: cotrack ist führend, wo verfügbar; die Status-Datei enthält dann nur einen Link. Abgesagte Ideen werden verworfen (bleiben sichtbar) statt gelöscht.
 
 ## Teil 1 – Basis (immer)
 
@@ -102,5 +48,57 @@ Ist cotrack verfügbar und gibt es dort ein Projekt zum Repo, ist cotrack die f�
 - Übergabe: Alle Punkte müssen in cotrack stehen; volle Fußzeile zeigen.
 - Rückfall: Ist cotrack nicht erreichbar oder nicht eingerichtet, einmal kurz sagen und nach der Basis weiterführen; später nachtragen.
 ```
+
+## Wozu der Prompt? – Wer regelt was
+
+cotrack ist ein Server: Er speichert, prüft und antwortet – aber nur, wenn die KI ihn fragt. Ob und wann sie fragt, steht
+im Prompt. Deshalb braucht es beides.
+
+| Was | Wo | Warum dort |
+|---|---|---|
+| Ob die KI eine Liste führt; wann sie cotrack aufruft (Start, neue Punkte, Erledigtes); Übergabe | **Prompt** | Der Server kann die KI zu nichts bringen, er antwortet nur. |
+| Wann die Fußzeile erscheint (bei „Stand?“, am Ende größerer Arbeiten, etwa alle vier Antworten; sonst die Kurzzeile) | **Prompt** | Nur die KI weiß, wann eine Antwort endet. |
+| Wie die Fußzeile aussieht (Gruppen, Reihenfolge, höchstens acht Einträge, ▶/⏸, ein- oder mehrzeilig, 👤/🤖) | **Server**, Standard in der **Web-App** (☰ → Chat-Fußzeile → Anpassen) | Eine Quelle für alle Chats und Programme. |
+| Sprache dessen, was cotrack der KI schreibt (Anweisung, Werkzeuge, Antworten, Fußzeile) | **Server**, eingestellt in der **Web-App** (☰ → Sprache, dieselbe wie für die Web-App); `lang` in einer Anfrage geht vor | MCP sagt dem Server nicht, welche Sprache der Nutzer spricht. |
+| Kennungen (nie neu vergeben), Abhängigkeiten, wer was geändert hat | **Server** | Die Datenbank erzwingt es. |
+| Welches Projekt zur Unterhaltung gehört | **KI**, nach `COTRACK.md` bzw. `cotrack_projects` | Der Server sieht das Repository nicht. |
+| Arbeiten ohne cotrack (Rückfall) | **Prompt**, Teil 1 | – |
+
+**Überschreiben die Einstellungen der Web-App den Prompt?** Nicht von selbst. Sie wirken, weil Teil 2 der KI sagt: die
+Fußzeile nie selbst bauen, sondern von cotrack holen und genau so wiedergeben. Mit einem älteren Prompt ohne Teil 2 baut
+die KI die Zeile womöglich selbst – dann gilt, was im Prompt steht. Wer die Kennzeichen ändert, kann sie in Teil 1
+mitändern, damit auch der Rückfall gleich aussieht.
+
+**Und die Anweisung des Servers?** Beim Verbinden schickt cotrack eine kurze Gebrauchsanweisung (`instructions`) mit.
+Claude Code gibt sie an die KI weiter, claude.ai und ChatGPT nicht verlässlich. Der Prompt gilt dagegen in jedem Chat.
+Bei einem Widerspruch gilt: das Aussehen vom Server, das Verhalten aus dem Prompt.
+
+## Einspielen und Versionen
+
+Teil 1 und Teil 2 hintereinander in die persönlichen Einstellungen beider Programme kopieren und den alten Text dort ersetzen.
+Ob du nach einer neuen Version etwas tun musst, steht in der letzten Spalte.
+
+<details>
+<summary><b>Versionen</b> (neueste zuerst)</summary>
+
+| Version | Was ist neu | Neu einspielen? |
+|---|---|---|
+| v2.14 | **Fälligkeiten:** echte Termine im Feld „Fällig“, Next zieht Überfälliges vor. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen. | Nein – Prompt unverändert |
+| v2.13 (20.11.2026) | Im Fußzeilen-Beispiel von Teil 1 stehen „👤“ und „🤖“ **ohne Doppelpunkt**, wie 💡 und ⚠️ (der Mittelpunkt trennt die Gruppen). Nur ohne cotrack relevant – mit cotrack kommt die Fußzeile vom Server. | Lohnt sich, nicht nötig |
+| v2.12 | **Knappe Beschreibungen:** etwa fünf Zeilen, Details per Link in der Quelle, Stand ersetzen statt anhängen. Regel in Anweisung und Werkzeugbeschreibungen des MCP-Servers. | Nein – Prompt unverändert |
+| v2.11 | **Kurze Titel:** höchstens 80 Zeichen, Details in die Beschreibung. Regel in Anweisung und Werkzeugbeschreibungen des MCP-Servers. | Nein – Prompt unverändert |
+| v2.10 | **Aufwand und Nutzen:** Die KI schätzt beides bei Aufgaben und Ideen mit. Regel in Anweisung und Werkzeugbeschreibungen des MCP-Servers. | Nein – Prompt unverändert |
+| v2.9 | **Kürzer:** gleiche Regeln, knapper formuliert (rund 4.100 statt 5.400 Zeichen), damit der Prompt samt eigener Regeln in ChatGPT passt (Grenze 5.000 Zeichen) und weniger Tokens kostet. Keine neue Regel. | **Ja**, wer v2.8 oder älter hat: beide Teile ersetzen (der alte Text wirkt sonst weiter – gleich, nur länger) |
+| v2.8 | **Teilpunkte:** Eine Aufgabe darf eine kurze Checkliste haben (höchstens fünf, nur auf deinen Wunsch); je ein Absatz in Teil 1 und Teil 2 ist neu. | **Ja**, beide Teile ersetzen |
+| v2.7 | Layout (ein-/mehrzeilig) und Kennzeichen der Fußzeile stellst du in der Web-App ein (☰ → Chat-Fußzeile → Anpassen). Im Fußzeilen-Beispiel von Teil 1 steht „⚠️“ statt „⚠“ (nur ohne cotrack relevant). | Nein, wer v2.6 hat |
+| v2.6 | Die Gruppen der Fußzeile heißen „👤:“ (deine Punkte) und „🤖:“ (die der KI) statt „Du:“ und „🤖KI:“. Der Prompt ist zweiteilig (Basis + cotrack-Zusatz), die Fußzeile kommt bei cotrack nur noch vom Server. | Ja |
+| v2.5 | Die volle Fußzeile ist mehrzeilig (jede Gruppe eine Zeile); die Kurzzeile bleibt einzeilig. | Ja |
+| v2.4 | Projekt-Zuordnung über `COTRACK.md`, Projekt-Kürzel und qualifizierte Kennungen („CT:A14“), Fußzeile je Projekt bei mehreren Projekten. | Ja |
+| v2.3 | Abhängigkeiten werden bei Paaren als „D2 ▶A4“ (Reihenfolge) statt „A4 ⏸D2“ geschrieben. | Ja |
+| v2.2 | cotrack ist führend, wo verfügbar; die Status-Datei enthält dann nur einen Link. Abgesagte Ideen werden verworfen (bleiben sichtbar) statt gelöscht. | Ja |
+| v2.1 | Die Fußzeile erscheint seltener: bei Änderungen nur als Kurzzeile, voll etwa alle vier Antworten. | Ja |
+| v2 | Gegenüber v1: T entfällt; Aufgaben (A) gehören dir oder der KI, sichtbar an „👤“/„🤖“; Entscheidungen (D) sind eine eigene Kategorie; Ideen erscheinen mit 💡. | Ja |
+
+</details>
 
 Die gültige Methodik steht oben in [METHODIK.md](METHODIK.md); dieser Text muss immer dazu passen (ebenso die englische Fassung [PROMPT.en.md](PROMPT.en.md)).

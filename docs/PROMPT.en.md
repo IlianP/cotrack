@@ -12,64 +12,8 @@ The prompt has **two parts**:
 With cotrack, the footer format comes from the server (`cotrack_footer`), not from the prompt – so there is only one source.
 
 **Length:** Both parts together are about 3,900 characters. That leaves room for your own rules in ChatGPT (at most 5,000
-characters for custom instructions), and every chat saves tokens. If you shorten or extend it: whatever the table below
+characters for custom instructions), and every chat saves tokens. If you shorten or extend it: whatever the table "Who controls what"
 assigns to the **prompt** must stay in.
-
-## Why a prompt? – Who controls what
-
-cotrack is a server: it stores, checks and answers – but only when the AI asks. Whether and when it asks is in the
-prompt. That is why you need both.
-
-| What | Where | Why there |
-|---|---|---|
-| Whether the AI keeps a list; when it calls cotrack (start, new items, completed ones); handover | **Prompt** | The server cannot make the AI do anything, it only answers. |
-| When the footer appears (on "Status?", at the end of larger pieces of work, roughly every four answers; otherwise the short line) | **Prompt** | Only the AI knows when an answer ends. |
-| What the footer looks like (groups, order, at most eight entries, ▶/⏸, single- or multi-line, 👤/🤖) | **Server**, default set in the **web app** (☰ → Chat footer → Customize) | One source for all chats and programs. |
-| Language of what cotrack writes to the AI (instructions, tools, answers, footer) | **Server**, set in the **web app** (☰ → Language, the same as the web app's); `lang` in a request wins | MCP does not tell the server which language the user speaks. |
-| References (never reused), dependencies, who changed what | **Server** | The database enforces it. |
-| Which project the conversation belongs to | **The AI**, from `COTRACK.md` or `cotrack_projects` | The server cannot see the repository. |
-| Working without cotrack (fallback) | **Prompt**, part 1 | – |
-
-**Do the web app settings override the prompt?** Not by themselves. They take effect because part 2 tells the AI: never
-build the footer yourself, fetch it from cotrack and reproduce it exactly. With an older prompt without part 2, the AI may
-build the line itself – then the prompt wins. If you change the markers, you can change them in part 1 too, so the
-fallback looks the same.
-
-**And the server's instructions?** When connecting, cotrack sends a short usage note (`instructions`). Claude Code passes
-it on to the AI, claude.ai and ChatGPT not reliably. The prompt, in contrast, applies in every chat. If they contradict
-each other: the look comes from the server, the behaviour from the prompt.
-
-## Installing and versions
-
-Replace the personal settings of both programs with these parts (part 1 followed by part 2). Changes compared to v1:
-T is dropped; actions (A) belong to you or the AI, visible from "👤"/"🤖"; decisions (D) are a category of their own;
-ideas appear with 💡. v2.1: The footer appears less often (only a short line on changes, full roughly every four answers). Footer language: follows the prompt (`lang`).
-v2.3: For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2".
-v2.14: **Due dates** (real dates in the "Due" field, Next brings forward what is overdue) – no change to the prompt, nothing
-to reinstall. The rule lives in the MCP server's instructions and the tool descriptions.
-v2.13 (20 Nov 2026): In the footer example of part 1, "👤" and "🤖" have **no colon**, like 💡 and ⚠️ (the middle dot
-separates the groups). Relevant only without cotrack – with cotrack the footer comes from the server. Reinstalling is worthwhile but not required.
-v2.12: **Brief descriptions** (about five lines, details via a link in the source, replace the status instead of appending) –
-no change to the prompt, nothing to reinstall. The rule lives in the MCP server's instructions and the tool descriptions.
-v2.11: **Short titles** (at most 80 characters, details in the description) – no change to the prompt, nothing to reinstall.
-The rule lives in the MCP server's instructions and the tool descriptions.
-v2.10: **Effort and benefit** – no change to the prompt, nothing to reinstall. The rule (the AI estimates both for actions
-and ideas) lives in the MCP server's instructions and the tool descriptions.
-v2.9: **Shorter** – same rules, worded more tightly (about 3,900 instead of 5,000 characters), so the prompt plus your own
-rules fits into ChatGPT (limit 5,000 characters) and costs fewer tokens. No new rule. **If you installed v2.8 or older,
-replace both parts** (otherwise the old text keeps working – same content, just longer).
-v2.8: **Sub-items** – an action may carry a short checklist (at most five, only at your request); one paragraph each in part 1
-and part 2 is new. **If you installed v2.7, replace both parts.**
-v2.7: You set the footer layout (single-/multi-line) and markers in the web app (☰ → Chat footer → Customize).
-**From v2.6 to v2.7 the prompt text was almost unchanged** – the only change: the footer example in part 1 shows "⚠️" instead of "⚠"
-(relevant only without cotrack; with cotrack the footer comes from the server). If you installed v2.6, there is nothing else to do.
-v2.6: The footer groups are called "👤:" (your items) and "🤖:" (the AI's) instead of "Du:" and "🤖KI:".
-Also, the prompt is split in two (base + cotrack addendum), and with cotrack the footer comes only from the server.
-v2.5: The full footer is multi-line (one line per group, trial phase); the short line stays single-line.
-v2.4: Project assignment via `COTRACK.md`, project codes and qualified references ("CT:A14"), one footer block per project when several projects are involved.
-v2.2: cotrack is the leading list where available; the status file then contains only a link. Declined ideas are dropped (stay visible) instead of deleted.
-
-The footer follows the language of the prompt: with `lang=en` cotrack writes "new:" and "done:" (German: "neu:", "erledigt:"; without `lang` the language set in ☰ → Language applies); the group markers 👤 and 🤖 are the same in every language. The letters A/D/I/W and the references are language-independent.
 
 ## Part 1 – Base (always)
 
@@ -103,5 +47,59 @@ If cotrack is available and has a project for the repo, cotrack is the leading l
 - Handover: all items must be in cotrack; show the full footer.
 - Fallback: If cotrack is unreachable or not set up, say so once briefly and continue per the base; add the items later.
 ```
+
+## Why a prompt? – Who controls what
+
+cotrack is a server: it stores, checks and answers – but only when the AI asks. Whether and when it asks is in the
+prompt. That is why you need both.
+
+| What | Where | Why there |
+|---|---|---|
+| Whether the AI keeps a list; when it calls cotrack (start, new items, completed ones); handover | **Prompt** | The server cannot make the AI do anything, it only answers. |
+| When the footer appears (on "Status?", at the end of larger pieces of work, roughly every four answers; otherwise the short line) | **Prompt** | Only the AI knows when an answer ends. |
+| What the footer looks like (groups, order, at most eight entries, ▶/⏸, single- or multi-line, 👤/🤖) | **Server**, default set in the **web app** (☰ → Chat footer → Customize) | One source for all chats and programs. |
+| Language of what cotrack writes to the AI (instructions, tools, answers, footer) | **Server**, set in the **web app** (☰ → Language, the same as the web app's); `lang` in a request wins | MCP does not tell the server which language the user speaks. |
+| References (never reused), dependencies, who changed what | **Server** | The database enforces it. |
+| Which project the conversation belongs to | **The AI**, from `COTRACK.md` or `cotrack_projects` | The server cannot see the repository. |
+| Working without cotrack (fallback) | **Prompt**, part 1 | – |
+
+**Do the web app settings override the prompt?** Not by themselves. They take effect because part 2 tells the AI: never
+build the footer yourself, fetch it from cotrack and reproduce it exactly. With an older prompt without part 2, the AI may
+build the line itself – then the prompt wins. If you change the markers, you can change them in part 1 too, so the
+fallback looks the same.
+
+**And the server's instructions?** When connecting, cotrack sends a short usage note (`instructions`). Claude Code passes
+it on to the AI, claude.ai and ChatGPT not reliably. The prompt, in contrast, applies in every chat. If they contradict
+each other: the look comes from the server, the behaviour from the prompt.
+
+## Installing and versions
+
+Copy part 1 followed by part 2 into the personal settings of both programs, replacing the old text there.
+Whether a new version needs anything from you is in the last column.
+
+<details>
+<summary><b>Versions</b> (newest first)</summary>
+
+| Version | What's new | Reinstall? |
+|---|---|---|
+| v2.14 | **Due dates:** real dates in the "Due" field, Next brings forward what is overdue. The rule lives in the MCP server's instructions and the tool descriptions. | No – prompt unchanged |
+| v2.13 (20 Nov 2026) | In the footer example of part 1, "👤" and "🤖" have **no colon**, like 💡 and ⚠️ (the middle dot separates the groups). Relevant only without cotrack – with cotrack the footer comes from the server. | Worthwhile, not required |
+| v2.12 | **Brief descriptions:** about five lines, details via a link in the source, replace the status instead of appending. Rule in the MCP server's instructions and tool descriptions. | No – prompt unchanged |
+| v2.11 | **Short titles:** at most 80 characters, details in the description. Rule in the MCP server's instructions and tool descriptions. | No – prompt unchanged |
+| v2.10 | **Effort and benefit:** the AI estimates both for actions and ideas. Rule in the MCP server's instructions and tool descriptions. | No – prompt unchanged |
+| v2.9 | **Shorter:** same rules, worded more tightly (about 3,900 instead of 5,000 characters), so the prompt plus your own rules fits into ChatGPT (limit 5,000 characters) and costs fewer tokens. No new rule. | **Yes**, if you have v2.8 or older: replace both parts (otherwise the old text keeps working – same content, just longer) |
+| v2.8 | **Sub-items:** an action may carry a short checklist (at most five, only at your request); one paragraph each in part 1 and part 2 is new. | **Yes**, replace both parts |
+| v2.7 | You set the footer layout (single-/multi-line) and markers in the web app (☰ → Chat footer → Customize). The footer example in part 1 shows "⚠️" instead of "⚠" (relevant only without cotrack). | No, if you have v2.6 |
+| v2.6 | The footer groups are called "👤:" (your items) and "🤖:" (the AI's) instead of "Du:" and "🤖KI:". The prompt is split in two (base + cotrack addendum); with cotrack the footer comes only from the server. | Yes |
+| v2.5 | The full footer is multi-line (one line per group); the short line stays single-line. | Yes |
+| v2.4 | Project assignment via `COTRACK.md`, project codes and qualified references ("CT:A14"), one footer block per project when several projects are involved. | Yes |
+| v2.3 | For pairs, dependencies are written as "D2 ▶A4" (sequence) instead of "A4 ⏸D2". | Yes |
+| v2.2 | cotrack is the leading list where available; the status file then contains only a link. Declined ideas are dropped (stay visible) instead of deleted. | Yes |
+| v2.1 | The footer appears less often: only a short line on changes, full roughly every four answers. | Yes |
+| v2 | Compared to v1: T is dropped; actions (A) belong to you or the AI, visible from "👤"/"🤖"; decisions (D) are a category of their own; ideas appear with 💡. | Yes |
+
+</details>
+
+The footer follows the language of the prompt: with `lang=en` cotrack writes "new:" and "done:" (German: "neu:", "erledigt:"; without `lang` the language set in ☰ → Language applies); the group markers 👤 and 🤖 are the same in every language. The letters A/D/I/W and the references are language-independent.
 
 The current methodology is at the top of [METHODOLOGY.md](METHODOLOGY.md); this text must always match it.
