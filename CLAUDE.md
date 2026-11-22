@@ -90,6 +90,12 @@
 - Compact board (D34): `state.dense` (`#denseBtn`, localStorage `cotrack.dense`) renders one line per item in `renderItem`.
   A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
   therefore annotates `ext_open`/`ext_next` like the project lists.
+- Project order (D37, A120): the server lists projects by `updated_at` (every item change, by user or AI). The web app
+  re-sorts on each device (`state.projectSort`, localStorage `cotrack.projectSort`; `sortProjects`, `PROJECT_SORTS` in
+  `src/ui.html`): changed · name · opened (`noteProjectOpened`, localStorage `cotrack.projectOpened`). Chosen with the
+  button in the picker's "Alle Projekte" row (`projectSortBtn`, `#projectSortPop`); every `state.projects` list follows it.
+- Footer delta (A121): `since` is either the version number from `cotrack_status` (digits = event id; `sinceVersion`,
+  `changedSince` in `src/worker.js` – exact) or an ISO time (only as exact as the AI's clock). The MCP texts ask for the version.
 - Sources as links (D34): `sourceLink` in `src/ui.html` turns "PR #7", "#12", a commit hash or a repository path into a
   GitHub link when the project has a `repo`; full addresses get a readable label.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.

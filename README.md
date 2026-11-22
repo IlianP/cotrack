@@ -68,6 +68,9 @@ warnings – a one-glance status that survives across conversations.
   added or by due date. Sorted by time, each card shows how long ago it was (who: in the tooltip), and what changed in the
   last 24 hours is tinted. The icon next to it shows one line per item instead of cards. A prerequisite that is done shows
   as ✓ instead of ⏸. Remembered on each device.
+- **Project order** – the button in the "All projects" row of the project list chooses how projects are listed: recently
+  changed (default; by you or the AI), by name (A–Z) or recently opened on this device. Applies to every list of projects
+  in the web app, remembered on each device.
 - **Due dates** – a date on an item shows the weekday and how far away it is ("Thu, 19/11 · 2 days overdue"), amber from
   two days before, red after. The AI sets it only for real dates (`due`), never estimated.
 - **Sources as links** – with a GitHub repository on the project, "PR #7", "#12", commit hashes and file paths in an
@@ -231,8 +234,8 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body; `PATCH {effort, benefit}` sets them – sending them again unchanged confirms an estimate (with the user token, `sized_by: "ai"` keeps them an estimate, used by undo); `expect: {status: "done", …}` writes only if the item still holds these values, otherwise 409 `conflict` |
 | POST | `/api/projects/:slug/items/:ref/restore` | bring a deleted item back under its own reference, from the snapshot in its last event (only while the deletion is its latest event) |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `new: … · done: …`; `lang`: `new / done` or `neu / erledigt`) |
-| GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
+| GET | `/api/projects/:slug/footer?format=text&since=1492&max=8&delta=1&layout=multi\|single&lang=de\|en` | chat footer (`since`: a version number, e.g. from `/version` or `cotrack_status` – or an ISO time; `layout=multi`: one line per group, `single`: one line – without `layout` the web app setting applies; `delta=1`: only `new: … · done: …`; `lang`: `new / done` or `neu / erledigt`) |
+| GET | `/api/footer?projects=CT,TEST&format=text&since=1492&delta=1&layout=` | footer for several projects, one block each (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | "Open points" section for `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | change log, newest first, with the item's current title (`before`: page back, `limit` ≤ 500, default 100) |
 | GET | `/api/events?after=&before=&limit=` | change log across all projects |

@@ -26,8 +26,7 @@ Reply in the language of the conversation and set `lang` for `cotrack_footer` to
   `repo = "owner/name"`. Without a repository, use the project from the project instructions; otherwise ask once.
   Never create a project.
 - **Call `cotrack_status`.** You get all open items (one line each, `@Du`/`@KI` = user/AI, `▶`/`⏸`) and the state number.
-  Keep the number: if you re-rate in the same conversation, `cotrack_changes` is enough.
-  Also keep the start time for the short line (`since`); if you don't know the time, use the start of the day.
+  Keep the number: it is `since` for the short line, and if you re-rate in the same conversation, `cotrack_changes` is enough.
 - **Details for candidates only:** `cotrack_get` for the roughly eight most promising items (description, successors,
   created and changed dates), not for all of them.
 - **With `all`:** first `cotrack_projects`, then `cotrack_status` per project.
@@ -119,7 +118,7 @@ set the status to `done`. If a risk has materialised, it becomes an A or D.
 ## 5. After each item
 
 - Record the result in cotrack immediately, not collected at the end.
-- Fetch the short line with `cotrack_footer` (`delta: true`, `since`: start time) and show it exactly as returned.
+- Fetch the short line with `cotrack_footer` (`delta: true`, `since`: the state number from the start) and show it exactly as returned.
   Never build it yourself.
 - Continue with the next item. If the result changed the picture (new items, something unblocked), re-rate.
   After three items, show the next three ("Next round: …") and carry on.

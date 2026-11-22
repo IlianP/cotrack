@@ -1550,9 +1550,11 @@ export function buildFooter(
   kinds,
   {
     max = 8, since = null, deltaOnly = false, layout = FOOTER_LAYOUT_DEFAULT, lang = "de", labels = FOOTER_OWNER_LABELS,
-    viewSlug = items[0]?.project_slug, codes = null, hide = null,
+    viewSlug = items[0]?.project_slug, codes = null, hide = null, changed = null,
   } = {},
 ) {
+  // since: an ISO time (compared with created_at / closed_at) – or, when footerFor got a version number, `changed`:
+  // the keys created or closed by events after that version (sinceVersion, changedSince).
   // hide: keys shown in another block of a multi-project footer – left out here, but still counted for ⏸ and ▶.
   // References are relative to the project in view: "A2" for its own items, "IMM:A2" for items of other projects (D26).
   const lbl = (key) => keyLabel(key, viewSlug, codes);
@@ -1612,10 +1614,15 @@ export function buildFooter(
     })
     .filter(Boolean);
   const delta = [];
-  if (since) {
+  if (since || changed) {
     const own = items.filter((i) => !hide?.has(itemKey(i)));
-    const created = own.filter((i) => i.created_at >= since).map((i) => lbl(itemKey(i)));
-    const done = own.filter((i) => i.status === "done" && i.closed_at && i.closed_at >= since).map((i) => lbl(itemKey(i)));
+    const isNew = changed ? (i) => changed.created.has(itemKey(i)) : (i) => i.created_at >= since;
+    // created after the version and done by now counts too (an item added as done has no "done" event)
+    const isClosed = changed
+      ? (i) => changed.closed.has(itemKey(i)) || changed.created.has(itemKey(i))
+      : (i) => i.closed_at && i.closed_at >= since;
+    const created = own.filter(isNew).map((i) => lbl(itemKey(i)));
+    const done = own.filter((i) => i.status === "done" && isClosed(i)).map((i) => lbl(itemKey(i)));
     const dl = FOOTER_DELTA_LABELS[lang] || FOOTER_DELTA_LABELS.de;
     if (created.length) delta.push(`${dl.created}: ${created.join(", ")}`);
     if (done.length) delta.push(`${dl.done}: ${done.join(", ")}`);
@@ -1771,7 +1778,33 @@ export function buildMultiFooter(entries, kinds, opts = {}) {
     .join("\n");
 }
 
+// `since` for the footer: a version number ("Stand" from cotrack_status, i.e. an event id – digits only) or an ISO time.
+// Returns the number, or null for an ISO time / nothing. The version is exact; an ISO time depends on the AI knowing the
+// clock, which it often does not (then it falls back to the start of the day and the short line shows too much).
+function sinceVersion(since) {
+  const s = String(since ?? "").trim();
+  return /^\d+$/.test(s) ? Number(s) : null;
+}
+
+// Keys ("slug:REF") of the given items created or closed (done, converted) by events after `version`.
+async function changedSince(db, version, items) {
+  const changed = { created: new Set(), closed: new Set() };
+  const slugs = [...new Set(items.map((i) => i.project_slug))];
+  if (!slugs.length) return changed;
+  const { results } = await db
+    .prepare(
+      `SELECT project_slug, item_ref, action FROM events
+       WHERE id > ? AND item_ref IS NOT NULL AND action IN ('created', 'done', 'converted')
+         AND project_slug IN (SELECT value FROM json_each(?))`,
+    )
+    .bind(version, JSON.stringify(slugs))
+    .all();
+  for (const e of results) (e.action === "created" ? changed.created : changed.closed).add(`${e.project_slug}:${e.item_ref}`);
+  return changed;
+}
+
 // Footer for one or more projects given by slug or code; a single project has no project label.
+// since: a version number (see sinceVersion) or an ISO time.
 // layout: "multi" | "single" from the request, or null for the web app setting.
 // lang: "de" | "en" from the request, or null for the instance setting `language`.
 export async function footerFor(db, keys, { since = null, delta = false, max = 8, layout = null, lang = null } = {}) {
@@ -1786,7 +1819,11 @@ export async function footerFor(db, keys, { since = null, delta = false, max = 8
     projectCodes(db),
     ...projects.map((p) => projectItems(db, p, { status: "all" })),
   ]);
-  const opts = { since, deltaOnly: delta, max, lang: lang || settings.language, codes, ...footerStyle(settings, layout) };
+  const version = sinceVersion(since);
+  const changed = version === null ? null : await changedSince(db, version, lists.flat());
+  const opts = {
+    since: version === null ? since : null, changed, deltaOnly: delta, max, lang: lang || settings.language, codes, ...footerStyle(settings, layout),
+  };
   if (projects.length === 1) return buildFooter(lists[0], kinds, { ...opts, viewSlug: projects[0].slug });
   // An item shown in several of the requested projects appears once (D26): in its home project's block, or – if that
   // project is not requested – in the first requested block that shows it. Hidden items still count for ⏸ and ▶.

@@ -74,6 +74,9 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   Änderung, nach Anlage oder nach Fälligkeit. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip),
   und was in den letzten 24 Stunden geändert wurde, ist leicht hinterlegt. Das Symbol daneben zeigt eine Zeile je Punkt
   statt Karten. Eine erledigte Voraussetzung steht als ✓ statt ⏸ da. Gespeichert pro Gerät.
+- **Reihenfolge der Projekte** – der Knopf in der Zeile „Alle Projekte“ der Projektauswahl legt fest, wie Projekte
+  aufgelistet werden: zuletzt geändert (Standard; von dir oder der KI), nach Name (A–Z) oder zuletzt auf diesem Gerät
+  geöffnet. Gilt für alle Projektlisten der Web-App, gespeichert pro Gerät.
 - **Fälligkeiten** – ein Termin am Punkt zeigt Wochentag und Abstand („Do., 19.11. · 2 Tage überfällig“), gelb ab zwei
   Tagen vorher, rot danach. Die KI setzt ihn nur bei echten Terminen (`due`), nie geschätzt.
 - **Quellen als Links** – hat das Projekt ein GitHub-Repository, öffnen „PR #7“, „#12“, Commit-Kennungen und Dateipfade
@@ -244,8 +247,8 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | lesen / ändern / löschen, z. B. `.../items/A3` oder qualifiziert `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "Text"}` hakt einen Teilpunkt einer Aufgabe ab (Nummer, `"2,3"` oder Text), ohne die Beschreibung neu zu schreiben; `PATCH {effort, benefit}` setzt sie – unverändert erneut gesendet, bestätigt das eine Schätzung (mit dem Nutzer-Token hält `sized_by: "ai"` sie als Schätzung, für Rückgängig); `expect: {status: "done", …}` schreibt nur, wenn der Punkt diese Werte noch hat, sonst 409 `conflict` |
 | POST | `/api/projects/:slug/items/:ref/restore` | einen gelöschten Punkt unter seiner eigenen Kennung zurückholen, aus dem Schnappschuss in seinem letzten Ereignis (nur solange das Löschen sein jüngstes Ereignis ist) |
 | POST | `/api/projects/:slug/items/:ref/convert` | eine Idee annehmen: `{kind: "A"}` → neuer Punkt, Idee mit Verweis geschlossen |
-| GET | `/api/projects/:slug/footer?format=text&since=ISO&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang`: `neu / erledigt` oder `new / done`) |
-| GET | `/api/footer?projects=CT,TEST&format=text&since=ISO&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
+| GET | `/api/projects/:slug/footer?format=text&since=1492&max=8&delta=1&layout=multi\|single&lang=de\|en` | Chat-Fußzeile (`since`: Stand-Nummer, z. B. aus `/version` oder `cotrack_status` – oder eine ISO-Zeit; `layout=multi`: eine Zeile je Gruppe, `single`: eine Zeile – ohne `layout` gilt die Einstellung der Web-App; `delta=1`: nur `neu: … · erledigt: …`; `lang`: `neu / erledigt` oder `new / done`) |
+| GET | `/api/footer?projects=CT,TEST&format=text&since=1492&delta=1&layout=` | Fußzeile für mehrere Projekte, je ein Block (`CT ▸ …`) |
 | GET | `/api/projects/:slug/status.md?lang=de\|en` | Abschnitt „Offene Punkte“ für `docs/STATUS.md` |
 | GET | `/api/projects/:slug/events?after=&before=&limit=` | Änderungsprotokoll, neueste zuerst, mit dem aktuellen Titel des Punkts (`before`: weiter zurückblättern, `limit` ≤ 500, Standard 100) |
 | GET | `/api/events?after=&before=&limit=` | Änderungsprotokoll über alle Projekte |
