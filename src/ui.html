@@ -1683,7 +1683,8 @@ document.addEventListener("keydown", (e) => {
 
 // Puts back what one of your own changes set (D33): before = the item before it, after = the server's answer. Only fields
 // still as that change left them are reverted – what someone else (e.g. the AI) changed since stays and is reported.
-const UNDO_FIELDS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by"];
+// last_session = the session link (D35); it is sent back as `session`, which restores the first session along with it.
+const UNDO_FIELDS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by", "last_session"];
 async function revertChange(before, after) {
   const path = P(before.project_slug) + "/items/" + before.ref;
   const label = refLabel(before);
@@ -1714,6 +1715,7 @@ async function revertChange(before, after) {
       const fields = Object.keys(body);
       if (fields.length) {
         body.expect = Object.fromEntries([...fields, "sized_by"].filter((f) => f in cur).map((f) => [f, v(cur, f)]));
+        if ("last_session" in body) { body.session = body.last_session; delete body.last_session; }
         await api(path, { method: "PATCH", body });
       }
       toast(kept ? tr("undoPartial", label, kept) : tr("undone", label));
@@ -4719,6 +4721,9 @@ function openEdit(it) {
     e.preventDefault();
     const body = {};
     for (const [key, el] of Object.entries(f)) body[key] = el.value;
+    // The session link only when it was changed here: otherwise this save would count as made in that session, and an
+    // open dialog would overwrite a newer session an AI recorded meanwhile.
+    if (f.session.value.trim() === (it.last_session || "")) delete body.session;
     if (!ai.commit()) return;
     if (ai.changed()) body.also_in = ai.value.value;
     if (isTask) {

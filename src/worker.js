@@ -1216,7 +1216,7 @@ export async function createItem(db, project, input, actor, { sizedBy = null, in
 
 // expect (optional, e.g. from undo in the web app): { field: value } the item must still hold when the update is written;
 // compared in the UPDATE itself, so a change by someone else in between is not overwritten (409 conflict instead).
-const EXPECT_COLS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by"];
+const EXPECT_COLS = ["title", "short", "body", "owner", "status", "waiting_on", "source", "due", "also_in", "effort", "benefit", "sized_by", "last_session"];
 const SESSION_COLS = ["first_session", "last_session"];
 function expectPredicate(input, item) {
   const e = input.expect;

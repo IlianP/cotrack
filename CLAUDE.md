@@ -85,7 +85,8 @@
   field change (`SESSION_COLS` are stripped from it). Without migration 0011 the columns are skipped (`sessionColumns`) and
   only the events keep it. MCP: `session` on add/update/convert, the rule in `INSTRUCTIONS`, `sourceHint` when a session link
   lands in `source`. UI: `sessionLink`/`sessionAnchor`, the field in `openEdit` (shown when set, otherwise "🔗 Session-Link
-  eintragen"), a ↗ column in `itemHistTable`. Session links never go into `source`; search (`q`) covers `source` as well.
+  eintragen"; `save` sends `session` only when the field was changed), a ↗ column in `itemHistTable`; undo restores it via
+  `last_session` in `UNDO_FIELDS`/`EXPECT_COLS`, sent back as `session`. Session links never go into `source`; search (`q`) covers `source` as well.
 - Compact board (D34): `state.dense` (`#denseBtn`, localStorage `cotrack.dense`) renders one line per item in `renderItem`.
   A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
   therefore annotates `ext_open`/`ext_next` like the project lists.
