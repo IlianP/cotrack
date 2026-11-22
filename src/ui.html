@@ -406,6 +406,8 @@ dialog.pal[open] { display: flex; flex-direction: column; }
 .lbl-row { display: flex; justify-content: space-between; gap: 8px; }
 .src-open { color: var(--accent); }
 .src-open[hidden] { display: none; }
+.src-open a { color: var(--accent); }
+.dlg textarea.src-input { min-height: 0; max-height: 10em; resize: none; overflow-y: auto; }
 .btn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; height: 38px; padding: 0 14px; }
 .btn.danger { color: var(--danger); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
@@ -1136,7 +1138,8 @@ const STRINGS = {
     deleted: (ref) => `${ref} gelöscht`, openItems: "offene Punkte", noProjectFound: "Kein Projekt gefunden",
     askSave: "Änderungen speichern?", askSaveText: "Du hast in diesem Fenster etwas geändert.", discard: "Verwerfen",
     keepEditing: "Weiter bearbeiten", save: "Speichern", cancel: "Abbrechen", close: "Schließen", del: "Löschen",
-    shortPh: "1–3 Wörter für die Fußzeile", nobody: "– niemand –", waitingPh: "z. B. D2, A1, IMM:A2", sourcePh: "Link oder Datei",
+    shortPh: "1–3 Wörter für die Fußzeile", nobody: "– niemand –", waitingPh: "z. B. D2, A1, IMM:A2", sourcePh: "Link oder Datei – eine pro Zeile, höchstens 3",
+    sourcesMax: (n) => `Höchstens ${n} Quellen – eine überholte ersetzen statt anhängen`,
     fTitle: "Titel", fBody: "Beschreibung", fShort: "Kurzlabel", fStatus: "Status", fWaiting: "Wartet auf", fSource: "Quelle", fDue: "Fällig",
     fSession: "Session", sessionPh: "Link zum Chat oder zur Session (https://…)", sessionAdd: "Session-Link eintragen",
     sessionFirst: "Erste Session:", sessionTitle: (l) => `Session öffnen (${l})`,
@@ -1373,7 +1376,8 @@ const STRINGS = {
     deleted: (ref) => `${ref} deleted`, openItems: "open items", noProjectFound: "No project found",
     askSave: "Save changes?", askSaveText: "You changed something in this window.", discard: "Discard",
     keepEditing: "Keep editing", save: "Save", cancel: "Cancel", close: "Close", del: "Delete",
-    shortPh: "1–3 words for the footer", nobody: "– nobody –", waitingPh: "e.g. D2, A1, IMM:A2", sourcePh: "Link or file",
+    shortPh: "1–3 words for the footer", nobody: "– nobody –", waitingPh: "e.g. D2, A1, IMM:A2", sourcePh: "Link or file – one per line, at most 3",
+    sourcesMax: (n) => `At most ${n} sources – replace an outdated one instead of adding`,
     fTitle: "Title", fBody: "Description", fShort: "Short label", fStatus: "Status", fWaiting: "Waiting for", fSource: "Source", fDue: "Due",
     fSession: "Session", sessionPh: "Link to the chat or session (https://…)", sessionAdd: "Add session link",
     sessionFirst: "First session:", sessionTitle: (l) => `Open the session (${l})`,
@@ -2268,6 +2272,10 @@ async function saveSize(it, body, confirmOnly) {
   refresh(false);
 }
 
+/* Sources (D36): normally one, up to MAX_SOURCES – one per line in the item's source. Keep MAX_SOURCES in step with src/worker.js. */
+const MAX_SOURCES = 3;
+const sourceLines = (source) => String(source || "").split("\n").map((l) => l.trim()).filter(Boolean);
+
 /* The source as a link: an address as it is; with a GitHub repository on the project also "PR #7", "#12" / "Issue #12",
    a commit hash and a path in the repository ("docs/sitemap.md"). Anything else stays text. */
 function sourceLink(source, slug) {
@@ -2336,10 +2344,12 @@ function renderItem(it, k, before) {
   const size = sizePill(it);
   if (size) meta.push(size);
   if (it.due) meta.push(duePill(it));
-  const src = sourceLink(it.source, it.project_slug);
-  if (it.source) meta.push(h("span", { class: "pill" }, src
-    ? h("a", { href: src.href, title: it.source, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + src.label)
-    : "📄 " + it.source));
+  for (const line of sourceLines(it.source)) {
+    const src = sourceLink(line, it.project_slug);
+    meta.push(h("span", { class: "pill" }, src
+      ? h("a", { href: src.href, title: line, target: "_blank", rel: "noopener noreferrer", onclick: (e) => e.stopPropagation() }, "🔗 " + src.label)
+      : "📄 " + line));
+  }
   const preview = checks.length ? splitBody(it.body).rest : it.body; // the checklist itself shows as the ☑ counter
   const key = it.project_slug + ":" + it.ref + ":" + it.updated_at;
   const changed = before && !before.has(key);
@@ -2573,7 +2583,7 @@ function nextCard(it, whyText, inherits) {
   if (result) result.value = state.nextDraft[key] || ""; // survives live re-renders
   const pr = state.project === ALL ? state.projects.find((p) => p.slug === it.project_slug) : null;
   const nxChecks = itemChecks(it), nxRest = nxChecks.length ? splitBody(it.body).rest : "";
-  const nxSrc = sourceLink(it.source, it.project_slug);
+  const nxSrcs = sourceLines(it.source).map((line) => [line, sourceLink(line, it.project_slug)]).filter(([, l]) => l);
   return h("article", { class: "nx-card", style: `--kc:${k.color || "#6b7280"}`, "aria-labelledby": "nxTitle" },
     h("div", { class: "nx-top" },
       h("span", { class: "kbadge" }, it.kind),
@@ -2581,7 +2591,7 @@ function nextCard(it, whyText, inherits) {
       h("span", { class: "nx-kind" }, k.name),
       h("span", { class: "spacer" }),
       pr ? h("span", { class: "pill", title: pr.slug }, pr.name) : null,
-      nxSrc ? h("a", { class: "pill", href: nxSrc.href, title: it.source, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + nxSrc.label) : null),
+      nxSrcs.map(([line, l]) => h("a", { class: "pill", href: l.href, title: line, target: "_blank", rel: "noopener noreferrer" }, "🔗 " + l.label))),
     h("h2", { class: "nx-title", id: "nxTitle" }, it.title),
     h("p", { class: "nx-why" }, whyText),
     sizeControls(it, inherits),
@@ -4748,13 +4758,31 @@ function openEdit(it) {
     status: h("select", null, Object.entries(STATUS_LABELS).map(([v, l]) => h("option", { value: v, selected: it.status === v }, l))),
     // relative to the item's own project, which is also how the server reads what is typed here
     waiting_on: h("input", { value: waitKeys(it).map((k) => keyRef(k, it.project_slug)).join(", "), placeholder: tr("waitingPh") }),
-    source: h("input", { value: it.source || "", placeholder: tr("sourcePh") }),
+    source: h("textarea", { class: "src-input", rows: 1, maxlength: 1000, placeholder: tr("sourcePh"), autocapitalize: "off", spellcheck: "false" }, it.source || ""),
     due: h("input", { type: "date", value: it.due || "" }),
     session: h("input", { type: "url", value: it.last_session || "", maxlength: 500, placeholder: tr("sessionPh"),
       autocomplete: "off", autocapitalize: "off", spellcheck: "false" }),
   };
-  const srcOpen = h("a", { class: "src-open", target: "_blank", rel: "noopener noreferrer" }, tr("sourceOpen"));
-  const syncSrc = () => { const l = sourceLink(f.source.value, it.project_slug); srcOpen.hidden = !l; if (l) srcOpen.href = l.href; };
+  // One source per line (D36): a link for each that leads somewhere – "öffnen ↗" for one, named by target for several.
+  // The field grows with its content (long addresses wrap), up to a limit in CSS; measured once the dialog is open.
+  const fitSrc = () => {
+    if (!f.source.isConnected) return;
+    f.source.style.height = "auto";
+    f.source.style.height = f.source.scrollHeight + f.source.offsetHeight - f.source.clientHeight + "px";
+  };
+  const srcOpen = h("span", { class: "src-open" });
+  const srcCount = h("span", { class: "small title-count", "aria-live": "polite" });
+  const syncSrc = () => {
+    const lines = sourceLines(f.source.value);
+    const links = lines.map((line) => sourceLink(line, it.project_slug)).filter(Boolean);
+    srcOpen.replaceChildren(...links.flatMap((l, i) => [i ? " · " : "",
+      h("a", { href: l.href, target: "_blank", rel: "noopener noreferrer", title: l.href }, links.length > 1 ? l.label + " ↗" : tr("sourceOpen"))]));
+    srcOpen.hidden = !links.length;
+    fitSrc();
+    const over = lines.length > MAX_SOURCES;
+    srcCount.hidden = !over;
+    srcCount.textContent = over ? tr("sourcesMax", MAX_SOURCES) : "";
+  };
   f.source.addEventListener("input", syncSrc);
   syncSrc();
   // Session link (D35): where the item was last worked on – sent by the AI, or entered here (e.g. a claude.ai chat, whose
@@ -4835,6 +4863,7 @@ function openEdit(it) {
     // open dialog would overwrite a newer session an AI recorded meanwhile.
     if (f.session.value.trim() === (it.last_session || "")) delete body.session;
     if (!ai.commit()) return;
+    if (sourceLines(f.source.value).length > MAX_SOURCES) { toast(tr("sourcesMax", MAX_SOURCES)); f.source.focus(); return; }
     if (ai.changed()) body.also_in = ai.value.value;
     if (isTask) {
       if (addInput.value.trim()) addCheck(); // typed but not yet added: keep it
@@ -4880,7 +4909,7 @@ function openEdit(it) {
     sz?.confirm ? h("label", { class: "chk size-confirm" }, sz.confirm, h("span", null, `${tr("sizeEstimated")} – ${tr("sizeConfirm")}`)) : null,
     h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
-    h("div", { class: "row2" }, h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source), field(tr("fDue"), f.due)),
+    h("div", { class: "row2" }, h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source, srcCount), field(tr("fDue"), f.due)),
     sessField,
     ai.field,
     h("div", { class: "add-row" }, ai.add, sessAdd),
@@ -4899,6 +4928,7 @@ function openEdit(it) {
       h("button", { type: "submit", class: "primary" }, tr("save"))),
   );
   d.querySelector("form").addEventListener("submit", save);
+  requestAnimationFrame(fitSrc);
 }
 const fmt = (iso) => iso ? new Date(iso).toLocaleString(LOCALE, { dateStyle: "short", timeStyle: "short" }) : "–";
 const actorLabel = (a) => STRINGS[LANG].actors[a] || a || "–";

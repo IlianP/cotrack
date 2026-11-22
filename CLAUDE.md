@@ -99,6 +99,11 @@
   `changedSince` in `src/worker.js` – exact) or an ISO time (only as exact as the AI's clock). The MCP texts ask for the version.
 - Sources as links (D34): `sourceLink` in `src/ui.html` turns "PR #7", "#12", a commit hash or a repository path into a
   GitHub link when the project has a `repo`; full addresses get a readable label.
+- Several sources (decision D36, methodology v2.16): `source` holds up to `MAX_SOURCES` (3) lines, one source each – `normSource`
+  in `src/worker.js` trims, drops blank lines and repeats, refuses more (400 `too_many_sources`); `sourceLines` in `src/ui.html`.
+  `MAX_SOURCES` exists in both – keep them in sync. Card and Next show one link per line, the edit dialog a multi-line field
+  (`src-input`, links per line in `srcOpen`); the compact board shows none. The rule for the AI (normally one, replace instead of
+  append) lives in `INSTRUCTIONS` and the `source` description in `src/mcp.js`, not in the prompt.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
   scrolls, columns fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`),

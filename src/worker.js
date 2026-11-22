@@ -1136,7 +1136,7 @@ export async function createItem(db, project, input, actor, { sizedBy = null, in
     owner: "owner" in input ? normOwner(input.owner) : (kind.default_owner ?? (kind.actionable ? actor : null)),
     status: normStatus(input.status ?? "open"),
     waiting_on: await normWaiting(db, input.waiting_on, project.slug),
-    source: text(input.source, "source", 1000),
+    source: normSource(input.source),
     due: normDate(input.due),
     created_by: actor,
     updated_by: actor,
@@ -1258,7 +1258,7 @@ export async function updateItem(db, project, item, input, actor) {
       const alsoIn = await normAlsoIn(db, input.also_in, item.project_slug);
       if (alsoIn !== (item.also_in ?? null)) changes.also_in = alsoIn; // undefined before migration 0010
     }
-    if ("source" in input) set("source", text(input.source, "source", 1000));
+    if ("source" in input) set("source", normSource(input.source));
     if ("due" in input) set("due", normDate(input.due));
     // The session this change comes from (D35): it becomes the item's last session, and its first while none is known.
     // Empty clears the link (the field in the web app) – the first one too when it is the same link.
@@ -1905,7 +1905,7 @@ export function buildStatusMarkdown(project, items, kinds, origin, lang = "de", 
     const k = kindBy.get(it.kind);
     const status = T.statuses[it.status] + (it.waiting_on ? ` ⏸${waitKeys(it).map((k) => keyLabel(k, project.slug, codes)).join(" ⏸")}` : "");
     lines.push(
-      `| ${it.ref} | ${cell(it.title)} | ${cell(k ? kindName(k, lang) : it.kind)} | ${cell(T.owners[it.owner] || it.owner || "")} | ${cell(it.source)} | ${status} |`,
+      `| ${it.ref} | ${cell(it.title)} | ${cell(k ? kindName(k, lang) : it.kind)} | ${cell(T.owners[it.owner] || it.owner || "")} | ${cell((it.source || "").split("\n").join(" · "))} | ${status} |`,
     );
   }
   return lines.join("\n") + "\n";
@@ -1999,6 +1999,19 @@ function normDate(v) {
   if (v === undefined || v === null || v === "") return null;
   if (typeof v !== "string" || !DATE_RE.test(v)) throw new HttpError(400, "invalid_field", "due (YYYY-MM-DD)");
   return v;
+}
+
+// Sources (decision D36): normally one; up to MAX_SOURCES, one per line in `source` (trimmed, no blank lines, no repeats).
+// Keep MAX_SOURCES in step with src/ui.html.
+const MAX_SOURCES = 3;
+function normSource(v) {
+  const s = text(v, "source", 1000);
+  if (!s) return null;
+  const lines = [...new Set(s.split(/\r?\n/).map((l) => l.trim()).filter(Boolean))];
+  if (lines.length > MAX_SOURCES) {
+    throw new HttpError(400, "too_many_sources", `at most ${MAX_SOURCES}, one per line – replace an outdated source instead of adding one`);
+  }
+  return lines.join("\n");
 }
 
 // The session a change comes from (decision D35): the address of the chat or coding session, https only (the web app links it).
