@@ -1662,12 +1662,14 @@ async function api(path, { method = "GET", body } = {}) {
 const P = (slug) => "/projects/" + encodeURIComponent(slug);
 
 /* A newer web app is live (A124). Reload when nothing is lost by it – no dialog open, nothing typed into a field that has the
-   focus, no unsent result in Next; otherwise say so once, and the next poll (every few seconds) tries again. At most one
-   automatic reload a minute: during a rollout the old and the new version may answer side by side. */
+   focus, no title waiting in quick add (it is no dialog and keeps its text without the focus), no unsent result in Next;
+   otherwise say so once, and the next poll (every few seconds) tries again. At most one automatic reload a minute: during a
+   rollout the old and the new version may answer side by side. */
 function uiOutdated(refused) {
   const el = document.activeElement;
   const typing = el && /^(INPUT|TEXTAREA)$/.test(el.tagName) && el.value;
-  const busy = document.querySelector("dialog[open]") || typing || Object.values(state.nextDraft).some(Boolean);
+  const busy = document.querySelector("dialog[open]") || typing || $("#addTitle").value.trim() ||
+    Object.values(state.nextDraft).some(Boolean);
   let last = 0;
   try { last = Number(sessionStorage.getItem("cotrack.reloadAt")) || 0; } catch {}
   if (!busy && Date.now() - last > 60000) {

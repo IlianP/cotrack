@@ -92,6 +92,21 @@ describe("web app", { skip }, () => {
     await ctx.close();
   });
 
+  it("does not reload while quick add holds a title without the focus, and does once it is empty", async () => {
+    let fake = null;
+    const { page, ctx } = await open(p, { apiHeader: () => fake });
+    await page.waitForSelector("li.item");
+    await page.evaluate(() => sessionStorage.removeItem("cotrack.reloadAt"));
+    // a title typed into quick add, then the focus went elsewhere
+    await page.evaluate(() => { const t = document.querySelector("#addTitle"); t.value = "Halb getippt"; t.blur(); window.__before = true; });
+    fake = "ffffffff";
+    await page.waitForFunction(() => /aktualisiert/.test(document.querySelector("#toast")?.textContent || ""), null, { timeout: 15000 });
+    assert.equal(await page.evaluate(() => window.__before && document.querySelector("#addTitle").value), "Halb getippt", "title kept, no reload");
+    await page.evaluate(() => { document.querySelector("#addTitle").value = ""; });
+    await page.waitForFunction(() => !window.__before && document.readyState === "complete", null, { timeout: 15000 });
+    await ctx.close();
+  });
+
   it("an outdated page with an open dialog does not reload, and its save is refused", async () => {
     const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Veraltet", source: TWO } })).body.item.ref;
     // a page from an older version: same code, different version
