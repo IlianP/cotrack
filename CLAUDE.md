@@ -94,7 +94,8 @@
   re-sorts on each device (`state.projectSort`, localStorage `cotrack.projectSort`; `sortProjects`, `PROJECT_SORTS` in
   `src/ui.html`): changed · name · opened (`noteProjectOpened`, localStorage `cotrack.projectOpened`). Chosen with the
   button in the picker's "Alle Projekte" row (`projectSortBtn`, `#projectSortPop`); every `state.projects` list follows it.
-- Footer delta (A121): `since` is either the version number from `cotrack_status` (digits = event id; `sinceVersion`,
+- Footer delta (A121): `since` is either the version number from `cotrack_status` (the instance-wide newest event id,
+  `latestEvent` in `src/mcp.js`, so it also fits a footer over several projects; digits = event id; `sinceVersion`,
   `changedSince` in `src/worker.js` – exact) or an ISO time (only as exact as the AI's clock). The MCP texts ask for the version.
 - Sources as links (D34): `sourceLink` in `src/ui.html` turns "PR #7", "#12", a commit hash or a repository path into a
   GitHub link when the project has a `repo`; full addresses get a readable label.

@@ -605,10 +605,11 @@ const MSG = {
 const optional = (args, keys) =>
   Object.fromEntries(keys.filter((k) => args[k] !== undefined).map((k) => [k, args[k] === "" ? null : args[k]]));
 
-// Same scope as cotrack_changes and the web app's polling: the project and what it shows or is linked to (D26).
-async function latestEvent(db, slug) {
-  const { where, args } = await linkedScope(db, slug);
-  const row = await db.prepare(`SELECT COALESCE(MAX(id), 0) AS v FROM events WHERE ${where}`).bind(...args).first();
+// The newest event of the whole instance – a session-wide cursor (A121): cotrack_footer's since may cover other projects
+// than the one in cotrack_status, so a project-scoped maximum would count their earlier changes as new. For
+// cotrack_changes it works the same way (it filters by the project's scope itself), just with a higher starting point.
+async function latestEvent(db) {
+  const row = await db.prepare("SELECT COALESCE(MAX(id), 0) AS v FROM events").first();
   return row.v;
 }
 
@@ -662,7 +663,7 @@ async function callTool(name, args, db, actor, lang, origin = "") {
       const project = await getProject(db, args.project);
       // Read the cursor BEFORE the items: a write in between is then replayed by
       // cotrack_changes instead of being skipped.
-      const stand = await latestEvent(db, project.slug);
+      const stand = await latestEvent(db);
       // The footer gets all items (like cotrack_footer), so it knows which blockers are closed and drops their ⏸.
       // Items of other projects shown here (also_in, D26) come along with their qualified reference.
       const [all, kinds, settings, codes] = await Promise.all([
