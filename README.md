@@ -72,6 +72,8 @@ warnings – a one-glance status that survives across conversations.
   two days before, red after. The AI sets it only for real dates (`due`), never estimated.
 - **Sources as links** – with a GitHub repository on the project, "PR #7", "#12", commit hashes and file paths in an
   item's source open the matching page.
+- **Session links** – Claude Code sends the address of its session with every change; the edit dialog links the session an
+  item was last worked on (and the first one), the history every step. For a claude.ai chat or ChatGPT, paste the link yourself.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
   (☰ → Chat footer → Customize), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
   per project when several are in play.
@@ -225,7 +227,7 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | PATCH | `/api/projects/:slug` | update `{name?, repo?, code?, archived?}`; `code` can be set once and never changed. `:slug` may also be the code |
 | GET | `/api/code-suggestion?slug=` | first free code for a slug (initials, then first 2–4 letters) |
 | GET | `/api/projects/:slug/items?status=open\|closed\|all&kind=&owner=&q=&format=text&lang=de\|en` | list items (`format=text`: one compact line per item, for AI assistants); includes items of other projects shown here (`also_in`, with `ext_open`/`ext_next` for links outside the list) unless `shared=0` |
-| POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, also_in?, source?, due?, effort?, benefit?, seq?}` – `waiting_on` may name items of other projects (`"IMM:A2"`), `also_in` lists further projects that show the item (`"IMM"`); `effort` `XS\|S\|M\|L\|XL`, `benefit` `low\|medium\|high`, only for A and I; `sized_by` records who set them (`ai` = estimate); `confirmed: true` marks values the user named or confirmed in a chat |
+| POST | `/api/projects/:slug/items` | create `{kind, title, short?, body?, owner?, status?, waiting_on?, also_in?, source?, session?, due?, effort?, benefit?, seq?}` – `waiting_on` may name items of other projects (`"IMM:A2"`), `also_in` lists further projects that show the item (`"IMM"`); `session` = the https address of the chat or coding session the change comes from (kept as `first_session`/`last_session`, on `PATCH` and `convert` too; empty clears it); `effort` `XS\|S\|M\|L\|XL`, `benefit` `low\|medium\|high`, only for A and I; `sized_by` records who set them (`ai` = estimate); `confirmed: true` marks values the user named or confirmed in a chat |
 | GET / PATCH / DELETE | `/api/projects/:slug/items/:ref` | read / update / delete, e.g. `.../items/A3` or qualified `.../items/CT:A3`; `PATCH {check: 2}` / `{uncheck: "text"}` ticks a sub-item of an action (number, `"2,3"` or text) without rewriting the body; `PATCH {effort, benefit}` sets them – sending them again unchanged confirms an estimate (with the user token, `sized_by: "ai"` keeps them an estimate, used by undo); `expect: {status: "done", …}` writes only if the item still holds these values, otherwise 409 `conflict` |
 | POST | `/api/projects/:slug/items/:ref/restore` | bring a deleted item back under its own reference, from the snapshot in its last event (only while the deletion is its latest event) |
 | POST | `/api/projects/:slug/items/:ref/convert` | accept an idea: `{kind: "A"}` → new item, idea closed with link |

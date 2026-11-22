@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.14 (as of 21 November 2026)
+## Current: Methodology v2.15 (as of 22 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -119,6 +119,17 @@
   - **Next** brings forward what is overdue or due within two days – right after what is in progress and before benefit
     relative to effort.
   - Footer and prompt stay unchanged; the rule lives in the server's instructions and in the tool description.
+- **Session link (v2.15, decision D35):** cotrack remembers **in which session** an item was worked on – the address of the
+  chat or coding session (e.g. `https://claude.ai/code/session_…`). When the AI knows its address, it sends it as `session`
+  with every add, change and conversion. The item keeps the **first** and the **last** session, the history every single
+  one. So you jump from the item straight back into the session instead of starting a new one.
+  - Session links do **not go into the source**: the source says where the details are (document, PR, research), the
+    session where the work happened. If one lands in the source anyway, the MCP server answers with a note.
+  - Only Claude Code knows its session address. claude.ai chats and ChatGPT do not give the model their address – there the
+    field stays empty, and the AI never guesses. You can enter the link yourself in the edit dialog ("🔗 Add session link").
+  - The edit dialog shows it under "Session", named after where it leads ("Claude Code ↗", "claude.ai ↗", "ChatGPT ↗"),
+    with the first session below when it was a different one; the history shows a ↗ per row. The board does not show it.
+  - Footer and prompt stay unchanged; the rule lives in the server's instructions and in the tool descriptions.
 - **PrioFlow (optional, skill):** Instead of picking from the list yourself, you call the `prioflow` skill. The model rates
   the open items (unblocks others, quick to do, deadline and age, impact on the project goal; warnings as weight), proposes
   the next three and guides you through them one by one until you say "stop". The model does the rating, not the server –
@@ -126,6 +137,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.15 does not change the prompt (the session link lives in the server's instructions).
   v2.14 does not change the prompt (due dates live in the server's instructions).
   v2.13 does not change the prompt (sharing items lives in the server's instructions).
   v2.12 does not change the prompt (the rule for brief descriptions lives in the server's instructions).

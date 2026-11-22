@@ -100,6 +100,10 @@ geschätzt (in Listen mit „?“, z. B. „⏱S·★hoch?“), bis der Nutzer s
 Nennt oder bestätigt er sie im Gespräch, sende sie mit confirmed true.
 Entscheidungen und Warnungen bekommen keine Werte; eine Entscheidung erbt den Nutzen der Punkte, die auf sie warten.
 Termine: Hat ein Punkt einen echten Termin (Frist, Veranstaltung, Zusage), setze due (JJJJ-MM-TT); schätze nie einen. In Listen steht er als 📅.
+Session-Link: Kennst du die Adresse deiner Session (Claude Code im Web oder in der App: https://claude.ai/code/session_…), sende sie als session
+bei jedem cotrack_add, cotrack_update und cotrack_convert mit. cotrack merkt sich so, in welcher Session ein Punkt angelegt und zuletzt
+bearbeitet wurde, und der Nutzer springt aus der Web-App direkt dorthin. Kennst du sie nicht (claude.ai-Chat, ChatGPT), lass session weg –
+nie raten. Session-Links gehören nicht in source.
 Punkte, die mehrere Projekte betreffen: Jeder Punkt hat genau ein Heimatprojekt und behält dort seine Kennung. Betrifft er ein weiteres
 Projekt, setze also_in (z. B. "IMM"): Dann erscheint er auch dort in Status, Listen und Fußzeile, mit Kürzel („FIN:W3“). Nicht doppelt
 anlegen und nicht umziehen. waiting_on darf auf Punkte anderer Projekte zeigen ("IMM:A2"). In Antworten schreibe Kennungen anderer
@@ -139,6 +143,10 @@ estimates (marked "?" in lists, e.g. "⏱S·★high?") until the user confirms o
 When they name or confirm them in the conversation, send them with confirmed true.
 Decisions and warnings get no values; a decision inherits the benefit of the items waiting for it.
 Dates: if an item has a real date (deadline, event, commitment), set due (YYYY-MM-DD); never estimate one. Lists show it as 📅.
+Session link: if you know the address of your session (Claude Code on the web or in the app: https://claude.ai/code/session_…), send it as
+session with every cotrack_add, cotrack_update and cotrack_convert. cotrack then remembers in which session an item was created and last
+worked on, and the user jumps straight there from the web app. If you do not know it (claude.ai chat, ChatGPT), leave session out –
+never guess. Session links do not belong in source.
 Items that concern several projects: every item has exactly one home project and keeps its reference there. If it concerns another
 project as well, set also_in (e.g. "IMM"): it then also appears there in status, lists and footer, with the code ("FIN:W3"). Do not
 add it twice and do not move it. waiting_on may point to items of other projects ("IMM:A2"). In answers, always write references of
@@ -166,9 +174,16 @@ function toolList(lang) {
   const refParam = { type: "string", description: t("Kennung, z. B. \"A4\"; mit Kürzel qualifiziert: \"CT:A4\"", "Reference, e.g. \"A4\"; qualified with the code: \"CT:A4\"") };
   const ownerText = t("user oder ai", "user or ai");
   const sourceText = t(
-    "Link oder Datei mit den Details (Dokument, PR, Recherche), aus der der Punkt stammt",
-    "Link or file with the details (document, PR, research) the item comes from",
+    "Link oder Datei mit den Details (Dokument, PR, Recherche), aus der der Punkt stammt – kein Session-Link (dafür: session)",
+    "Link or file with the details (document, PR, research) the item comes from – not a session link (use session for that)",
   );
+  const sessionParam = {
+    type: "string",
+    description: t(
+      "Adresse dieser Session, nur wenn du sie kennst (z. B. https://claude.ai/code/session_…) – nie raten; gehört nicht in source",
+      "Address of this session, only if you know it (e.g. https://claude.ai/code/session_…) – never guess; does not belong in source",
+    ),
+  };
   const dueParam = {
     type: "string",
     description: t(
@@ -345,6 +360,7 @@ function toolList(lang) {
           waiting_on: waitingParam,
           also_in: alsoInParam,
           source: { type: "string", description: sourceText },
+          session: sessionParam,
           due: dueParam,
           effort: effortParam,
           benefit: benefitParam,
@@ -386,6 +402,7 @@ function toolList(lang) {
           waiting_on: waitingParam,
           also_in: alsoInParam,
           source: { type: "string", description: sourceText },
+          session: sessionParam,
           due: dueParam,
           check: {
             type: "string",
@@ -417,6 +434,7 @@ function toolList(lang) {
           ref: refParam,
           kind: { type: "string", enum: ["A", "D"] },
           owner: { type: "string", enum: ["user", "ai"] },
+          session: sessionParam,
         },
         required: ["ref", "kind"],
       },
@@ -513,6 +531,8 @@ const MSG = {
     followedBy: "Danach folgt",
     alsoIn: "Auch angezeigt in",
     source: "Quelle",
+    session: "Session",
+    firstSession: "Erste Session",
     due: "Fällig",
     convertedTo: "Umgewandelt in",
     history: (it) => `Angelegt ${it.created_at} (${it.created_by}), geändert ${it.updated_at} (${it.updated_by})`,
@@ -522,6 +542,8 @@ const MSG = {
       `Hinweis: Der Titel hat ${n} Zeichen. Bitte auf höchstens ${TITLE_TARGET} kürzen (cotrack_update title): Optionen, Schritte, Fristen und Stand knapp in die Beschreibung (body), Ausführliches in die verlinkte Quelle (source).`,
     bodyHint: (n) =>
       `Hinweis: Die Beschreibung hat ${n} Zeichen. cotrack braucht nur, was zum Handeln nötig ist (etwa fünf Zeilen): Details, Messwerte und Verlauf gehören in die verlinkte Quelle (source). Bitte verdichten (cotrack_update body) – nichts löschen, was nirgends sonst steht.`,
+    sessionInSource:
+      "Hinweis: Die Quelle enthält einen Session-Link. Er gehört in session (cotrack_update session), die Quelle bleibt für Dokumente, PRs und Recherche.",
     missingProject: "project (oder qualifizierte Kennung wie CT:A4)",
     refMismatch: (ref, project) => `${ref} gehört nicht zu ${project}`,
     error: "Fehler",
@@ -549,6 +571,8 @@ const MSG = {
     followedBy: "Followed by",
     alsoIn: "Also shown in",
     source: "Source",
+    session: "Session",
+    firstSession: "First session",
     due: "Due",
     convertedTo: "Converted to",
     history: (it) => `Created ${it.created_at} (${it.created_by}), changed ${it.updated_at} (${it.updated_by})`,
@@ -558,6 +582,8 @@ const MSG = {
       `Note: the title has ${n} characters. Please shorten it to at most ${TITLE_TARGET} (cotrack_update title): options, steps, deadlines and status go briefly into the description (body), anything longer into the linked source.`,
     bodyHint: (n) =>
       `Note: the description has ${n} characters. cotrack only needs what is required to act (about five lines): details, measurements and history belong in the linked source. Please condense it (cotrack_update body) – never delete what exists nowhere else.`,
+    sessionInSource:
+      "Note: the source holds a session link. It belongs in session (cotrack_update session); keep source for documents, PRs and research.",
     missingProject: "project (or a qualified reference like CT:A4)",
     refMismatch: (ref, project) => `${ref} does not belong to ${project}`,
     error: "Error",
@@ -596,6 +622,9 @@ async function projectAndRef(db, args, M) {
 const titleHint = (it, M) => ([...it.title].length >= TITLE_HINT_AT ? "\n" + M.titleHint([...it.title].length) : "");
 // Decision D25: the same kind of nudge for a long description, only when a body was sent (ticking a checkbox does not count).
 const bodyHint = (it, M) => ([...(it.body || "")].length >= BODY_HINT_AT ? "\n" + M.bodyHint([...it.body].length) : "");
+// Decision D35: session links have their own place; a nudge when one lands in source anyway.
+const SESSION_LINK_RE = /https:\/\/(claude\.ai\/(code\/session_|chat\/)|chatgpt\.com\/(c|g)\/)/i;
+const sourceHint = (it, M) => (SESSION_LINK_RE.test(it.source || "") ? "\n" + M.sessionInSource : "");
 const projectTitle = (p) => `${p.slug}${p.code ? ` [${p.code}]` : ""} – ${p.name}${p.repo ? ` (${p.repo})` : ""}`;
 
 async function callTool(name, args, db, actor, lang, origin = "") {
@@ -671,6 +700,8 @@ async function callTool(name, args, db, actor, lang, origin = "") {
       if (next.length) lines.push(`${M.followedBy}: ▶${next.map(lbl).join(",")}`);
       if (it.due) lines.push(`${M.due}: ${it.due}`);
       if (it.source) lines.push(`${M.source}: ${it.source}`);
+      if (it.last_session) lines.push(`${M.session}: ${it.last_session}`);
+      if (it.first_session && it.first_session !== it.last_session) lines.push(`${M.firstSession}: ${it.first_session}`);
       if (it.converted_to) lines.push(`${M.convertedTo}: ${it.converted_to}`);
       lines.push(M.history(it));
       // Opens this item in the web app – for a link in the chat.
@@ -679,26 +710,26 @@ async function callTool(name, args, db, actor, lang, origin = "") {
     }
     case "cotrack_add": {
       const project = await getProject(db, args.project);
-      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "due", "effort", "benefit"]),
+      const input = { kind: args.kind, title: args.title, ...optional(args, ["short", "owner", "body", "waiting_on", "also_in", "source", "session", "due", "effort", "benefit"]),
         ...(args.confirmed === true ? { confirmed: true } : {}) };
       const it = await createItem(db, project, input, actor);
       const size = sizeText(it, lang);
-      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}${titleHint(it, M)}${bodyHint(it, M)}`;
+      return `${it.ref} ${M.created}${size ? ` (${size})` : ""}: ${it.title}${titleHint(it, M)}${bodyHint(it, M)}${sourceHint(it, M)}`;
     }
     case "cotrack_update": {
       const { project, ref } = await projectAndRef(db, args, M);
       const item = await getItemByRef(db, project.slug, ref);
-      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "due", "check", "uncheck", "effort", "benefit"]);
+      const fields = optional(args, ["status", "title", "short", "owner", "body", "waiting_on", "also_in", "source", "session", "due", "check", "uncheck", "effort", "benefit"]);
       if (args.confirmed === true) fields.confirmed = true;
       const it = await updateItem(db, project, item, fields, actor);
       const progress = checkProgress(it);
       // The hint only when the title was sent now – closing an item with an old long title needs no lecture.
-      return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}${"title" in fields ? titleHint(it, M) : ""}${"body" in fields ? bodyHint(it, M) : ""}`;
+      return `${it.ref} ${M.updated} (${it.status}${progress ? `, ${progress}` : ""}): ${it.title}${"title" in fields ? titleHint(it, M) : ""}${"body" in fields ? bodyHint(it, M) : ""}${"source" in fields ? sourceHint(it, M) : ""}`;
     }
     case "cotrack_convert": {
       const { project, ref } = await projectAndRef(db, args, M);
       const item = await getItemByRef(db, project.slug, ref);
-      const r = await convertItem(db, project, item, optional(args, ["kind", "owner"]), actor);
+      const r = await convertItem(db, project, item, optional(args, ["kind", "owner", "session"]), actor);
       return `${r.from.ref} → ${r.to.ref}: ${r.to.title}`;
     }
     case "cotrack_footer": {
