@@ -83,7 +83,8 @@ Antwort Punkte, nur die Kurzzeile „neu: … · erledigt: …“ zeigen; die vo
 am Ende größerer Arbeiten oder etwa alle vier Antworten. Baue die Fußzeile nie selbst: Ihr Format (ein- oder mehrzeilig, Kennzeichen
 der Gruppen, Standard 👤 = Nutzer, 🤖 = KI, dazu 💡 und ⚠️) stellt der Nutzer in der Web-App ein; gib sie genau so wieder, wie cotrack_footer
 sie liefert. layout nur setzen, wenn der Nutzer im Gespräch ausdrücklich ein anderes Format will. Mit lang "en" (passend zu einem englischen
-Prompt/Gespräch) lauten „neu / erledigt“ new / done. Für spätere Sessions reicht cotrack_changes mit der zuletzt gesehenen Stand-Nummer.
+Prompt/Gespräch) lauten „neu / erledigt“ new / done. Merke dir die Stand-Nummer aus cotrack_status: Sie ist since für die Kurzzeile (genau die
+Änderungen seit Session-Beginn, ohne Uhrzeit) und reicht in späteren Sessions für cotrack_changes.
 Projekt-Zuordnung: Welches Projekt zur Unterhaltung gehört, bestimmst du, nicht der Server. Gehört ein Repository dazu, lies einmal beim Start
 (und wenn ein Repository hinzukommt) die Datei COTRACK.md im Repo-Root: „project:“ ist der Slug, „code:“ das Kürzel. Fehlt sie, finde das Projekt
 mit cotrack_projects (Parameter repo = "owner/name"). Ohne Treffer oder bei Mehrdeutigkeit frage den Nutzer einmal; lege nie von dir aus ein Projekt an.
@@ -128,7 +129,8 @@ answer, show only the short line "new: … · done: …"; the full footer (cotra
 at the end of larger pieces of work or roughly every four answers. Never build the footer yourself: its format (single- or multi-line, group
 markers, default 👤 = the user, 🤖 = the AI, plus 💡 and ⚠️) is set by the user in the web app; reproduce it exactly as cotrack_footer
 returns it. Set layout only when the user explicitly asks for a different format in the conversation. With lang "de" (for a German
-prompt/conversation) "new / done" become neu / erledigt. In later sessions, cotrack_changes with the last version number you saw is enough.
+prompt/conversation) "new / done" become neu / erledigt. Keep the version number from cotrack_status: it is since for the short line (exactly
+the changes since the session began, no clock needed) and enough for cotrack_changes in later sessions.
 Project assignment: you decide which project the conversation belongs to, not the server. If a repository is involved, read the file
 COTRACK.md in the repository root once at the start (and whenever a repository is added): "project:" is the slug, "code:" the short code. If it
 is missing, find the project with cotrack_projects (parameter repo = "owner/name"). If nothing matches or it is ambiguous, ask the user once; never create a project on your own.
@@ -303,8 +305,8 @@ function toolList(lang) {
       name: "cotrack_status",
       title: t("Stand eines Projekts", "Project status"),
       description: t(
-        "Kompakter Stand für den Session-Start: Fußzeile, alle offenen Punkte (eine Zeile pro Punkt; 📝 = hat eine Beschreibung, siehe cotrack_get; mit Kürzel wie „FIN:W3“ = aus einem anderen Projekt mit angezeigt) und die aktuelle Stand-Nummer für cotrack_changes.",
-        "Compact status for the start of a session: footer, all open items (one line each; 📝 = has a description, see cotrack_get; with a code like \"FIN:W3\" = shown here from another project) and the current version number for cotrack_changes.",
+        "Kompakter Stand für den Session-Start: Fußzeile, alle offenen Punkte (eine Zeile pro Punkt; 📝 = hat eine Beschreibung, siehe cotrack_get; mit Kürzel wie „FIN:W3“ = aus einem anderen Projekt mit angezeigt) und die aktuelle Stand-Nummer – merken: since für die Kurzzeile (cotrack_footer) und after für cotrack_changes.",
+        "Compact status for the start of a session: footer, all open items (one line each; 📝 = has a description, see cotrack_get; with a code like \"FIN:W3\" = shown here from another project) and the current version number – keep it: since for the short line (cotrack_footer) and after for cotrack_changes.",
       ),
       inputSchema: { type: "object", properties: { project: projectParam }, required: ["project"] },
       annotations: { readOnlyHint: true },
@@ -449,10 +451,10 @@ function toolList(lang) {
       title: t("Fußzeile", "Footer"),
       description: t(
         "Die Fußzeile für das Ende einer Antwort, im Format aus den Einstellungen der Web-App (Standard: je Gruppe eine Zeile); genau so wiedergeben. " +
-          "Mit since (ISO-Zeit) auch „neu“ und „erledigt“; mit delta nur diese Kurzzeile (immer einzeilig). " +
+          "Mit since (Stand-Nummer aus cotrack_status) auch „neu“ und „erledigt“; mit delta nur diese Kurzzeile (immer einzeilig). " +
           "Bei mehreren Projekten (durch Komma getrennt) ein Block je Projekt, mit Kürzel davor („CT ▸ …“); Projekte ohne Inhalt entfallen.",
         "The footer for the end of an answer, in the format from the web app settings (default: one line per group); reproduce it exactly. " +
-          "With since (ISO time) also \"new\" and \"done\"; with delta only that short line (always one line). " +
+          "With since (the version number from cotrack_status) also \"new\" and \"done\"; with delta only that short line (always one line). " +
           "For several projects (separated by commas) one block per project, prefixed with its code (\"CT ▸ …\"); projects with nothing to show are left out.",
       ),
       inputSchema: {
@@ -462,7 +464,13 @@ function toolList(lang) {
             type: "string",
             description: t("Ein Projekt oder mehrere durch Komma, z. B. \"CT,TS\" (Slug oder Kürzel)", "One project or several separated by commas, e.g. \"CT,TS\" (slug or code)"),
           },
-          since: { type: "string", description: t("ISO-Zeitpunkt, z. B. Session-Beginn", "ISO time, e.g. the start of the session") },
+          since: {
+            type: "string",
+            description: t(
+              "Stand-Nummer vom Session-Beginn (cotrack_status, z. B. \"1492\") – zählt genau die Änderungen danach. Eine ISO-Zeit geht auch, ist aber nur so genau wie deine Uhr",
+              "Version number from the start of the session (cotrack_status, e.g. \"1492\") – counts exactly the changes after it. An ISO time works too, but is only as exact as your clock",
+            ),
+          },
           delta: {
             type: "boolean",
             description: t("Nur „neu: … · erledigt: …“ (braucht since); leer, wenn nichts geändert wurde", "Only \"new: … · done: …\" (needs since); empty when nothing changed"),
@@ -524,6 +532,7 @@ const MSG = {
     project: "Projekt",
     footer: "Fußzeile",
     version: "Stand",
+    versionHint: "(since für die Kurzzeile, after für cotrack_changes)",
     nothingOpen: "(nichts offen)",
     noChanges: "(keine Änderungen)",
     noChangesSince: (n) => `Keine Änderungen seit Stand ${n}.`,
@@ -565,6 +574,7 @@ const MSG = {
     project: "Project",
     footer: "Footer",
     version: "Version",
+    versionHint: "(since for the short line, after for cotrack_changes)",
     nothingOpen: "(nothing open)",
     noChanges: "(no changes)",
     noChangesSince: (n) => `No changes since version ${n}.`,
@@ -601,10 +611,11 @@ const MSG = {
 const optional = (args, keys) =>
   Object.fromEntries(keys.filter((k) => args[k] !== undefined).map((k) => [k, args[k] === "" ? null : args[k]]));
 
-// Same scope as cotrack_changes and the web app's polling: the project and what it shows or is linked to (D26).
-async function latestEvent(db, slug) {
-  const { where, args } = await linkedScope(db, slug);
-  const row = await db.prepare(`SELECT COALESCE(MAX(id), 0) AS v FROM events WHERE ${where}`).bind(...args).first();
+// The newest event of the whole instance – a session-wide cursor (A121): cotrack_footer's since may cover other projects
+// than the one in cotrack_status, so a project-scoped maximum would count their earlier changes as new. For
+// cotrack_changes it works the same way (it filters by the project's scope itself), just with a higher starting point.
+async function latestEvent(db) {
+  const row = await db.prepare("SELECT COALESCE(MAX(id), 0) AS v FROM events").first();
   return row.v;
 }
 
@@ -658,7 +669,7 @@ async function callTool(name, args, db, actor, lang, origin = "") {
       const project = await getProject(db, args.project);
       // Read the cursor BEFORE the items: a write in between is then replayed by
       // cotrack_changes instead of being skipped.
-      const stand = await latestEvent(db, project.slug);
+      const stand = await latestEvent(db);
       // The footer gets all items (like cotrack_footer), so it knows which blockers are closed and drops their ⏸.
       // Items of other projects shown here (also_in, D26) come along with their qualified reference.
       const [all, kinds, settings, codes] = await Promise.all([
@@ -670,7 +681,7 @@ async function callTool(name, args, db, actor, lang, origin = "") {
       const items = all.filter((i) => ["open", "doing", "blocked"].includes(i.status));
       const view = { viewSlug: project.slug, codes };
       const footer = buildFooter(all, kinds, { lang, ...footerStyle(settings), ...view }) || M.nothingOpen;
-      return `${M.project}: ${projectTitle(project)}\n${M.footer}:${footer.includes("\n") ? "\n" : " "}${footer}\n${M.version}: ${stand}\n\n${itemsAsText(items, kinds, { lang, ...view })}`;
+      return `${M.project}: ${projectTitle(project)}\n${M.footer}:${footer.includes("\n") ? "\n" : " "}${footer}\n${M.version}: ${stand} ${M.versionHint}\n\n${itemsAsText(items, kinds, { lang, ...view })}`;
     }
     case "cotrack_list": {
       const project = await getProject(db, args.project);
@@ -745,7 +756,9 @@ async function callTool(name, args, db, actor, lang, origin = "") {
       const keys = String(args.project || "").split(",").map((k) => k.trim()).filter(Boolean);
       if (!keys.length) throw httpError(400, "missing_field", "project");
       // Without lang the footer speaks the instance language, like everything else here.
-      const line = await footerFor(db, keys, { since: args.since || null, delta: args.delta === true, layout: normLayout(args.layout), lang: optLang(args.lang) || lang });
+      // since: the version number from cotrack_status (a string or, from some clients, a number – 0 included) or an ISO time.
+      const since = args.since === undefined || args.since === null || String(args.since).trim() === "" ? null : String(args.since).trim();
+      const line = await footerFor(db, keys, { since, delta: args.delta === true, layout: normLayout(args.layout), lang: optLang(args.lang) || lang });
       return line || (args.delta === true ? M.noChanges : M.nothingOpen);
     }
     case "cotrack_changes": {

@@ -85,6 +85,15 @@ button { cursor: pointer; }
 .psel-count { font-size: 12px; color: var(--muted); }
 .psel-repo { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
 .psel-list li.psel-all { border-bottom: 1px solid var(--line); border-radius: 8px 8px 0 0; margin-bottom: 4px; }
+/* order of the projects (A120): small button at the right of the "Alle Projekte" row, menu right below it */
+.psel-sort {
+  align-self: center; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; min-height: 28px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font-size: 12px; white-space: nowrap;
+}
+.psel-sort svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.psel-sort[aria-expanded="true"] { border-color: var(--accent); }
+.psel-sort.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.psel-pop .psel-sortpop { right: 8px; }
 .psel-empty { padding: 10px 8px; color: var(--muted); font-size: 13px; }
 /* narrow screens: the list spans the whole top bar (its containing block) instead of starting at the button */
 @media (max-width: 560px) {
@@ -943,6 +952,8 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
         aria-expanded="true" aria-controls="projectList" placeholder="Name, Kürzel oder Repo …" autocomplete="off"
         autocapitalize="off" spellcheck="false" enterkeyhint="go" data-t-attr="aria-label:projectSearch;placeholder:projectSearchPh">
       <ul id="projectList" class="psel-list" role="listbox" aria-label="Projekte" data-t-attr="aria-label:projects"></ul>
+      <!-- order of the projects (A120): opened from the button in the "Alle Projekte" row -->
+      <div id="projectSortPop" class="sort-pop psel-sortpop" hidden></div>
     </div>
   </div>
   <span id="live" class="live" title="Live-Verbindung" data-t-attr="title:liveTitle"></span>
@@ -1099,6 +1110,11 @@ const STRINGS = {
     sort: "Sortieren", sortBy: (name) => `Sortierung: ${name}`, sortNote: "Gilt fürs Board · auf diesem Gerät gespeichert",
     sortNames: { num: "Nummer", changed: "Zuletzt geändert", created: "Zuletzt angelegt", due: "Fälligkeit" },
     sortHints: { num: "D1, D2 … in der Reihenfolge der Anlage", changed: "Jüngste Änderung oben – wie im Verlauf", created: "Neue Punkte oben", due: "Was zuerst fällig ist, steht oben" },
+    projectSort: "Reihenfolge der Projekte", projectSortBy: (name) => `Reihenfolge der Projekte: ${name}`,
+    projectSortNote: "Gilt für alle Projektlisten · auf diesem Gerät gespeichert",
+    projectSortNames: { changed: "Zuletzt geändert", name: "Name (A–Z)", opened: "Zuletzt geöffnet" },
+    projectSortShort: { changed: "Geändert", name: "A–Z", opened: "Geöffnet" },
+    projectSortHints: { changed: "Jüngste Änderung oben – von dir oder der KI", name: "Alphabetisch nach Name", opened: "Was du auf diesem Gerät zuletzt geöffnet hast" },
     ageNow: "gerade eben", ageMin: (n) => `vor ${n} Min.`, ageHours: (n) => `vor ${n} Std.`, ageYesterday: "gestern",
     ageDays: (n) => `vor ${n} Tagen`, ageOn: (d) => `am ${d}`,
     ageTitle: { changed: (at, who) => `Zuletzt geändert: ${at} von ${who}`, created: (at, who) => `Angelegt: ${at} von ${who}` },
@@ -1332,6 +1348,11 @@ const STRINGS = {
     sort: "Sort", sortBy: (name) => `Sort: ${name}`, sortNote: "Applies to the board · saved on this device",
     sortNames: { due: "Due date", num: "Number", changed: "Recently changed", created: "Recently added" },
     sortHints: { num: "D1, D2 … in the order they were added", changed: "Latest change on top – like the history", created: "New items on top", due: "What is due first comes first" },
+    projectSort: "Project order", projectSortBy: (name) => `Project order: ${name}`,
+    projectSortNote: "Applies to all project lists · saved on this device",
+    projectSortNames: { changed: "Recently changed", name: "Name (A–Z)", opened: "Recently opened" },
+    projectSortShort: { changed: "Changed", name: "A–Z", opened: "Opened" },
+    projectSortHints: { changed: "Latest change on top – by you or the AI", name: "Alphabetical by name", opened: "What you opened last on this device" },
     ageNow: "just now", ageMin: (n) => `${n} min ago`, ageHours: (n) => `${n} h ago`, ageYesterday: "yesterday",
     ageDays: (n) => `${n} days ago`, ageOn: (d) => `on ${d}`,
     ageTitle: { changed: (at, who) => `Last changed: ${at} by ${who}`, created: (at, who) => `Added: ${at} by ${who}` },
@@ -1595,6 +1616,11 @@ const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · N
 const SORTS = ["num", "changed", "created", "due"];
 const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
 const SORT_SYM = { num: "#", changed: "↻", created: "+", due: "◷" };
+// Order of the project lists (A120, D37), chosen in the picker's "Alle Projekte" row and remembered on this device:
+// "changed" = newest change first (by you or the AI; the server's order), "name" = alphabetical,
+// "opened" = what was opened last on this device (localStorage "cotrack.projectOpened"), the rest by "changed".
+const PROJECT_SORTS = ["changed", "name", "opened"];
+const PROJECT_SORT_SYM = { changed: "↻", name: "A", opened: "◷" };
 // The address: "#slug" selects a project, "#slug/A14" also opens that item – a link to one item, e.g. from a chat.
 function hashTarget() {
   let raw = "";
@@ -1611,6 +1637,7 @@ const state = {
   nextTime: ["5", "30", "120"].includes(store.get("cotrack.nextTime")) ? store.get("cotrack.nextTime") : "", // Next: time filter in minutes
   mode: MODES.includes(store.get("cotrack.mode")) ? store.get("cotrack.mode") : "board",
   sort: SORTS.includes(store.get("cotrack.sort")) ? store.get("cotrack.sort") : "num",
+  projectSort: PROJECT_SORTS.includes(store.get("cotrack.projectSort")) ? store.get("cotrack.projectSort") : "changed",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
   dense: store.get("cotrack.dense") === "1", // board: one line per item (this device)
@@ -1755,6 +1782,7 @@ async function boot() {
     state.actor = me.actor; state.allKinds = kinds.kinds.map(localizeKind); state.kinds = state.allKinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
+    noteProjectOpened(state.project);
     renderKindSeg();
     const linked = hashTarget(); // before the first refresh: selecting the project rewrites the address
     await refresh(true);
@@ -1775,7 +1803,7 @@ async function boot() {
 // notify: point out projects that appeared since the last load (e.g. created by an AI via MCP).
 async function loadProjects(notify) {
   const known = new Set(state.projects.map((p) => p.slug));
-  state.projects = (await api("/projects")).projects;
+  state.projects = sortProjects((await api("/projects")).projects);
   const added = notify && loadProjects.done ? state.projects.filter((p) => !known.has(p.slug)) : [];
   loadProjects.done = true;
   if (state.project !== ALL && !state.projects.some((p) => p.slug === state.project)) {
@@ -1788,6 +1816,29 @@ async function loadProjects(notify) {
   } else if (added.length > 1) {
     toast(tr("newProjects", added.length, added.map((p) => p.name).join(", ")));
   }
+}
+
+// The project list in the order chosen on this device (PROJECT_SORTS); every list of projects in the app follows it.
+function sortProjects(list) {
+  const byName = (a, b) => String(a.name || a.slug).localeCompare(String(b.name || b.slug), LANG, { numeric: true, sensitivity: "base" });
+  const byChange = (a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")) || byName(a, b);
+  const out = list.slice();
+  if (state.projectSort === "name") return out.sort(byName);
+  if (state.projectSort === "opened") {
+    const seen = projectOpened();
+    return out.sort((a, b) => String(seen[b.slug] || "").localeCompare(String(seen[a.slug] || "")) || byChange(a, b));
+  }
+  return out.sort(byChange);
+}
+function projectOpened() {
+  try { const v = JSON.parse(store.get("cotrack.projectOpened") || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; }
+}
+function noteProjectOpened(slug) {
+  if (!slug || slug === ALL) return;
+  const seen = { ...projectOpened(), [slug]: new Date().toISOString() };
+  const latest = Object.entries(seen).sort((a, b) => String(b[1]).localeCompare(String(a[1]))).slice(0, 100);
+  store.set("cotrack.projectOpened", JSON.stringify(Object.fromEntries(latest)));
+  if (state.projectSort === "opened") state.projects = sortProjects(state.projects);
 }
 
 async function refresh(force) {
@@ -4181,6 +4232,7 @@ function selectProject(slug) {
   closeHome();
   state.project = slug; state.version = -1; state.nextPick = null;
   store.set("cotrack.project", slug);
+  noteProjectOpened(slug);
   history.replaceState(null, "", "#" + encodeURIComponent(slug));
   renderProjects(); refresh(true); poll();
 }
@@ -4228,7 +4280,8 @@ function renderPicker() {
           onmousemove: () => setPickerActive(i), onclick: () => choosePicker(i) },
         h("span", { class: "psel-code" }, p.all ? "" : p.code || ""),
         h("span", { class: "psel-name" }, p.name),
-        h("span", { class: "psel-count", title: tr("openItems") }, p.open_count ? String(p.open_count) : ""),
+        p.all && i === 0 && state.projects.length > 1 ? projectSortBtn()
+          : h("span", { class: "psel-count", title: tr("openItems") }, p.open_count ? String(p.open_count) : ""),
         p.repo ? h("span", { class: "psel-repo" }, p.repo) : null,
       ),
     ),
@@ -4263,6 +4316,7 @@ function openPicker(text = "") {
 function closePicker(refocus = false) {
   if (!picker.open) return;
   picker.open = false;
+  $("#projectSortPop").hidden = true;
   $("#projectPop").hidden = true;
   $("#projectBtn").setAttribute("aria-expanded", "false");
   if (refocus) $("#projectBtn").focus();
@@ -4274,6 +4328,61 @@ function choosePicker(i) {
   closePicker(true);
   if (p.slug !== state.project) selectProject(p.slug);
 }
+
+/* order of the projects (A120): button in the "Alle Projekte" row → short menu, like the board's sort; this device only */
+function projectSortBtn() {
+  const label = tr("projectSortBy", tr("projectSortNames." + state.projectSort));
+  return h("button", {
+    type: "button", id: "projectSortBtn", class: "psel-sort" + (state.projectSort !== "changed" ? " on" : ""),
+    "aria-haspopup": "menu", "aria-expanded": String(!$("#projectSortPop").hidden), "aria-controls": "projectSortPop",
+    title: label, "aria-label": label,
+    // the row itself selects "Alle Projekte" – the button must not
+    onclick: (e) => { e.stopPropagation(); setProjectSortOpen($("#projectSortPop").hidden); },
+  }, svg("svg", { viewBox: "0 0 24 24", "aria-hidden": "true" }, svg("path", { d: "M4 6h9" }), svg("path", { d: "M4 12h6" }),
+    svg("path", { d: "M4 18h3" }), svg("path", { d: "M17 5v14" }), svg("path", { d: "M13.5 15.5L17 19l3.5-3.5" })),
+  h("span", null, tr("projectSortShort." + state.projectSort)));
+}
+const projectSortOptions = () => [...$("#projectSortPop").querySelectorAll('[role="menuitemradio"]')];
+function setProjectSortOpen(open, refocus = null) {
+  const pop = $("#projectSortPop"), btn = $("#projectSortBtn");
+  if (open === !pop.hidden) return;
+  if (open) {
+    pop.replaceChildren(
+      h("div", { class: "sort-head", id: "projectSortHead" }, tr("projectSort")),
+      h("div", { role: "menu", "aria-labelledby": "projectSortHead" }, PROJECT_SORTS.map((s) => h("button", {
+        type: "button", role: "menuitemradio", "aria-checked": String(state.projectSort === s), tabindex: "-1", onclick: () => setProjectSort(s),
+      }, h("span", { class: "sy", "aria-hidden": "true" }, PROJECT_SORT_SYM[s]),
+        h("span", null, h("span", { class: "sl" }, tr("projectSortNames." + s)), h("span", { class: "sh" }, tr("projectSortHints." + s))),
+        h("span", { class: "ok", "aria-hidden": "true" }, state.projectSort === s ? "✓" : "")))),
+      h("p", { class: "sort-note" }, tr("projectSortNote")));
+    // right below the button, inside the picker
+    if (btn) pop.style.top = `${btn.getBoundingClientRect().bottom - $("#projectPop").getBoundingClientRect().top + 4}px`;
+  }
+  pop.hidden = !open;
+  btn?.setAttribute("aria-expanded", String(open));
+  if (open) projectSortOptions()[PROJECT_SORTS.indexOf(state.projectSort)]?.focus();
+  else refocus?.focus();
+}
+function setProjectSort(s) {
+  setProjectSortOpen(false, $("#projectSearch"));
+  if (s === state.projectSort) return;
+  state.projectSort = s;
+  store.set("cotrack.projectSort", s);
+  state.projects = sortProjects(state.projects);
+  if (!$("#projectSearch").value) picker.active = Math.max(0, pickerMatches("").findIndex((p) => p.slug === state.project));
+  renderPicker();
+  // "Alle Projekte" groups by project in the order of the list (Ketten, Next)
+  if (state.project === ALL) render();
+}
+$("#projectSortPop").addEventListener("keydown", (e) => {
+  const opts = projectSortOptions(), i = opts.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    opts[(i + (e.key === "ArrowDown" ? 1 : opts.length - 1)) % opts.length]?.focus();
+  } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); opts[e.key === "Home" ? 0 : opts.length - 1]?.focus(); }
+  else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setProjectSortOpen(false, $("#projectSortBtn")); }
+  else if (e.key === "Tab") setProjectSortOpen(false);
+});
 
 /* ---------------------------------------------------------- quick access (Ctrl/⌘+K) */
 // One field for everything: an item of any project by reference ("A14", "WEB:A14") or by words, a project, a view or an
@@ -4396,7 +4505,8 @@ $("#projectBtn").addEventListener("keydown", (e) => {
   // Typing on the closed button starts a search right away.
   else if (e.key.length === 1 && e.key !== " " && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); openPicker(e.key); }
 });
-$("#projectSearch").addEventListener("input", () => { picker.active = 0; renderPicker(); });
+$("#projectSearch").addEventListener("input", () => { picker.active = 0; setProjectSortOpen(false); renderPicker(); });
+$("#projectSearch").addEventListener("focus", () => setProjectSortOpen(false));
 $("#projectSearch").addEventListener("keydown", (e) => {
   // While an input method (e.g. Japanese, Chinese) is composing, Enter/arrows/Escape belong to it. Safari reports
   // the confirming Enter with isComposing false but keyCode 229.

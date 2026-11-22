@@ -26,8 +26,8 @@ Antworte in der Sprache der Unterhaltung und setze `lang` bei `cotrack_footer` p
   `repo = "owner/name"`. Ohne Repository gilt das Projekt aus den Projektanweisungen, sonst fragst du einmal.
   Lege nie ein Projekt an.
 - **`cotrack_status`** aufrufen. Du bekommst alle offenen Punkte (eine Zeile je Punkt, `@Du`/`@KI`, `▶`/`⏸`) und die
-  Stand-Nummer. Merke dir die Nummer: Bewertest du in derselben Unterhaltung neu, reicht `cotrack_changes`.
-  Merke dir auch den Startzeitpunkt für die Kurzzeile (`since`); kennst du die Uhrzeit nicht, nimm den Beginn des Tages.
+  Stand-Nummer. Merke dir die Nummer: Sie ist `since` für die Kurzzeile, und bewertest du in derselben Unterhaltung neu,
+  reicht `cotrack_changes`.
 - **Details nur für Kandidaten:** `cotrack_get` für die etwa acht aussichtsreichsten Punkte (Beschreibung, Nachfolger,
   Anlage- und Änderungsdatum), nicht für alle.
 - **Bei `alle`:** erst `cotrack_projects`, dann `cotrack_status` je Projekt.
@@ -120,7 +120,7 @@ die Beschreibung an und setzt den Status `done`. Ist ein Risiko eingetreten, wir
 ## 5. Nach jedem Punkt
 
 - Trag das Ergebnis sofort in cotrack ein, nicht gesammelt am Ende.
-- Hol die Kurzzeile mit `cotrack_footer` (`delta: true`, `since`: Startzeitpunkt) und gib sie genau so wieder.
+- Hol die Kurzzeile mit `cotrack_footer` (`delta: true`, `since`: die Stand-Nummer vom Start) und gib sie genau so wieder.
   Bau sie nie selbst.
 - Mach mit dem nächsten Punkt weiter. Hat das Ergebnis die Lage verändert (neue Punkte, etwas freigegeben), bewerte neu.
   Nach drei Punkten zeigst du die nächsten drei („Nächste Runde: …“) und machst weiter.
