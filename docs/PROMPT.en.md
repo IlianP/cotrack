@@ -1,4 +1,4 @@
-# Custom prompt (Claude & ChatGPT) – Methodology v2.16 (prompt text last changed on 20 Nov 2026)
+# Custom prompt (Claude & ChatGPT) – Methodology v2.17 (prompt text last changed on 22 Nov 2026)
 
 **English** · [Deutsch](PROMPT.md)
 
@@ -32,7 +32,7 @@ Sub-items: An action may carry a short checklist ("- [ ] step", max. 5), only if
 Footer: Each group on its own line ("👤 D1 … · A2 …", "🤖 A3 … (+2)", "💡 I1 … (+5)", "⚠️ W1 …"; my items first, decisions before actions, max. 8 entries of 1–3 words). Show the full footer only on "Status?", at the end of a larger piece of work, or when I haven't seen it for about four answers. On changes the short line "new: … · done: …" is enough. For short answers without changes, both are omitted.
 "Status?": full list with short description, origin (link/file), status, blockers.
 "Handover" / end of longer work: With file/repo access, write all open points into the "Offene Punkte" (open points) section of the status file (e.g. docs/STATUS.md; one line per item: reference, keyword, source, status; remove completed items; if there is none, suggest one). Without file access: compact handover block to copy.
-Session start: If you find a status file with this section, merge it with the conversation's items: combine duplicates (older reference stays), remove completed items, mark contradictions as W or D instead of silently deciding. Old T references from v1 stay valid.
+Session start: If you find a status file with this section, merge it with the conversation's items: combine duplicates (older reference stays), remove completed items, mark contradictions as W or D instead of silently deciding.
 ```
 
 ## Part 2 – cotrack addendum (only with cotrack)
@@ -82,6 +82,7 @@ Whether a new version needs anything from you is in the last column.
 
 | Version | What's new | Reinstall? |
 |---|---|---|
+| v2.17 (22 Nov 2026) | The sentence "Old T references from v1 stay valid." at the end of part 1 is gone – T no longer exists. | Worth it, not required: just delete the sentence |
 | v2.16 | **Up to three sources:** one per line, normally one; replace what is outdated instead of appending. The rule lives in the MCP server's instructions and the tool description. | No – prompt unchanged |
 | v2.15 | **Session link:** cotrack remembers in which session (Claude Code) an item was worked on and links it in the edit dialog. The rule lives in the MCP server's instructions and the tool descriptions. | No – prompt unchanged |
 | v2.14 | **Due dates:** real dates in the "Due" field, Next brings forward what is overdue. The rule lives in the MCP server's instructions and the tool descriptions. | No – prompt unchanged |

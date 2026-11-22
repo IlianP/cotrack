@@ -7,7 +7,7 @@
 > dieselbe wie für die Web-App; ohne Wahl Deutsch). Sie bestimmt auch die Sprache der Anweisung, Werkzeugbeschreibungen und Antworten des Servers.
 > Die Buchstaben A/D/I/W und die Kennungen sind sprachunabhängig.
 
-## Gültig: Methodik v2.16 (Stand 22. November 2026)
+## Gültig: Methodik v2.17 (Stand 22. November 2026)
 
 | Kürzel | Bedeutung | Fußzeile |
 |---|---|---|
@@ -144,6 +144,7 @@
 - **Nicht übernommen:** P (Problem), L (Erkenntnis) in der Fußzeile, fortlaufende Projektnummer.
 - Der Prompt-Text dazu: [PROMPT.md](PROMPT.md) – zweiteilig: Basis (ohne cotrack nutzbar) und cotrack-Zusatz (nur mit MCP). Beide Dateien müssen immer zueinander passen – ebenso mit den englischen Fassungen
   ([METHODOLOGY.md](METHODOLOGY.md), [PROMPT.en.md](PROMPT.en.md)).
+  v2.17 streicht im Prompt den Satz zu alten T-Kennungen aus v1 (T gibt es nicht mehr).
   v2.16 ändert den Prompt nicht (die Regel für Quellen steht in der Server-Anweisung).
   v2.15 ändert den Prompt nicht (der Session-Link steht in der Server-Anweisung).
   v2.14 ändert den Prompt nicht (Fälligkeiten stehen in der Server-Anweisung).

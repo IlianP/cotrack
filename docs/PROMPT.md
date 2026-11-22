@@ -1,4 +1,4 @@
-# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.16 (Prompt-Text zuletzt geändert am 20.11.2026)
+# Benutzerdefinierter Prompt (Claude & ChatGPT) – Methodik v2.17 (Prompt-Text zuletzt geändert am 22.11.2026)
 
 [English](PROMPT.en.md) · **Deutsch**
 
@@ -33,7 +33,7 @@ Teilpunkte: Eine Aufgabe darf eine kurze Checkliste („- [ ] Schritt“, max. 5
 Fußzeile: Jede Gruppe in eigener Zeile („👤 D1 … · A2 …“, „🤖 A3 … (+2)“, „💡 I1 … (+5)“, „⚠️ W1 …“; meine Punkte zuerst, Entscheidungen vor Aufgaben, max. 8 Einträge mit 1–3 Wörtern). Die volle Fußzeile nur bei „Stand?“, am Ende größerer Arbeit oder wenn ich sie ca. vier Antworten nicht gesehen habe. Bei Änderungen genügt die Kurzzeile „neu: … · erledigt: …“. Bei kurzen Antworten ohne Änderung entfällt beides.
 „Stand?“: volle Liste mit Kurzbeschreibung, Herkunft (Link/Datei), Status, Blockaden.
 „Übergabe“ / Ende längerer Arbeit: Mit Datei-/Repo-Zugriff alle offenen Punkte in den Abschnitt „Offene Punkte“ der Status-Datei schreiben (z. B. docs/STATUS.md; eine Zeile pro Punkt: Kennung, Stichwort, Quelle, Status; Erledigtes entfernen; fehlt sie, eine vorschlagen). Ohne Dateizugriff: kompakter Übergabeblock zum Kopieren.
-Session-Start: Findest du eine Status-Datei mit diesem Abschnitt, führe sie mit den Punkten der Unterhaltung zusammen: Doppelte zusammenlegen (ältere Kennung bleibt), Erledigtes entfernen, Widersprüche als W oder D markieren statt still zu entscheiden. Alte T-Kennungen aus v1 bleiben gültig.
+Session-Start: Findest du eine Status-Datei mit diesem Abschnitt, führe sie mit den Punkten der Unterhaltung zusammen: Doppelte zusammenlegen (ältere Kennung bleibt), Erledigtes entfernen, Widersprüche als W oder D markieren statt still zu entscheiden.
 ```
 
 ## Teil 2 – cotrack-Zusatz (nur mit cotrack)
@@ -83,6 +83,7 @@ Ob du nach einer neuen Version etwas tun musst, steht in der letzten Spalte.
 
 | Version | Was ist neu | Neu einspielen? |
 |---|---|---|
+| v2.17 (22.11.2026) | Der Satz „Alte T-Kennungen aus v1 bleiben gültig.“ am Ende von Teil 1 entfällt – T gibt es nicht mehr. | Lohnt sich, nicht nötig: den Satz einfach löschen |
 | v2.16 | **Bis zu drei Quellen:** eine pro Zeile, normalerweise eine; Überholtes ersetzen statt anhängen. Die Regel steht in der Anweisung des MCP-Servers und in der Werkzeugbeschreibung. | Nein – Prompt unverändert |
 | v2.15 | **Session-Link:** cotrack merkt sich, in welcher Session (Claude Code) an einem Punkt gearbeitet wurde, und verlinkt sie im Bearbeiten-Dialog. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen. | Nein – Prompt unverändert |
 | v2.14 | **Fälligkeiten:** echte Termine im Feld „Fällig“, Next zieht Überfälliges vor. Die Regel steht in der Anweisung des MCP-Servers und in den Werkzeugbeschreibungen. | Nein – Prompt unverändert |

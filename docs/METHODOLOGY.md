@@ -7,7 +7,7 @@
 > the same as the web app's; without a choice German). It also sets the language of the server's instructions, tool descriptions and answers. The letters A/D/I/W and the references are language-independent.
 > The history sections below still show the earlier labels ("Du:", "KI:").
 
-## Current: Methodology v2.16 (as of 22 November 2026)
+## Current: Methodology v2.17 (as of 22 November 2026)
 
 | Letter | Meaning | Footer |
 |---|---|---|
@@ -144,6 +144,7 @@
   [skills/en/prioflow/SKILL.md](../skills/en/prioflow/SKILL.md).
 - **Not adopted:** P (problem), L (lesson) in the footer, a running project-wide number.
 - The corresponding prompt text: [PROMPT.en.md](PROMPT.en.md) – in two parts: base (usable without cotrack) and cotrack addendum (MCP only). Both files must always match.
+  v2.17 removes the sentence about old T references from v1 from the prompt (T no longer exists).
   v2.16 does not change the prompt (the rule for sources lives in the server's instructions).
   v2.15 does not change the prompt (the session link lives in the server's instructions).
   v2.14 does not change the prompt (due dates live in the server's instructions).
