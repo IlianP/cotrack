@@ -503,9 +503,10 @@ export function seedSql(now = Date.now()) {
 
 // Few statements with many rows each – for one D1 batch in the Worker (the free plan allows 50 queries per invocation;
 // a batch runs as one transaction, so a failed reset leaves the old data).
-export function seedStatements(now = Date.now(), maxLen = 90000) {
+// afterPrologue: statements to run right after the guard and the deletes (the Worker restores copied projects there).
+export function seedStatements(now = Date.now(), { maxLen = 90000, afterPrologue = [] } = {}) {
   const d = buildDemo(now);
-  const out = PROLOGUE(d.slugs.map(lit).join(", "));
+  const out = [...PROLOGUE(d.slugs.map(lit).join(", ")), ...afterPrologue];
   const multi = (table, rows) => {
     if (!rows.length) return;
     const head = `INSERT INTO ${table} (${Object.keys(rows[0]).join(", ")}) VALUES `;

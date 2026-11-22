@@ -9,7 +9,8 @@
   `cotrack-demo-db` (`[env.demo]`), data from `demo/data.mjs` (CLI: `demo/seed.mjs`) plus a copy of Patchwerk. Deployed with main by its own Workers Build (code + migrations,
   data stays); resetting the data: `demo/README.md`. Keep `demo/data.mjs` in step with the event format in `src/worker.js`.
   Open demo (A114): `DEMO_OPEN = "1"` lets requests without any token in as guests (actor `user`, `guest: true` in `/api/me`);
-  `guestGuard` allows writes only to items of `DEMO_SLUGS`, `GUEST_LIMIT` limits per address, the cron runs `resetDemo` nightly.
+  `guestGuard` allows writes only to items of `DEMO_SLUGS` and of the projects in the snapshot (`ensureSnapshot`, tables
+  `demo_snap_*`: the copied Patchwerk), `GUEST_LIMIT` limits per address, the cron runs `resetDemo` nightly (snapshot + data).
   The web app's guest mode: `state.guest`, `signedIn()`, slower poll, no settings/projects in ☰. The live instance has no
   `DEMO_OPEN`, so nothing changes there.
 - `COTRACK.md` (repo root) maps this repo to its cotrack project (`project:` = slug; `code:` = short code once set). Keep it in sync with the board.
