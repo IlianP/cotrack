@@ -24,6 +24,20 @@ database_name = "cotrack-demo-db"
 database_id = "ecc46ff1-c778-4833-8142-8ed4edb4afc5"   # the author's demo database
 migrations_dir = "migrations"
 
+# Open demo (A114): visitors try it without a token – they may change the demo projects' items only (src/worker.js,
+# guestGuard), limited per address (GUEST_LIMIT: 120 units a minute, reads 1, writes 5), and every night at 02:41 UTC the cron
+# resets the demo projects to demo/data.mjs. Remove DEMO_OPEN to require the token again.
+[env.demo.vars]
+DEMO_OPEN = "1"
+
+[env.demo.triggers]
+crons = ["41 2 * * *"]
+
+[[env.demo.ratelimits]]
+name = "GUEST_LIMIT"
+namespace_id = "4711"
+simple = { limit = 120, period = 60 }
+
 # Workers Logs: request path, status and console output for debugging (e.g. MCP clients). Cloudflare masks the
 # Authorization header; secrets in request bodies are not logged. Free plan: 200k events/day, kept for 3 days.
 [observability]
