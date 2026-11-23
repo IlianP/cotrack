@@ -2536,13 +2536,14 @@ function setBoardFooter(value) {
   $("#footerText").replaceChildren(); // no text of the other layout while the new one loads
   renderFooter();
 }
-// References in the footer ("A4", "▶A15,A12", "UZ:A4") open their item; everything else stays text.
-const FOOTER_REF = /(?<![\w:])((?:[A-Za-z][\w-]*:)?[A-Z]\d+)(?!\w)/g;
+// References in the footer ("A4", "▶A15,A12", "UZ:A4", "BUG12") open their item; everything else stays text. A category
+// code has 1–4 letters (KIND_RE in src/worker.js); only known categories count, so "HTML5" in a short label stays text.
+const FOOTER_REF = /(?<![\w:])((?:[A-Za-z0-9][\w-]*:)?([A-Z]{1,4})\d{1,6})(?!\w)/g;
 function footerNodes(text) {
   const out = [];
   let at = 0;
   for (const m of text.matchAll(FOOTER_REF)) {
-    const key = footerKey(m[1]);
+    const key = state.allKinds.some((k) => k.code === m[2]) && footerKey(m[1]);
     if (!key) continue;
     out.push(text.slice(at, m.index), refLink(key));
     at = m.index + m[1].length;

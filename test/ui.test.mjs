@@ -324,5 +324,26 @@ describe("web app", { skip }, () => {
       assert.deepEqual(errors, []);
       await ctx.close();
     });
+
+    it("footer bar: references of categories with longer codes open too, other words stay text", async () => {
+      // categories are instance-wide: one of its own, retired again at the end (it then shows only where it holds items)
+      const kind = { code: "TBUG", name: "Fehler", actionable: true, sort_order: 90 };
+      assert.equal((await api("/kinds", { method: "POST", body: kind })).status, 200);
+      try {
+        const fp = await freshProject("ui-footer");
+        await api(`/projects/${fp}/items`, { method: "POST", body: { kind: "TBUG", title: "Absturz beim Speichern", short: "Absturz" } });
+        await api(`/projects/${fp}/items`, { method: "POST", body: { kind: "W", title: "Export veraltet", short: "HTML5 Export" } });
+        const { page, ctx } = await open(fp, { viewport: LAND, storage: { "cotrack.boardFooter": "single" } });
+        await page.waitForSelector("#footerText .reflink");
+        const links = await page.evaluate(() => [...document.querySelectorAll("#footerText .reflink")].map((b) => b.textContent));
+        assert.deepEqual(links, ["TBUG1", "W1"], "TBUG1 is a link, HTML5 is not");
+        await page.click("#footerText .reflink");
+        await page.waitForSelector("dialog[open] input");
+        assert.equal(await page.inputValue("dialog[open] input"), "Absturz beim Speichern");
+        await ctx.close();
+      } finally {
+        await api("/kinds", { method: "POST", body: { ...kind, active: false } });
+      }
+    });
   });
 });
