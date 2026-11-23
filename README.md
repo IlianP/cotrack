@@ -1,27 +1,74 @@
-# cotrack
+<h1 align="center">cotrack</h1>
 
-**English** · [Deutsch](README.de.md)
+<p align="center">
+  <b>Tie up loose ends – together.</b><br>
+  One live list of open points per project – shared by you and your AI assistants.
+</p>
 
-**Tie up loose ends – together.** Live tracking of open points for people who work with AI assistants.
+<p align="center">
+  <a href="https://cotrack-demo.ilianos1.workers.dev"><b>▶ Try the live demo</b></a> – no sign-up &nbsp;·&nbsp;
+  <a href="docs/SETUP.md">Run your own</a> &nbsp;·&nbsp;
+  <a href="docs/MCP.en.md">Connect your AI</a> &nbsp;·&nbsp;
+  <a href="README.de.md">Deutsch</a>
+</p>
 
-When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still
-have to make, tasks the AI promised to do, ideas, risks. *cotrack* keeps these open points in **one live list
-per project**. You edit it in a responsive web app; your AI assistants read and update the very same list through
-an [MCP server](docs/MCP.en.md) (or the HTTP API). Every item has a stable reference like `A4` or `D2` that is
-**never reused**, so you can talk about it in any chat – and every new session starts with the same picture.
+<p align="center">
+  <img src="docs/img/tour.en.gif" width="900" alt="cotrack in 20 seconds: the board of a project; the AI adds a warning through MCP and starts on a task; the user ticks an item off; then the views Next, Chains and Overview">
+</p>
 
-**Try it:** the [public demo](https://cotrack-demo.ilianos1.workers.dev) needs no sign-in – invented projects (in German) you
-may change as you like; it is reset every night.
+When you work with Claude, ChatGPT & co. across long conversations, things get lost: decisions you still have to make,
+tasks the AI promised to do, ideas, risks. *cotrack* keeps these open points in **one live list per project** – you work
+on it in the web app, your AI reads and updates the very same list through an [MCP server](docs/MCP.en.md) (or the HTTP API).
+
+- 🤖 **Your AI keeps the list up to date.** It loads the status at the start of a session, adds items as they come up and
+  closes what is done – no copying back and forth, no "where were we?".
+- 🔖 **Stable references.** Every item has a reference like `A4` or `D2` that is **never reused**, so you can name it in
+  any chat – and every new session starts with the same picture.
+- 🧭 **You see what is next.** Board, *Next* (one item at a time, by benefit and effort), dependency chains and an
+  overview of all projects – on the desktop, tablet and phone.
+- ☁️ **Yours.** Runs on your own Cloudflare account (the free plan is enough): one Worker, one D1 database, no build step,
+  no dependencies, MIT-licensed.
+
+Every AI answer can end with the same one-glance status, the *chat footer* – yours first, then the AI's, then ideas and
+warnings:
 
 ```
-👤 D5 Lizenz wählen · A13 Prompt einspielen
-🤖 A6 Token-sparen · A7 README überarbeiten (+1)
-💡 I10 Teilpunkte (+5)
-⚠️ W1 Auth · W3 Tokens rotieren
+👤 D5 Choose license · A13 Install prompt
+🤖 A6 Save tokens · A7 Rework README (+1)
+💡 I10 Sub-items (+5)
+⚠️ W1 Auth · W3 Rotate tokens
 ```
 
-That is the *chat footer* cotrack generates for the end of an AI answer: yours first, then the AI's, then ideas and
-warnings – a one-glance status that survives across conversations.
+## A closer look
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/img/next.en.png" alt="The view Next: one item with effort, benefit and its checklist, the next items beside it"><br>
+      <b>Next</b> – one item at a time: what you started first, then what is due, then the most benefit for the least
+      effort. Effort and benefit are set with one tap.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/img/chains.en.png" alt="The view Chains: arrows from each prerequisite to the items waiting for it"><br>
+      <b>Chains</b> – what waits for what. The item that is free to start stands out, and “Worth a look” names what
+      holds up the most.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/img/overview.en.png" alt="The overview: four figures and one card per project"><br>
+      <b>Overview</b> – every project on one page: your turn, overdue, with the AI, new for you – projects that need you
+      come first.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/img/phones.en.png" alt="cotrack on two phones: the board in light mode, Next in dark mode"><br>
+      <b>On the phone</b> – one category per swipe, dark mode follows the system, and it installs as an app.
+    </td>
+  </tr>
+</table>
+
+All pictures show the invented projects of the [public demo](https://cotrack-demo.ilianos1.workers.dev) (there in German,
+the web app follows your browser's language). Change whatever you like in it – it is reset every night.
 
 > The methodology behind cotrack (categories, rules, relation to PRINCE2/RAID) is described in
 > [docs/METHODOLOGY.md](docs/METHODOLOGY.md), the matching prompt for Claude and ChatGPT in
@@ -37,6 +84,11 @@ warnings – a one-glance status that survives across conversations.
    so it knows what is open without you re-explaining.
 
 ## Features
+
+Everything cotrack does – from sub-items, due dates and undo to statistics and the installable app:
+
+<details>
+<summary><b>All features</b></summary>
 
 - **Categories** – the default set above; configurable (`/api/kinds`).
 - **Stable references** per project and category, never renumbered or reused. Accepting an idea *converts* it
@@ -113,6 +165,8 @@ warnings – a one-glance status that survives across conversations.
   what cotrack tells Claude, ChatGPT & co. (instructions, tool descriptions, answers, footer). Without a choice ("Auto") the
   web app follows the browser language and the AI gets German.
 
+</details>
+
 > **Status:** early and used daily by its author. Access is protected by a single secret token only (no login, no roles) –
 > fine for personal use, not for sharing a deployment with strangers. See the roadmap. Everything is available in German and
 > English: the web app and what the AI gets from cotrack (MCP, text answers, footer – one setting, ☰ → *Language*), the
@@ -156,6 +210,9 @@ changes (409 `client_outdated`), so an outdated page cannot damage data stored b
 **Tests:** `npm test` starts the worker locally on a fresh, temporary database (`wrangler dev`, test tokens – your data and
 `.dev.vars` stay untouched) and runs `test/*.test.mjs` against it: API, MCP and – when Playwright is installed – the web app
 in a real browser. Every fix gets a test that fails without it.
+
+**Screenshots:** `node demo/screenshots.mjs` renews the pictures in `docs/img/` (clip and screenshots, German and English)
+from a local instance with the demo projects – after visible changes to the web app. Needs Playwright and ffmpeg.
 
 ## Connect your AI (MCP)
 
@@ -229,6 +286,9 @@ All endpoints except `/`, `/api/health` and the OAuth endpoints for MCP clients 
 `/authorize`, `/token`, `/revoke`; see [docs/MCP.en.md](docs/MCP.en.md)) require `Authorization: Bearer <token>`.
 The token decides the actor (`user` or `ai`) recorded on every change.
 
+<details>
+<summary><b>All endpoints</b></summary>
+
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/projects` | list projects (with open counts) |
@@ -250,6 +310,8 @@ The token decides the actor (`user` or `ai`) recorded on every change.
 | GET | `/api/items?owner=user&status=open&format=text` | items across all projects (as JSON with `ext_open`/`ext_next` like the project lists) |
 | GET / POST | `/api/kinds` | list / create-or-update categories |
 | GET / PATCH | `/api/settings` | instance settings `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (defaults `multi`, `👤`, `🤖`, `de`); `null` or `""` restores the default; `PATCH` only with `TOKEN_USER` |
+
+</details>
 
 Text answers (`format=text`, `status.md`, footer) are written in the instance language (`language` in `/api/settings`)
 unless the request has `lang=de|en`.

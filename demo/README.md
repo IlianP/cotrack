@@ -62,3 +62,10 @@ npx wrangler d1 execute cotrack-demo-db --env demo --remote --command "CREATE TA
 
 When the event format in `src/worker.js` changes (`createItem`, `updateItem`, `convertItem`), change `demo/data.mjs` with it.
 `demo/data.mjs` is the data and its simulation (pure, bundled into the Worker); `demo/seed.mjs` only writes it as an SQL file.
+
+## README pictures
+
+`node demo/screenshots.mjs` (or `… de` / `… en`) renews the clip and the screenshots in `docs/img/`: per language it starts
+`wrangler dev` on a temporary database, seeds the demo projects – German from `demo/data.mjs`, English from
+`demo/data.en.mjs` (the same timeline translated, only for the pictures) – takes the screenshots with Playwright and turns
+the recorded clip into a GIF with ffmpeg. Nothing touches the demo or the live instance.

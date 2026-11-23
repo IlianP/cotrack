@@ -1,18 +1,37 @@
-# cotrack
+<h1 align="center">cotrack</h1>
 
-[English](README.md) · **Deutsch**
+<p align="center">
+  <b>Lose Enden gemeinsam verknüpfen.</b><br>
+  Eine Live-Liste der offenen Punkte pro Projekt – für dich und deine KI-Assistenten.
+</p>
 
-**Lose Enden gemeinsam verknüpfen.** Offene Punkte live verfolgen – für alle, die mit KI-Assistenten arbeiten.
+<p align="center">
+  <a href="https://cotrack-demo.ilianos1.workers.dev"><b>▶ Live-Demo ausprobieren</b></a> – ohne Anmeldung &nbsp;·&nbsp;
+  <a href="docs/SETUP.de.md">Selbst betreiben</a> &nbsp;·&nbsp;
+  <a href="docs/MCP.md">KI verbinden</a> &nbsp;·&nbsp;
+  <a href="README.md">English</a>
+</p>
+
+<p align="center">
+  <img src="docs/img/tour.de.gif" width="900" alt="cotrack in 20 Sekunden: das Board eines Projekts; die KI legt per MCP eine Warnung an und beginnt eine Aufgabe; der Nutzer hakt einen Punkt ab; dann die Ansichten Next, Ketten und Übersicht">
+</p>
 
 Wer mit Claude, ChatGPT & Co. über lange Unterhaltungen hinweg arbeitet, verliert Dinge: Entscheidungen, die noch
 anstehen, Aufgaben, die die KI zugesagt hat, Ideen, Risiken. *cotrack* hält diese offenen Punkte in **einer Live-Liste
-pro Projekt**. Du bearbeitest sie in einer responsiven Web-App; deine KI-Assistenten lesen und aktualisieren dieselbe
-Liste über einen [MCP-Server](docs/MCP.md) (oder die HTTP-API). Jeder Punkt hat eine stabile Kennung wie `A4` oder `D2`,
-die **nie neu vergeben** wird – du kannst dich also in jedem Chat darauf beziehen, und jede neue Session beginnt mit
-demselben Stand.
+pro Projekt** – du arbeitest in der Web-App damit, deine KI liest und aktualisiert dieselbe Liste über einen
+[MCP-Server](docs/MCP.md) (oder die HTTP-API).
 
-**Ausprobieren:** Die [öffentliche Demo](https://cotrack-demo.ilianos1.workers.dev) braucht keine Anmeldung – erfundene
-Projekte, die du nach Belieben ändern darfst; jede Nacht wird alles zurückgesetzt.
+- 🤖 **Deine KI hält die Liste aktuell.** Sie lädt zu Beginn einer Session den Stand, legt neue Punkte an, sobald sie
+  auftauchen, und schließt ab, was erledigt ist – kein Hin- und Herkopieren, kein „Wo waren wir?“.
+- 🔖 **Stabile Kennungen.** Jeder Punkt hat eine Kennung wie `A4` oder `D2`, die **nie neu vergeben** wird – du kannst sie
+  in jedem Chat nennen, und jede neue Session beginnt mit demselben Stand.
+- 🧭 **Du siehst, was als Nächstes dran ist.** Board, *Next* (ein Punkt nach dem anderen, nach Nutzen und Aufwand),
+  Abhängigkeitsketten und eine Übersicht über alle Projekte – am Rechner, auf dem Tablet und auf dem Handy.
+- ☁️ **Gehört dir.** Läuft in deinem eigenen Cloudflare-Konto (der kostenlose Tarif reicht): ein Worker, eine
+  D1-Datenbank, kein Build-Schritt, keine Abhängigkeiten, MIT-Lizenz.
+
+Jede KI-Antwort kann mit demselben Status auf einen Blick enden, der *Chat-Fußzeile* – zuerst deine Punkte, dann die der
+KI, dann Ideen und Warnungen:
 
 ```
 👤 D5 Lizenz wählen · A13 Prompt einspielen
@@ -21,8 +40,35 @@ Projekte, die du nach Belieben ändern darfst; jede Nacht wird alles zurückgese
 ⚠️ W1 Auth · W3 Tokens rotieren
 ```
 
-Das ist die *Chat-Fußzeile*, die cotrack für das Ende einer KI-Antwort erzeugt: zuerst deine Punkte, dann die der KI,
-dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltungen hinweg erhalten bleibt.
+## Ein genauerer Blick
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/img/next.de.png" alt="Die Ansicht Next: ein Punkt mit Aufwand, Nutzen und Checkliste, daneben die nächsten Punkte"><br>
+      <b>Next</b> – ein Punkt nach dem anderen: zuerst Angefangenes, dann Fälliges, dann der größte Nutzen für den
+      kleinsten Aufwand. Aufwand und Nutzen setzt du mit einem Tipp.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/img/chains.de.png" alt="Die Ansicht Ketten: Pfeile von jeder Voraussetzung zu den Punkten, die auf sie warten"><br>
+      <b>Ketten</b> – was wartet worauf. Was frei ist, sticht heraus, und „Auffällig“ nennt, was am meisten bremst.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/img/overview.de.png" alt="Die Übersicht: vier Kennzahlen und eine Karte pro Projekt"><br>
+      <b>Übersicht</b> – alle Projekte auf einer Seite: du bist dran, überfällig, bei der KI, neu für dich – Projekte, die
+      dich brauchen, zuerst.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/img/phones.de.png" alt="cotrack auf zwei Handys: das Board hell, Next im Dunkelmodus"><br>
+      <b>Auf dem Handy</b> – eine Kategorie pro Wisch, der Dunkelmodus folgt dem System, als App installierbar.
+    </td>
+  </tr>
+</table>
+
+Alle Bilder zeigen die erfundenen Projekte der [öffentlichen Demo](https://cotrack-demo.ilianos1.workers.dev). Dort darfst
+du nach Belieben ändern – jede Nacht wird alles zurückgesetzt.
 
 > Die Methodik hinter cotrack (Kategorien, Regeln, Bezug zu PRINCE2/RAID) ist in
 > [docs/METHODIK.md](docs/METHODIK.md) beschrieben, der passende Prompt für Claude und ChatGPT in
@@ -38,6 +84,11 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
    letzten Mal) und weiß so, was offen ist, ohne dass du es erneut erklären musst.
 
 ## Funktionen
+
+Alles, was cotrack kann – von Teilpunkten, Fälligkeiten und Rückgängig bis zu Statistiken und der installierbaren App:
+
+<details>
+<summary><b>Alle Funktionen</b></summary>
 
 - **Kategorien** – der Standardsatz oben; konfigurierbar (`/api/kinds`).
 - **Stabile Kennungen** pro Projekt und Kategorie, nie neu nummeriert oder wiederverwendet. Eine angenommene Idee wird
@@ -122,6 +173,8 @@ dann Ideen und Warnungen – ein Status auf einen Blick, der über Unterhaltunge
   für das ein, was cotrack Claude, ChatGPT & Co. sagt (Anweisungen, Werkzeugbeschreibungen, Antworten, Fußzeile). Ohne Wahl
   („Auto“) folgt die Web-App der Sprache des Browsers, und die KI bekommt Deutsch.
 
+</details>
+
 > **Status:** früh und vom Autor täglich im Einsatz. Der Zugriff ist nur durch einen geheimen Token geschützt (kein Login,
 > keine Rollen) – für den persönlichen Gebrauch in Ordnung, nicht dafür gedacht, eine Installation mit Fremden zu
 > teilen. Siehe Roadmap. Alles gibt es auf Deutsch und Englisch: die Web-App und was die KI von cotrack bekommt (MCP,
@@ -168,6 +221,9 @@ betrifft das nicht.
 **Tests:** `npm test` startet den Worker lokal mit einer frischen, temporären Datenbank (`wrangler dev`, Test-Tokens – deine
 Daten und `.dev.vars` bleiben unberührt) und führt `test/*.test.mjs` dagegen aus: API, MCP und – wenn Playwright installiert
 ist – die Web-App in einem echten Browser. Jede Korrektur bekommt einen Test, der ohne sie fehlschlägt.
+
+**Bilder:** `node demo/screenshots.mjs` erneuert die Bilder in `docs/img/` (Clip und Screenshots, Deutsch und Englisch)
+aus einer lokalen Instanz mit den Demo-Projekten – nach sichtbaren Änderungen an der Web-App. Braucht Playwright und ffmpeg.
 
 ## KI verbinden (MCP)
 
@@ -243,6 +299,9 @@ Alle Endpunkte außer `/`, `/api/health` und den OAuth-Endpunkten für MCP-Clien
 `/authorize`, `/token`, `/revoke`; siehe [docs/MCP.md](docs/MCP.md)) erfordern `Authorization: Bearer <token>`.
 Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festgehalten wird.
 
+<details>
+<summary><b>Alle Endpunkte</b></summary>
+
 | Methode | Pfad | Zweck |
 |---|---|---|
 | GET | `/api/projects` | Projekte auflisten (mit Anzahl offener Punkte) |
@@ -264,6 +323,8 @@ Das Token bestimmt den Akteur (`user` oder `ai`), der bei jeder Änderung festge
 | GET | `/api/items?owner=user&status=open&format=text` | Punkte über alle Projekte hinweg (als JSON mit `ext_open`/`ext_next` wie in den Projektlisten) |
 | GET / POST | `/api/kinds` | Kategorien auflisten / anlegen oder ändern |
 | GET / PATCH | `/api/settings` | Einstellungen der Instanz `{footer_layout: "multi"\|"single", footer_label_user, footer_label_ai, language: "de"\|"en"}` (Standard `multi`, `👤`, `🤖`, `de`); `null` oder `""` stellt den Standard wieder her; `PATCH` nur mit `TOKEN_USER` |
+
+</details>
 
 Textantworten (`format=text`, `status.md`, Fußzeile) kommen in der Sprache der Instanz (`language` in `/api/settings`),
 außer die Anfrage nennt `lang=de|en`.
