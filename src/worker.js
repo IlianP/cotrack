@@ -8,7 +8,8 @@ import UI_HTML from "./ui.html";
 import { pwaResponse } from "./pwa.js";
 import { handleMcp } from "./mcp.js";
 import { handleOAuth } from "./oauth.js";
-import { DEMO_SLUGS, seedStatements } from "../demo/data.mjs";
+import { seedStatements } from "../demo/data.mjs";
+import { DEMO_SLUGS_ALL as DEMO_SLUGS, contentAll } from "../demo/data.en.mjs"; // German and English (A132)
 
 const STATUSES = ["open", "doing", "blocked", "done", "dropped"];
 const OPEN = ["open", "doing", "blocked"];
@@ -236,7 +237,7 @@ export async function resetDemo(db) {
     `DELETE FROM projects WHERE slug IN ${inSnap}`,
     ...SNAP_TABLES.map((t) => `INSERT INTO ${t} (${cols[t]}) SELECT ${cols[t]} FROM demo_snap_${t}` + (t === "events" ? " ORDER BY id" : "")),
   ];
-  await db.batch(seedStatements(Date.now(), { afterPrologue: restore }).map((sql) => db.prepare(sql)));
+  await db.batch(seedStatements(Date.now(), { afterPrologue: restore, fill: contentAll }).map((sql) => db.prepare(sql)));
 }
 
 /* ------------------------------------------------------------------ auth */

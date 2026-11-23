@@ -1699,6 +1699,9 @@ async function api(path, { method = "GET", body } = {}) {
   return data;
 }
 const P = (slug) => "/projects/" + encodeURIComponent(slug);
+// Open demo (A132): a guest sees the demo projects of their language – "en-…" in English, all others in German.
+const demoHidden = (slug) => state.guest && String(slug || "").startsWith("en-") !== (LANG === "en");
+const demoVisible = (list) => (state.guest ? list.filter((x) => !demoHidden(x.project_slug ?? x.slug)) : list);
 
 /* A newer web app is live (A124). Reload when nothing is lost by it – no dialog open, nothing typed into a field that has the
    focus, no title waiting in quick add (it is no dialog and keeps its text without the focus), no unsent result in Next;
@@ -1849,7 +1852,7 @@ async function boot() {
 // notify: point out projects that appeared since the last load (e.g. created by an AI via MCP).
 async function loadProjects(notify) {
   const known = new Set(state.projects.map((p) => p.slug));
-  state.projects = sortProjects((await api("/projects")).projects);
+  state.projects = sortProjects(demoVisible((await api("/projects")).projects));
   const added = notify && loadProjects.done ? state.projects.filter((p) => !known.has(p.slug)) : [];
   loadProjects.done = true;
   if (state.project !== ALL && !state.projects.some((p) => p.slug === state.project)) {
@@ -1898,7 +1901,7 @@ async function refresh(force) {
   const { items } = await api(path + "?" + params);
   if (req !== state.reqId) return;
   const before = state.lastRefs;
-  state.items = items;
+  state.items = demoVisible(items);
   state.lastRefs = new Set(items.map((i) => i.project_slug + ":" + i.ref + ":" + i.updated_at));
   render(force ? null : before);
   renderFooter();
@@ -2991,7 +2994,7 @@ async function loadHome() {
   try {
     const [{ items }, { events }] = await Promise.all([api("/items?status=open"), api("/events?limit=300")]);
     if (req !== home.req || !state.home) return;
-    home.items = items; home.events = events;
+    home.items = demoVisible(items); home.events = demoVisible(events);
     renderHome();
   } catch (e) { if (e.message !== "unauthorized") toast(tr("error", e.message)); }
 }
@@ -4526,7 +4529,7 @@ async function openPal() {
   try {
     const { items } = await api("/items?status=all");
     if (req !== pal.req) return;
-    pal.items = items;
+    pal.items = demoVisible(items);
     if (d.open) renderPal();
   } catch {}
 }

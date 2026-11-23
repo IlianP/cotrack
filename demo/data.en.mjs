@@ -1,18 +1,17 @@
 /**
- * The demo projects in English – for the English screenshots and the clip in README.md (demo/screenshots.mjs), not for
- * the demo worker (that one keeps the German projects of demo/data.mjs). Same timeline, references and dependencies as the
- * German content, slugs in English. It only needs to look right in the pictures: when the German content changes, change
- * this one only if the screenshots should show it.
- *
- *   import { seedSqlEn } from "./data.en.mjs";
+ * The demo projects in English (A132): the same timeline, references and dependencies as the German content of
+ * demo/data.mjs, with slugs "en-…" and codes of their own, so both sets live side by side in the demo. The web app shows a
+ * guest only the projects of their language (`demoHidden` in src/ui.html: "en-…" for English, the rest for German).
+ * Seeded with the German ones (demo/seed.mjs, the nightly reset) and alone for the English pictures (demo/screenshots.mjs).
+ * Keep it in step with the German content.
  */
-import { project, it, later, due, seedSql } from "./data.mjs";
+import { project, it, later, due, seedSql, contentDe, DEMO_SLUGS } from "./data.mjs";
 
-export const SLUGS_EN = ["website", "move", "concert", "workshop"];
+export const SLUGS_EN = ["en-website", "en-move", "en-concert", "en-workshop"];
 
 export function contentEn() {
 
-project("website", { name: "Website relaunch", code: "WEB", created: "user@40 08:55" },
+project("en-website", { name: "Website relaunch", code: "SITE", created: "user@40 08:55" },
   it("A1", "ai@40 09:05", { title: "Inventory: record every page and text of the old website", short: "Inventory",
     owner: "ai", effort: "M", benefit: "high", source: "docs/inventory.md",
     body: "Goal: a list of all pages with URL, purpose, visits (last 12 months) and the state of the texts.\nBasis for the sitemap and the redirects." },
@@ -68,7 +67,7 @@ project("website", { name: "Website relaunch", code: "WEB", created: "user@40 08
     benefit: "medium", waiting_on: "A6" }),
   it("I3", "ai@29 21:10", { title: "German version of the website", short: "German version", effort: "XL", benefit: "low" }),
   it("A9", "ai@27 08:40", { title: "Update legal notice and privacy policy to the new address", short: "Legal notice", owner: "ai",
-    effort: "S", benefit: "high", waiting_on: "move:A4" }),
+    effort: "S", benefit: "high", waiting_on: "en-move:A4" }),
   it("A10", "ai@27 08:45", { title: "Set up 301 redirects from the old to the new URLs", short: "Redirects", owner: "ai",
     effort: "M", benefit: "high", waiting_on: "A11", source: "docs/inventory.md" }),
   it("A11", "ai@27 08:50", { title: "Move the content into the new CMS", short: "Move content", owner: "ai", effort: "L", benefit: "high",
@@ -110,7 +109,7 @@ project("website", { name: "Website relaunch", code: "WEB", created: "user@40 08
     benefit: "medium", waiting_on: "D5" }),
 );
 
-project("move", { name: "Moving to Leipzig", code: "MV", created: "user@35 19:02" },
+project("en-move", { name: "Moving to Leipzig", code: "MOVE", created: "user@35 19:02" },
   it("A1", "ai@35 19:12", { title: "Get quotes from three moving companies", short: "Quotes", owner: "ai", effort: "M", benefit: "high" },
     ["ai@34 11:30", { status: "doing" }],
     ["ai@33 17:45", { status: "done", source: "quote-comparison.xlsx", body: "Status: three quotes compared (€1,480, €1,720, €2,150)." }]),
@@ -123,7 +122,7 @@ project("move", { name: "Moving to Leipzig", code: "MV", created: "user@35 19:02
   it("A3", "user@34 21:05", { title: "Get boxes and packing material", short: "Boxes", owner: "user", effort: "S", benefit: "medium" },
     ["user@27 18:30", { status: "done" }]),
   it("A4", "ai@33 18:00", { title: "Change address: registry office, bank, insurance", short: "Change address", owner: "user", effort: "M",
-    benefit: "high", also_in: "website",
+    benefit: "high", also_in: "en-website",
     body: "Within two weeks of moving in.\n- [ ] Registry office (appointment Nov 18)\n- [ ] Bank\n- [ ] Health insurance\n- [ ] Car insurance\n- [ ] Employer and tax office" },
     ["user@6 08:30", { status: "doing" }],
     ["user@2 08:50", { check: [1] }],
@@ -149,7 +148,7 @@ project("move", { name: "Moving to Leipzig", code: "MV", created: "user@35 19:02
   it("I2", "ai@4 20:00", { title: "Small housewarming party in December", short: "Housewarming", effort: "S", benefit: "low" }),
 );
 
-project("concert", { name: "Christmas concert", code: "CC", created: "user@26 20:00" },
+project("en-concert", { name: "Christmas concert", code: "XMAS", created: "user@26 20:00" },
   it("D1", "ai@26 20:05", { title: "Venue: town hall or St. Mary's church?", short: "Venue",
     body: "Town hall: 400 seats, rent €600, sound and lights on site.\nSt. Mary's: 250 seats, free, lovely acoustics, cold.\nRecommendation: St. Mary's." },
     ["user@22 19:45", { status: "done", body: "Outcome: St. Mary's, Sun Dec 13, 5 pm – acoustics and atmosphere." }]),
@@ -208,7 +207,7 @@ project("concert", { name: "Christmas concert", code: "CC", created: "user@26 20
   it("I4", "ai@3 19:40", { title: "Donation box with a QR code for card payments", short: "QR donations", effort: "XS", benefit: "medium" }),
 );
 
-project("workshop", { name: "Workshop “AI at the office”", code: "WS", created: "user@18 10:00" },
+project("en-workshop", { name: "Workshop “AI at the office”", code: "AIW", created: "user@18 10:00" },
   it("A1", "user@18 10:05", { title: "Define the target group and learning goals", short: "Learning goals", owner: "user", effort: "S", benefit: "high" },
     ["user@17 08:30", { status: "done", body: "Target group: teams in small offices without AI experience.\nLearning goals: apply three prompt patterns with confidence, know the limits and data protection." }]),
   it("D1", "ai@18 10:20", { title: "Format: half a day on site or two online sessions?", short: "Format",
@@ -228,7 +227,7 @@ project("workshop", { name: "Workshop “AI at the office”", code: "WS", creat
   it("W1", "ai@16 18:50", { title: "Data protection: no client data in AI tools", short: "Data protection",
     body: "Impact: participants practise with real data, a possible GDPR breach.\nCountermeasure: exercises with sample data only, a note right at the start." }),
   it("A5", "ai@15 10:00", { title: "Landing page with a sign-up form", short: "Landing page", owner: "ai", effort: "M", benefit: "high",
-    waiting_on: "D2", also_in: "website" }),
+    waiting_on: "D2", also_in: "en-website" }),
   it("D2", "ai@15 10:05", { title: "Set the price per person", short: "Price",
     body: "€290: low threshold, barely covers costs with 6 people.\n€390: usual for half-day workshops with material.\n€490: only with follow-up support.\nRecommendation: €390, early bird €340." }),
   it("A6", "user@15 12:00", { title: "Book a seminar room at the coworking space", short: "Room", owner: "user", effort: "S", benefit: "high" },
@@ -251,5 +250,9 @@ project("workshop", { name: "Workshop “AI at the office”", code: "WS", creat
 );
 }
 
-// The SQL file for a local screenshot database (like demo/seed.mjs, with the same guard and renumbering).
+// Both languages: what the demo holds.
+export function contentAll() { contentDe(); contentEn(); }
+export const DEMO_SLUGS_ALL = [...DEMO_SLUGS, ...SLUGS_EN];
+
+// The SQL file for a local screenshot database with the English projects only (like demo/seed.mjs, same guard).
 export const seedSqlEn = (now = Date.now()) => seedSql(now, contentEn);

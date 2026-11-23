@@ -9,9 +9,11 @@
   `cotrack-demo-db` (`[env.demo]`), data from `demo/data.mjs` (CLI: `demo/seed.mjs`) plus a copy of Patchwerk. Deployed with main by its own Workers Build (code + migrations,
   data stays); resetting the data: `demo/README.md`. Keep `demo/data.mjs` in step with the event format in `src/worker.js`.
   README pictures (`docs/img/`, A130): `node demo/screenshots.mjs` renews clip and screenshots in both languages from a
-  local instance with the demo projects (German: `demo/data.mjs`; English: `demo/data.en.mjs`, same timeline, only for the
-  pictures, built with the helpers `demo/data.mjs` exports) – rerun it after visible changes to the web app. Needs
-  Playwright and ffmpeg; never take pictures of the live instance.
+  local instance with the demo projects (German: `demo/data.mjs`; English: `demo/data.en.mjs`, same timeline, built with
+  the helpers `demo/data.mjs` exports) – rerun it after visible changes to the web app. Needs Playwright and ffmpeg; never
+  take pictures of the live instance. The demo holds both languages (A132): English projects are `en-…` with codes of their
+  own (`DEMO_SLUGS_ALL`, `contentAll`; seed and nightly reset write both), and the web app shows a guest only those of its
+  language (`demoHidden`/`demoVisible` in `src/ui.html`). Keep the two contents in step.
   Open demo (A114): `DEMO_OPEN = "1"` lets requests without any token in as guests (actor `user`, `guest: true` in `/api/me`);
   `guestGuard` allows writes only to items of `DEMO_SLUGS` and of the projects in the snapshot (`ensureSnapshot`, tables
   `demo_snap_*`: the copied Patchwerk), `GUEST_LIMIT` limits per address, the cron runs `resetDemo` nightly (snapshot + data).
