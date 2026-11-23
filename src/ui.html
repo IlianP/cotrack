@@ -3161,6 +3161,7 @@ async function loadStats() {
   const req = ++stats.req, scope = state.project;
   const params = new URLSearchParams({ tz: String(new Date().getTimezoneOffset()) });
   if (scope !== ALL) params.set("project", scope);
+  else if (state.guest) params.set("projects", state.projects.map((p) => p.slug).join(",")); // only their language (A132)
   try {
     const data = await api("/stats?" + params);
     if (req !== stats.req || scope !== state.project || !state.stats) return;
