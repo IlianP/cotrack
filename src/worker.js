@@ -104,12 +104,31 @@ class HttpError extends Error {
 export const httpError = (status, code, detail) => new HttpError(status, code, detail);
 export const isHttpError = (err) => err instanceof HttpError;
 
+/* The web app's version (A124): a hash of the page itself, written into the page when it is served. Every answer of the API
+   names the current one (header x-cotrack-ui), so an open page notices an update and reloads. Writes from an outdated page are
+   refused (409 client_outdated): an old page can damage data a newer version stores – before D36 the source was a single-line
+   field, which turned two sources into one line when such a page saved. */
+const UI_VERSION = fnv1a(UI_HTML);
+const UI_PAGE = UI_HTML.replace("__UI_VERSION__", UI_VERSION);
+function fnv1a(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+// A page sends its version with every request. Pages from before this check send none – but a browser still marks a
+// request from a page of this origin (Sec-Fetch-Site), so those are outdated as well. Scripts and MCP clients send neither.
+function outdatedPage(headers) {
+  const sent = headers.get("x-cotrack-ui");
+  if (sent) return sent !== UI_VERSION;
+  return headers.get("sec-fetch-site") === "same-origin";
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
       if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-        return page(UI_HTML);
+        return page(UI_PAGE);
       }
       // Web app manifest and icons (installable app), public like the page itself.
       if (request.method === "GET") {
@@ -126,6 +145,9 @@ export default {
       if (oauth) return oauth;
       if (url.pathname === "/api/health") return json({ ok: true, service: "cotrack" });
       if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
+        if (!["GET", "HEAD", "OPTIONS"].includes(request.method) && outdatedPage(request.headers)) {
+          return json({ error: "client_outdated", detail: "cotrack was updated – reload the page (nothing was saved)" }, 409);
+        }
         const actor = await authenticate(request, env);
         // Open demo (DEMO_OPEN, A114): a request without any token is a guest – acts as "user", within the limits of guestGuard.
         // A wrong token stays 401, so signing in with the real one still works.
@@ -2083,15 +2105,16 @@ async function readJson(req) {
   return v;
 }
 
+// Both name the web app's current version (x-cotrack-ui), so an open page can tell that it is outdated.
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-cotrack-ui": UI_VERSION },
   });
 }
 
 function plain(body, type = "text/plain; charset=utf-8") {
-  return new Response(body, { headers: { "content-type": type, "cache-control": "no-store" } });
+  return new Response(body, { headers: { "content-type": type, "cache-control": "no-store", "x-cotrack-ui": UI_VERSION } });
 }
 
 function page(html) {

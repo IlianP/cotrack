@@ -150,6 +150,12 @@ once with your token). Optional `TOKEN_AI`: a fixed token for AI tools without a
 Language for the web app and your AI assistants: ☰ → *Language* (`EN` for English; without a choice the AI gets German).
 Footer layout and markers: ☰ → *Chat footer → Customize* in the web app.
 After pulling updates, run `npm run db:migrate` again before deploying – new versions may add migrations.
+An open web app notices an update and reloads by itself as soon as no dialog is open; until then the server refuses its
+changes (409 `client_outdated`), so an outdated page cannot damage data stored by the new version. Scripts and MCP are not affected.
+
+**Tests:** `npm test` starts the worker locally on a fresh, temporary database (`wrangler dev`, test tokens – your data and
+`.dev.vars` stay untouched) and runs `test/*.test.mjs` against it: API, MCP and – when Playwright is installed – the web app
+in a real browser. Every fix gets a test that fails without it.
 
 ## Connect your AI (MCP)
 

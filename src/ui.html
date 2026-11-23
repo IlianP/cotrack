@@ -1206,6 +1206,8 @@ const STRINGS = {
     nextTimeOpts: { "": "beliebig", 5: "5 Min.", 30: "30 Min.", 120: "2 Std." },
     nextTimeHidden: (n) => `${n} ${n === 1 ? "Punkt" : "Punkte"} ohne Aufwand ausgeblendet.`, nextTimeEmpty: "Nichts passt in diese Zeit.",
     doneToast: (ref) => `${ref} erledigt`, decidedToast: (ref) => `${ref} entschieden`, undo: "Rückgängig",
+    outdated: "cotrack wurde aktualisiert – bitte neu laden", outdatedSave: "cotrack wurde aktualisiert – nicht gespeichert. Bitte neu laden.",
+    reload: "Neu laden",
     undone: (ref) => `${ref}: rückgängig gemacht`, restoredToast: (ref) => `${ref} wiederhergestellt`, restore: "Wiederherstellen",
     undoPartial: (ref, n) => `${ref}: rückgängig gemacht – ${n === 1 ? "ein Feld wurde inzwischen anders geändert und bleibt" : `${n} Felder wurden inzwischen anders geändert und bleiben`} so`,
     // Ketten (A55)
@@ -1444,6 +1446,8 @@ const STRINGS = {
     nextTimeOpts: { "": "any", 5: "5 min", 30: "30 min", 120: "2 h" },
     nextTimeHidden: (n) => `${n} ${n === 1 ? "item" : "items"} without effort hidden.`, nextTimeEmpty: "Nothing fits into this time.",
     doneToast: (ref) => `${ref} done`, decidedToast: (ref) => `${ref} decided`, undo: "Undo",
+    outdated: "cotrack was updated – please reload", outdatedSave: "cotrack was updated – not saved. Please reload.",
+    reload: "Reload",
     undone: (ref) => `${ref}: undone`, restoredToast: (ref) => `${ref} restored`, restore: "Restore",
     undoPartial: (ref, n) => `${ref}: undone – ${n === 1 ? "one field was" : `${n} fields were`} changed otherwise meanwhile and stay${n === 1 ? "s" : ""}`,
     // Chains (A55)
@@ -1659,22 +1663,52 @@ function h(tag, attrs, ...kids) {
 
 // With a token, or as a guest of the open demo (A114).
 const signedIn = () => Boolean(state.token || state.guest);
+// This page's version (A124): the server writes it in when it serves the page. Every request names it, every answer names the
+// version that is live now – when they differ, the page is outdated (uiOutdated), and the server refuses its writes.
+const UI_VERSION = "__UI_VERSION__";
 async function api(path, { method = "GET", body } = {}) {
   const res = await fetch("/api" + path, {
     method,
     // A demo guest (A114) sends no token at all.
-    headers: { ...(state.token ? { authorization: "Bearer " + state.token } : {}), ...(body ? { "content-type": "application/json" } : {}) },
+    headers: { ...(state.token ? { authorization: "Bearer " + state.token } : {}), ...(body ? { "content-type": "application/json" } : {}),
+      "x-cotrack-ui": UI_VERSION },
     body: body ? JSON.stringify(body) : undefined,
   });
+  const live = res.headers.get("x-cotrack-ui");
+  if (live && live !== UI_VERSION) uiOutdated();
   if (res.status === 401) { showLogin(tr("tokenInvalid")); throw new Error("unauthorized"); }
   const isJson = (res.headers.get("content-type") || "").includes("json");
   const data = isJson ? await res.json() : await res.text();
+  // Nothing was saved: say so with a reload button – after the caller's own error toast, which this one replaces.
+  if (data?.error === "client_outdated") { setTimeout(() => uiOutdated(true)); throw new Error(tr("outdatedSave")); }
   if (data?.error === "demo_guest") throw new Error(tr(/read-only/.test(data.detail || "") ? "demoReadOnly" : "demoNotAvailable"));
   if (data?.error === "rate_limited") throw new Error(tr("demoRateLimited"));
   if (!res.ok) throw new Error((data && data.error ? data.error + (data.detail ? ": " + data.detail : "") : res.status));
   return data;
 }
 const P = (slug) => "/projects/" + encodeURIComponent(slug);
+
+/* A newer web app is live (A124). Reload when nothing is lost by it – no dialog open, nothing typed into a field that has the
+   focus, no title waiting in quick add (it is no dialog and keeps its text without the focus), no unsent result in Next;
+   otherwise say so once, and the next poll (every few seconds) tries again. At most one automatic reload a minute: during a
+   rollout the old and the new version may answer side by side. */
+function uiOutdated(refused) {
+  const el = document.activeElement;
+  const typing = el && /^(INPUT|TEXTAREA)$/.test(el.tagName) && el.value;
+  const busy = document.querySelector("dialog[open]") || typing || $("#addTitle").value.trim() ||
+    Object.values(state.nextDraft).some(Boolean);
+  let last = 0;
+  try { last = Number(sessionStorage.getItem("cotrack.reloadAt")) || 0; } catch {}
+  if (!busy && Date.now() - last > 60000) {
+    try { sessionStorage.setItem("cotrack.reloadAt", String(Date.now())); } catch {}
+    location.reload();
+    return;
+  }
+  if (refused || !state.outdatedSaid) {
+    state.outdatedSaid = true;
+    toast(tr(refused ? "outdatedSave" : "outdated"), { label: tr("reload"), onclick: () => location.reload() });
+  }
+}
 
 // action: optional { label, onclick, undo } – shown as a button; such toasts stay longer and wait while the pointer or the
 // focus is on them. Only the latest toast counts: a new one replaces the old, and with it its "Rückgängig".

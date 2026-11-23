@@ -161,6 +161,13 @@ npx wrangler secret put TOKEN_USER         # dein Token, z. B. openssl rand -hex
 Layout und Kennzeichen der Fußzeile: ☰ → *Chat-Fußzeile → Anpassen* in der Web-App.
 Nach dem Einspielen von Updates vor dem Deploy erneut `npm run db:migrate` ausführen – neue Versionen können
 Migrationen mitbringen.
+Eine offene Web-App merkt ein Update und lädt sich selbst neu, sobald kein Dialog offen ist; bis dahin lehnt der Server ihre
+Änderungen ab (409 `client_outdated`), damit eine veraltete Seite keine Daten der neuen Version beschädigt. Skripte und MCP
+betrifft das nicht.
+
+**Tests:** `npm test` startet den Worker lokal mit einer frischen, temporären Datenbank (`wrangler dev`, Test-Tokens – deine
+Daten und `.dev.vars` bleiben unberührt) und führt `test/*.test.mjs` dagegen aus: API, MCP und – wenn Playwright installiert
+ist – die Web-App in einem echten Browser. Jede Korrektur bekommt einen Test, der ohne sie fehlschlägt.
 
 ## KI verbinden (MCP)
 

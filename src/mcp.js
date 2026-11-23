@@ -789,7 +789,8 @@ function describeChange(e) {
   const d = JSON.parse(e.data);
   if (e.action === "deleted") return d.title ? `: ${d.title}` : "";
   const parts = CHANGE_FIELDS.filter((k) => k in d).map((k) => {
-    let v = d[k] === null ? "–" : String(d[k]);
+    // One line per change: several sources or a multi-line body are joined with " · ".
+    let v = d[k] === null ? "–" : String(d[k]).replace(/\s*\n\s*/g, " · ");
     if (v.length > 80) v = v.slice(0, 77) + "…";
     return k === "title" ? v : `${k}=${v}`;
   });
