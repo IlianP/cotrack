@@ -1332,7 +1332,7 @@ const STRINGS = {
     // Board: Kompakt-Ansicht, erledigte Voraussetzungen
     sourceOpen: "öffnen ↗",
     // Übersicht
-    homeOpen: "Übersicht: alle Projekte", homeTitle: "Übersicht", menuHome: "⌂ Übersicht über alle Projekte", homeLoading: "Wird geladen …",
+    homeOpen: "Übersicht: alle Projekte", homeTitle: "Übersicht", menuHome: "🏠 Übersicht über alle Projekte", homeLoading: "Wird geladen …",
     homeScope: (p, n) => `${p === 1 ? "1 Projekt" : p + " Projekte"} · ${n} offen`,
     homeMine: "Du bist dran", homeMineNone: "Gerade nichts für dich", homeMineN: (n) => `Du bist dran · ${n}`,
     homeOver: "Überfällig", homeSoon: (n) => (n ? `${n} in den nächsten 7 Tagen fällig` : "nichts in den nächsten 7 Tagen"),
@@ -1572,7 +1572,7 @@ const STRINGS = {
     // Board: compact view, prerequisites that are done
     sourceOpen: "open ↗",
     // Overview
-    homeOpen: "Overview: all projects", homeTitle: "Overview", menuHome: "⌂ Overview of all projects", homeLoading: "Loading …",
+    homeOpen: "Overview: all projects", homeTitle: "Overview", menuHome: "🏠 Overview of all projects", homeLoading: "Loading …",
     homeScope: (p, n) => `${p === 1 ? "1 project" : p + " projects"} · ${n} open`,
     homeMine: "Your turn", homeMineNone: "Nothing for you right now", homeMineN: (n) => `Your turn · ${n}`,
     homeOver: "Overdue", homeSoon: (n) => (n ? `${n} due within 7 days` : "nothing due within 7 days"),
@@ -4442,7 +4442,7 @@ const PAL_KEY = matchMedia("(hover: hover)").matches ? (/Mac|iPhone|iPad/.test(n
 function palCommands() {
   const mode = (m) => () => $(`#modeSwitch [data-mode="${m}"]`).click();
   return [
-    { icon: "⌂", label: tr("homeOpen"), words: "übersicht overview home start projekte projects cockpit", run: openHome },
+    { icon: "🏠", label: tr("homeOpen"), words: "übersicht overview home start projekte projects cockpit", run: openHome },
     { icon: "▦", label: tr("modeBoard"), words: "board", run: mode("board") },
     { icon: "▶", label: tr("viewNextTitle"), words: "next weiter", run: mode("next") },
     { icon: "⛓", label: tr("modeDepsTitle"), words: "ketten chains abhängigkeiten dependencies", run: mode("deps") },
