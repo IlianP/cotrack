@@ -9,7 +9,7 @@
   <a href="https://cotrack-demo.ilianos1.workers.dev"><b>▶ Live-Demo ausprobieren</b></a> – ohne Anmeldung &nbsp;·&nbsp;
   <a href="docs/SETUP.de.md">Selbst betreiben</a> &nbsp;·&nbsp;
   <a href="docs/MCP.md">KI verbinden</a> &nbsp;·&nbsp;
-  <a href="README.md">English</a>
+  <a href="README.md">🇬🇧 English</a>
 </p>
 
 <p align="center">
