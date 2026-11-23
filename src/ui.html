@@ -159,7 +159,15 @@ main { max-width: 1400px; margin: 0 auto; padding: 14px 16px; }
 .bar-filter { gap: 14px; }
 .tgs { gap: 4px; }
 .top .bar { position: static; flex: 0 1 auto; flex-wrap: nowrap; margin: 0; padding: 0; background: none; backdrop-filter: none; }
-.top.with-bar .psel { min-width: 170px; } /* PSEL_MIN */
+.top { --psel-min: 170px; } /* the project picker's least width next to the bar (barFitsTop) */
+.top.with-bar .psel { min-width: var(--psel-min); }
+/* snug (placeBar): a little tighter, tried before the bar leaves the top bar – so it still fits one row on a narrower
+   window (e.g. a monitor turned upright, German labels, two-digit counts) */
+body.snug .top { gap: 6px; --psel-min: 150px; }
+body.snug .bar, body.snug .bar-filter { column-gap: 8px; }
+body.snug .bar-view { gap: 6px; }
+body.snug .chips button { padding: 5px 9px; }
+body.snug .tg { padding: 0 7px; }
 .chips { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 10px; flex: none; }
 .chips button { border: 0; background: transparent; padding: 5px 12px; border-radius: 8px; color: var(--muted); }
 .chips button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
@@ -5259,13 +5267,18 @@ function markStuck() {
 }
 // From 1180px the filter bar moves into the top bar and the board starts one row higher – but only while everything fits
 // there: longer labels (German), two-digit counts, more categories or an open search need more, and the last buttons
-// (☰) would leave the screen. The bar then stays in its own row below.
+// (☰) would leave the screen. Before the bar goes into its own row below, a slightly tighter top bar is tried (snug).
 const WIDE = matchMedia("(min-width: 1180px)");
-const PSEL_MIN = 170; // the project picker's least width next to the bar (.top.with-bar .psel)
 function placeBar() {
-  const bar = $("#bar"), top = $(".top"), focused = document.activeElement;
+  const bar = $("#bar"), top = $(".top"), focused = document.activeElement, body = document.body;
   $("#filterBar").classList.remove("tight"); // measured with the counts; fitFilterBar decides afterwards
-  const up = WIDE.matches && barFitsTop(top, bar);
+  body.classList.remove("snug");
+  let up = WIDE.matches && barFitsTop(top, bar);
+  if (WIDE.matches && !up) {
+    body.classList.add("snug");
+    up = barFitsTop(top, bar);
+    if (!up) body.classList.remove("snug");
+  }
   if (up && bar.parentElement !== top) top.insertBefore(bar, top.querySelector(".spacer"));
   else if (!up && bar.parentElement === top) $("main").prepend(bar);
   top.classList.toggle("with-bar", up);
@@ -5280,7 +5293,8 @@ function barFitsTop(top, bar) {
   const shown = (el) => el.getClientRects().length > 0;
   const cs = getComputedStyle(top), kids = [...top.children].filter((el) => el !== bar && shown(el));
   let need = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight) + (parseFloat(cs.columnGap) || 0) * kids.length;
-  for (const el of kids) need += el.matches(".psel") ? PSEL_MIN : el.matches(".spacer") ? 0 : width(el);
+  const pselMin = parseFloat(cs.getPropertyValue("--psel-min")) || 0;
+  for (const el of kids) need += el.matches(".psel") ? pselMin : el.matches(".spacer") ? 0 : width(el);
   const parts = [...bar.children].filter(shown);
   need += (parseFloat(getComputedStyle(bar).columnGap) || 0) * Math.max(0, parts.length - 1);
   for (const el of parts) need += width(el);
