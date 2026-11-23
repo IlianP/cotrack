@@ -67,6 +67,23 @@ describe("web app", { skip }, () => {
     await ctx.close();
   });
 
+  it("keeps each source on one line in a small font – no wrapping that makes the field tall", async () => {
+    const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Lange Adressen", source: TWO } })).body.item.ref;
+    const { page, ctx } = await open(`${p}/${ref}`);
+    await page.waitForSelector("dialog[open] .src-input");
+    await page.waitForTimeout(100);
+    const m = await page.evaluate(() => {
+      const t = document.querySelector("dialog[open] .src-input"), cs = getComputedStyle(t);
+      const lines = (t.scrollHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)) / parseFloat(cs.lineHeight);
+      return { lines: Math.round(lines), font: parseFloat(cs.fontSize), cut: t.scrollHeight > t.clientHeight + 1, value: t.value };
+    });
+    assert.equal(m.lines, 2, "two sources, two lines – long addresses do not wrap");
+    assert.ok(m.font <= 13, `small font (${m.font}px)`);
+    assert.equal(m.cut, false, "nothing cut off vertically");
+    assert.equal(m.value, TWO);
+    await ctx.close();
+  });
+
   it("blocks saving a fourth source in the dialog", async () => {
     const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Vier", source: TWO } })).body.item.ref;
     const { page, ctx } = await open(`${p}/${ref}`);

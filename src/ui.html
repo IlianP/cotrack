@@ -407,7 +407,9 @@ dialog.pal[open] { display: flex; flex-direction: column; }
 .src-open { color: var(--accent); }
 .src-open[hidden] { display: none; }
 .src-open a { color: var(--accent); }
-.dlg textarea.src-input { min-height: 0; max-height: 10em; resize: none; overflow-y: auto; }
+/* One line per source (D36), no wrapping: a long address scrolls sideways while typing; the links above name each target. */
+.dlg textarea.src-input { min-height: 0; max-height: 10em; resize: none; overflow: auto; white-space: pre; font-size: 13px; scrollbar-width: none; }
+.dlg textarea.src-input::-webkit-scrollbar { display: none; }
 .btn { border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; height: 38px; padding: 0 14px; }
 .btn.danger { color: var(--danger); }
 .small { font-size: 12.5px; color: var(--muted); margin: 0; }
@@ -4792,13 +4794,15 @@ function openEdit(it) {
     status: h("select", null, Object.entries(STATUS_LABELS).map(([v, l]) => h("option", { value: v, selected: it.status === v }, l))),
     // relative to the item's own project, which is also how the server reads what is typed here
     waiting_on: h("input", { value: waitKeys(it).map((k) => keyRef(k, it.project_slug)).join(", "), placeholder: tr("waitingPh") }),
-    source: h("textarea", { class: "src-input", rows: 1, maxlength: 1000, placeholder: tr("sourcePh"), autocapitalize: "off", spellcheck: "false" }, it.source || ""),
+    source: h("textarea", { class: "src-input", rows: 1, wrap: "off", maxlength: 1000, placeholder: tr("sourcePh"), autocapitalize: "off", spellcheck: "false",
+      // back to the start of each address once the field is left
+      onblur: (e) => { e.currentTarget.scrollLeft = 0; } }, it.source || ""),
     due: h("input", { type: "date", value: it.due || "" }),
     session: h("input", { type: "url", value: it.last_session || "", maxlength: 500, placeholder: tr("sessionPh"),
       autocomplete: "off", autocapitalize: "off", spellcheck: "false" }),
   };
   // One source per line (D36): a link for each that leads somewhere – "öffnen ↗" for one, named by target for several.
-  // The field grows with its content (long addresses wrap), up to a limit in CSS; measured once the dialog is open.
+  // The field grows by one line per source (no wrapping), up to a limit in CSS; measured once the dialog is open.
   const fitSrc = () => {
     if (!f.source.isConnected) return;
     f.source.style.height = "auto";

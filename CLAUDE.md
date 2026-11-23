@@ -102,7 +102,7 @@
 - Several sources (decision D36, methodology v2.16): `source` holds up to `MAX_SOURCES` (3) lines, one source each – `normSource`
   in `src/worker.js` trims, drops blank lines and repeats, refuses more (400 `too_many_sources`); `sourceLines` in `src/ui.html`.
   `MAX_SOURCES` exists in both – keep them in sync. Card and Next show one link per line, the edit dialog a multi-line field
-  (`src-input`, links per line in `srcOpen`); the compact board shows none. The rule for the AI (normally one, replace instead of
+  (`src-input`: one line per source, no wrapping, small font; links per line in `srcOpen`); the compact board shows none. The rule for the AI (normally one, replace instead of
   append) lives in `INSTRUCTIONS` and the `source` description in `src/mcp.js`, not in the prompt.
 - Web app version (A124): the worker hashes `src/ui.html` (`UI_VERSION`, `fnv1a`) and writes it into the page (placeholder in
   `const UI_VERSION` in `src/ui.html` – keep exactly one occurrence). `json()`/`plain()` send it as `x-cotrack-ui`; `api()` in the
@@ -112,7 +112,8 @@
   neither and are not affected. Reason: an old page's single-line source field merged two sources into one line (D36).
 - Tests: `npm test` (`test/run.mjs`) starts `wrangler dev` on a temporary D1 with test tokens and runs `test/*.test.mjs` with
   node:test – `api.test.mjs` (API + MCP), `ui.test.mjs` (Playwright, skipped without it). Add a test for every fix and check it
-  fails without the fix. Each test file uses a project of its own (`freshProject`).
+  fails without the fix. Each test file uses a project of its own (`freshProject`). Tests run **locally only – never in GitHub
+  Actions or any other CI** (the user's decision: Actions minutes cost real money); do not add workflows that run them.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
 - Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
   scrolls, columns fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`),
