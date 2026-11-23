@@ -255,7 +255,9 @@ body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
 /* in a shared column the smaller categories keep their height, up to 45 % – and with --share categories in the column
    never so much that the largest is left with less than its 120px */
 .fitcol > .col { flex: 0 0 auto; max-height: min(45%, calc((100% - 120px) / (var(--share, 2) - 1) - 14px)); }
-.fitcol > .col.grow { flex: 1 1 0; min-height: 120px; max-height: none; }
+/* the largest takes the rest only when the column is too short for all of them (then it scrolls); otherwise every category
+   ends after its items and the free room stays below the last one, not inside the largest (dense board: one line each) */
+.fitcol > .col.grow { flex: 0 1 auto; min-height: 120px; max-height: none; }
 .board.fit .col-head, .board.swipe .col-head { flex: none; }
 /* only up and down stay inside a category: "contain" on both axes would also swallow the sideways swipe to the next one */
 .board.fit .items, .board.swipe .items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
@@ -2031,7 +2033,7 @@ function layoutBoard(layout, visible, sections) {
     board.style.gridTemplateColumns = `repeat(${plan.length}, minmax(0, 1fr))`;
     board.style.maxWidth = widest(plan.length);
     board.replaceChildren(...plan.map((codes) => {
-      // the category with the most items fills the rest of the column (the lower one if two have as many)
+      // the category with the most items gets the rest of the column when it is too short (the lower one if two have as many)
       const big = codes.reduce((m, c) => (count.get(c) >= count.get(m) ? c : m));
       for (const c of codes) byCode.get(c).classList.toggle("grow", c === big);
       return h("div", { class: "fitcol", style: `--share:${codes.length}` }, codes.map((c) => byCode.get(c)));
