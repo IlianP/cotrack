@@ -8,6 +8,10 @@
 - Demo instance (invented data, own tokens): https://cotrack-demo.ilianos1.workers.dev – worker `cotrack-demo`, D1
   `cotrack-demo-db` (`[env.demo]`), data from `demo/data.mjs` (CLI: `demo/seed.mjs`) plus a copy of Patchwerk. Deployed with main by its own Workers Build (code + migrations,
   data stays); resetting the data: `demo/README.md`. Keep `demo/data.mjs` in step with the event format in `src/worker.js`.
+  README pictures (`docs/img/`, A130): `node demo/screenshots.mjs` renews clip and screenshots in both languages from a
+  local instance with the demo projects (German: `demo/data.mjs`; English: `demo/data.en.mjs`, same timeline, only for the
+  pictures, built with the helpers `demo/data.mjs` exports) – rerun it after visible changes to the web app. Needs
+  Playwright and ffmpeg; never take pictures of the live instance.
   Open demo (A114): `DEMO_OPEN = "1"` lets requests without any token in as guests (actor `user`, `guest: true` in `/api/me`);
   `guestGuard` allows writes only to items of `DEMO_SLUGS` and of the projects in the snapshot (`ensureSnapshot`, tables
   `demo_snap_*`: the copied Patchwerk), `GUEST_LIMIT` limits per address, the cron runs `resetDemo` nightly (snapshot + data).

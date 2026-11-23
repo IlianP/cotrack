@@ -37,7 +37,7 @@ function when(days, hm) {
   return local - offsetMin(local) * 60000 + ((jitter * 37) % 60) * 1000 + ((jitter * 131) % 1000);
 }
 // due(3) = the date three days from today, due(-2) = two days ago (YYYY-MM-DD, as the API stores it).
-function due(days) {
+export function due(days) {
   return new Date(Date.UTC(Number(TODAY.year), Number(TODAY.month) - 1, Number(TODAY.day) + days)).toISOString().slice(0, 10);
 }
 function stamp(s) {
@@ -48,12 +48,13 @@ function stamp(s) {
 
 /* ------------------------------------------------------------------- DSL */
 let PROJECTS = [];
-const project = (slug, meta, ...items) => PROJECTS.push({ slug, ...meta, items });
+// Exported with it/later/due for other content (demo/data.en.mjs, the English screenshots); call them only inside a fill function.
+export const project = (slug, meta, ...items) => PROJECTS.push({ slug, ...meta, items });
 // it(ref, created, fields, ...[stamp, change]) – an item and what happened to it later (change = what a PATCH would send;
 // { check: [n] } ticks sub-items, { convert: { ref, kind, ... } } turns an idea into an action/decision).
-const it = (ref, created, fields, ...ops) => ({ ref, created, fields, ops });
+export const it = (ref, created, fields, ...ops) => ({ ref, created, fields, ops });
 // later(ref, ...ops) – what happened to an item that came from a conversion
-const later = (ref, ...ops) => ({ ref, created: null, fields: null, ops });
+export const later = (ref, ...ops) => ({ ref, created: null, fields: null, ops });
 
 /* --------------------------------------------------------------- content */
 // In a function: due dates and stamps are relative to the build time.
@@ -412,11 +413,12 @@ function event(p, ref, action, actor, data, t) {
 /* -------------------------------------------------------------- output */
 const lit = (v) => (v === null || v === undefined ? "NULL" : typeof v === "number" ? String(v) : `'${String(v).replace(/'/g, "''")}'`);
 
-// Runs the whole timeline for the given time; returns the rows to write.
-export function buildDemo(now = Date.now()) {
+// Runs the whole timeline for the given time; returns the rows to write. fill = the content (default: the German demo
+// projects below; demo/data.en.mjs passes its English version for the screenshots).
+export function buildDemo(now = Date.now(), fill = content) {
   NOW = now; TODAY = berlin(NOW); jitter = 0;
   PROJECTS = []; projects = []; items = new Map(); counters = new Map(); events = [];
-  content();
+  fill();
   // Every step of every project on one timeline, applied in order (numbers are handed out in creation order).
   const steps = [];
   for (const p of PROJECTS) {
@@ -447,7 +449,7 @@ export function buildDemo(now = Date.now()) {
   const late = steps.filter((s) => s.ms > NOW - 60000);
   late.forEach((s, n) => { s.ms = NOW - 60000 * (late.length - n); });
   for (const s of steps) s.run(s.ms);
-  if (PROJECTS.map((p) => p.slug).join() !== DEMO_SLUGS.join()) throw new Error("DEMO_SLUGS does not match the demo projects");
+  if (fill === content && PROJECTS.map((p) => p.slug).join() !== DEMO_SLUGS.join()) throw new Error("DEMO_SLUGS does not match the demo projects");
   return {
     slugs: PROJECTS.map((p) => p.slug),
     projects: projects.map((p) => ({ slug: p.slug, name: p.name, repo: null, archived: 0, created_at: iso(p.created_at),
@@ -484,8 +486,8 @@ const EPILOGUE = [
 const values = (row) => `(${Object.values(row).map(lit).join(", ")})`;
 
 // One INSERT per row – the SQL file for `wrangler d1 execute` (demo/seed.mjs).
-export function seedSql(now = Date.now()) {
-  const d = buildDemo(now);
+export function seedSql(now = Date.now(), fill = content) {
+  const d = buildDemo(now, fill);
   const insert = (table, row) => `INSERT INTO ${table} (${Object.keys(row).join(", ")}) VALUES ${values(row)};`;
   const out = [
     `-- cotrack demo data, generated ${new Date(now).toISOString()} by demo/seed.mjs – for a demo database only.`,
