@@ -460,7 +460,10 @@ export function buildDemo(now = Date.now(), fill = content) {
   };
 }
 
-// The slugs of the demo projects (guests may write only there); buildDemo checks that the content still matches.
+// The German content, for demo/data.en.mjs (contentAll).
+export const contentDe = () => content();
+
+// The slugs of the German demo projects (guests may write there and in the English ones, DEMO_SLUGS_ALL); buildDemo checks that the content still matches.
 export const DEMO_SLUGS = ["website", "umzug", "adventskonzert", "workshop"];
 
 // Guard first: only a demo database has the table demo_instance, so anywhere else the first statement fails.
@@ -506,8 +509,8 @@ export function seedSql(now = Date.now(), fill = content) {
 // Few statements with many rows each – for one D1 batch in the Worker (the free plan allows 50 queries per invocation;
 // a batch runs as one transaction, so a failed reset leaves the old data).
 // afterPrologue: statements to run right after the guard and the deletes (the Worker restores copied projects there).
-export function seedStatements(now = Date.now(), { maxLen = 90000, afterPrologue = [] } = {}) {
-  const d = buildDemo(now);
+export function seedStatements(now = Date.now(), { maxLen = 90000, afterPrologue = [], fill = content } = {}) {
+  const d = buildDemo(now, fill);
   const out = [...PROLOGUE(d.slugs.map(lit).join(", ")), ...afterPrologue];
   const multi = (table, rows) => {
     if (!rows.length) return;

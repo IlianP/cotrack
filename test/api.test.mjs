@@ -227,3 +227,16 @@ describe("web app version (A124)", () => {
     for (const n of ["cotrack_add", "cotrack_update", "cotrack_convert"]) assert.ok(tools[n].inputSchema.properties.session, n);
   });
 });
+
+describe("statistics limited to some projects (A132)", () => {
+  it("projects=a,b counts only those, without it every project", async () => {
+    const a = await freshProject("stats"), b = await freshProject("stats");
+    await api(`/projects/${a}/items`, { method: "POST", body: { kind: "A", title: "in a" } });
+    await api(`/projects/${b}/items`, { method: "POST", body: { kind: "A", title: "in b" } });
+    await api(`/projects/${b}/items`, { method: "POST", body: { kind: "I", title: "also in b" } });
+    const only = (await api(`/stats?projects=${a}`)).body;
+    assert.equal(only.items_total, 1);
+    assert.equal((await api(`/stats?projects=${a},${b}`)).body.items_total, 3);
+    assert.ok((await api("/stats")).body.items_total >= 3);
+  });
+});

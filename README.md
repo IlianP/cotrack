@@ -67,8 +67,8 @@ warnings:
   </tr>
 </table>
 
-All pictures show the invented projects of the [public demo](https://cotrack-demo.ilianos1.workers.dev) (there in German,
-the web app follows your browser's language). Change whatever you like in it – it is reset every night.
+All pictures show the invented projects of the [public demo](https://cotrack-demo.ilianos1.workers.dev) – in English or
+German, whichever your browser speaks. Change whatever you like in it – it is reset every night.
 
 > The methodology behind cotrack (categories, rules, relation to PRINCE2/RAID) is described in
 > [docs/METHODOLOGY.md](docs/METHODOLOGY.md), the matching prompt for Claude and ChatGPT in

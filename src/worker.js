@@ -8,7 +8,8 @@ import UI_HTML from "./ui.html";
 import { pwaResponse } from "./pwa.js";
 import { handleMcp } from "./mcp.js";
 import { handleOAuth } from "./oauth.js";
-import { DEMO_SLUGS, seedStatements } from "../demo/data.mjs";
+import { seedStatements } from "../demo/data.mjs";
+import { DEMO_SLUGS_ALL as DEMO_SLUGS, contentAll } from "../demo/data.en.mjs"; // German and English (A132)
 
 const STATUSES = ["open", "doing", "blocked", "done", "dropped"];
 const OPEN = ["open", "doing", "blocked"];
@@ -236,7 +237,7 @@ export async function resetDemo(db) {
     `DELETE FROM projects WHERE slug IN ${inSnap}`,
     ...SNAP_TABLES.map((t) => `INSERT INTO ${t} (${cols[t]}) SELECT ${cols[t]} FROM demo_snap_${t}` + (t === "events" ? " ORDER BY id" : "")),
   ];
-  await db.batch(seedStatements(Date.now(), { afterPrologue: restore }).map((sql) => db.prepare(sql)));
+  await db.batch(seedStatements(Date.now(), { afterPrologue: restore, fill: contentAll }).map((sql) => db.prepare(sql)));
 }
 
 /* ------------------------------------------------------------------ auth */
@@ -297,7 +298,9 @@ async function route(req, db, url, actor, { guest = false } = {}) {
   // tz = the browser's getTimezoneOffset(), so days and hours are the reader's own)
   if (seg.length === 1 && seg[0] === "stats" && method === "GET") {
     const project = q.get("project") ? (await getProject(db, q.get("project"))).slug : null;
-    return json(await buildStats(db, { project, tz: clampInt(q.get("tz"), -840, 840, 0) }));
+    // projects=a,b: only these (the web app sends the projects a demo guest sees)
+    const projects = q.get("projects") ? q.get("projects").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 200) : null;
+    return json(await buildStats(db, { project, projects, tz: clampInt(q.get("tz"), -840, 840, 0) }));
   }
 
   // Suggested project code for a slug, e.g. GET /api/code-suggestion?slug=festival-workshop-planner
@@ -563,17 +566,21 @@ const median = (xs) => {
 
 // Everything the statistics views show, counted from items and the change log. Days are local to the reader (tz in
 // minutes, as Date#getTimezoneOffset). "Responsible" = owner, or the kind's default; only kinds with an owner count.
-export async function buildStats(db, { project = null, tz = 0 } = {}) {
+// projects: limit "all projects" to these slugs (a demo guest sees only the projects of their language, A132).
+export async function buildStats(db, { project = null, projects = null, tz = 0 } = {}) {
+  const only = projects ? JSON.stringify(projects) : null;
   const [itemRes, kinds, evRes] = await Promise.all([
     // all items, not the board's capped list
-    db.prepare(`${ITEM_SELECT} WHERE ? IS NULL OR i.project_slug = ?`).bind(project, project).all(),
+    db.prepare(`${ITEM_SELECT} WHERE (? IS NULL OR i.project_slug = ?) AND (? IS NULL OR i.project_slug IN (SELECT value FROM json_each(?)))`)
+      .bind(project, project, only, only).all(),
     listKinds(db, true),
     db
       .prepare(
         `SELECT project_slug, item_ref, action, actor, data, at FROM events
-         WHERE ? IS NULL OR project_slug = ? ORDER BY id LIMIT 50000`,
+         WHERE (? IS NULL OR project_slug = ?) AND (? IS NULL OR project_slug IN (SELECT value FROM json_each(?)))
+         ORDER BY id LIMIT 50000`,
       )
-      .bind(project, project)
+      .bind(project, project, only, only)
       .all(),
   ]);
   const items = itemRes.results;

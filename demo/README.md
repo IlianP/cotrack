@@ -17,10 +17,13 @@ A separate cotrack instance with invented data, for showing the app without touc
   in again), drop these four tables; the next guest change or reset takes it afresh. A reset turns the demo back in time,
   so references created by guests are handed out again afterwards. Test it locally with
   `npx wrangler dev --env demo --test-scheduled` and `curl "http://localhost:8787/__scheduled?cron=41+2+*+*+*"`.
-- Content: four invented projects from `demo/data.mjs` (German) plus a copy of a real project (Patchwerk) taken from the
+- Content: four invented projects in German (`demo/data.mjs`) and the same four in English (`demo/data.en.mjs`, slugs
+  `en-…`, codes SITE, MOVE, XMAS, AIW – A132) plus a copy of a real project (Patchwerk) taken from the
   live database once. The seed covers what the views need: open/done/dropped items, a history of several weeks by you and
   the AI, dependency chains (also across projects, plus one deliberate cycle for "Auffällig"), sub-items, effort and benefit
   (estimated and confirmed), converted ideas, an item shown in two projects, due dates, blocked and reopened items.
+  A guest sees the projects of their browser language only (`demoHidden` in `src/ui.html`: English → `en-…`, otherwise the
+  rest, Patchwerk included); signed in with the token you see all of them.
 
 ## Update the code
 
@@ -67,5 +70,5 @@ When the event format in `src/worker.js` changes (`createItem`, `updateItem`, `c
 
 `node demo/screenshots.mjs` (or `… de` / `… en`) renews the clip and the screenshots in `docs/img/`: per language it starts
 `wrangler dev` on a temporary database, seeds the demo projects – German from `demo/data.mjs`, English from
-`demo/data.en.mjs` (the same timeline translated, only for the pictures) – takes the screenshots with Playwright and turns
+`demo/data.en.mjs` (the same timeline translated) – takes the screenshots with Playwright and turns
 the recorded clip into a GIF with ffmpeg. Nothing touches the demo or the live instance.

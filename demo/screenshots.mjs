@@ -42,7 +42,7 @@ let rpc = 0; // MCP request ids
 // What the clip says (one line under the app per step) and what the AI adds in it.
 const TEXT = {
   de: {
-    locale: "de-DE",
+    locale: "de-DE", project: "website",
     steps: [
       ["Eine Liste pro Projekt", "Entscheidungen, Aufgaben, Ideen und Warnungen"],
       ["Deine KI schreibt mit", "per MCP – das Board zeigt es nach Sekunden"],
@@ -55,7 +55,7 @@ const TEXT = {
       body: "Folge: Erstgespräch und Workshop-Anfrage lassen sich nicht getrennt buchen.\nGegenmaßnahme: Team-Tarif (12 €/Monat) oder zwei Links." },
   },
   en: {
-    locale: "en-US",
+    locale: "en-US", project: "en-website",
     steps: [
       ["One list per project", "decisions, tasks, ideas and warnings"],
       ["Your AI writes along", "via MCP – the board shows it within seconds"],
@@ -151,14 +151,14 @@ async function pictures(base, lang) {
 // A signed-in page of the website relaunch.
 async function appContext(browser, t, { vp = DESK, scale = 2, mode = "board", theme = "light", cursor = false } = {}) {
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: scale, locale: t.locale, colorScheme: theme });
-  await ctx.addInitScript(({ token, mode, theme }) => {
+  await ctx.addInitScript(({ token, mode, theme, project }) => {
     try {
       localStorage.setItem("cotrack.token", token);
       localStorage.setItem("cotrack.mode", mode);
       localStorage.setItem("cotrack.theme", theme);
-      localStorage.setItem("cotrack.project", "website");
+      localStorage.setItem("cotrack.project", project);
     } catch {}
-  }, { token: USER, mode, theme });
+  }, { token: USER, mode, theme, project: t.project });
   if (cursor) await ctx.addInitScript(addCursor);
   return ctx;
 }
@@ -166,7 +166,7 @@ async function appContext(browser, t, { vp = DESK, scale = 2, mode = "board", th
 async function shot(browser, base, t, path, { vp, scale, mode, theme, setup } = {}) {
   const ctx = await appContext(browser, t, { vp, scale, mode, theme });
   const page = await ctx.newPage();
-  await page.goto(base + "/#website");
+  await page.goto(base + "/#" + t.project);
   await ready(page);
   if (setup) { await setup(page); await sleep(900); }
   const png = await page.screenshot(path ? { path } : {});
@@ -215,7 +215,7 @@ async function clip(browser, base, lang) {
       .dots i.on { background: #2dd4bf; }
       #t { transition: opacity .25s; } #t b { font-weight: 650; color: #5eead4; margin-right: 10px; }
     </style>
-    <iframe src="/#website"></iframe>
+    <iframe src="/#${t.project}"></iframe>
     <div class="cap"><span class="dots">${t.steps.map(() => "<i></i>").join("")}</span><span id="t"></span></div>` }));
   // The app forbids framing (frame-ancestors 'none') – allow its own origin, for this recording only.
   await page.route((url) => url.href.startsWith(base) && url.pathname === "/", async (route) => {
@@ -280,8 +280,8 @@ async function clip(browser, base, lang) {
   // 2 – the AI adds a warning and starts on A9 (as it would through MCP from a chat)
   await caption(1);
   await sleep(700);
-  await mcp(base, "cotrack_add", { project: "website", kind: "W", ...t.warn });
-  await mcp(base, "cotrack_update", { project: "website", ref: "A9", status: "doing" });
+  await mcp(base, "cotrack_add", { project: t.project, kind: "W", ...t.warn });
+  await mcp(base, "cotrack_update", { project: t.project, ref: "A9", status: "doing" });
   await app.evaluate(() => poll());
   await sleep(2200);
   // 3 – you tick off A8 (the toast offers undo)

@@ -67,8 +67,8 @@ KI, dann Ideen und Warnungen:
   </tr>
 </table>
 
-Alle Bilder zeigen die erfundenen Projekte der [öffentlichen Demo](https://cotrack-demo.ilianos1.workers.dev). Dort darfst
-du nach Belieben ändern – jede Nacht wird alles zurückgesetzt.
+Alle Bilder zeigen die erfundenen Projekte der [öffentlichen Demo](https://cotrack-demo.ilianos1.workers.dev) – auf Deutsch
+oder Englisch, je nach Sprache deines Browsers. Dort darfst du nach Belieben ändern – jede Nacht wird alles zurückgesetzt.
 
 > Die Methodik hinter cotrack (Kategorien, Regeln, Bezug zu PRINCE2/RAID) ist in
 > [docs/METHODIK.md](docs/METHODIK.md) beschrieben, der passende Prompt für Claude und ChatGPT in
