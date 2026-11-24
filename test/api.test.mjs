@@ -307,3 +307,20 @@ describe("undo noted on the event (D33)", () => {
     assert.equal(it.updated_by, "user");
   });
 });
+
+describe("statistics and undo (A140)", () => {
+  it("an undone completion is not counted as done, an undone reopening keeps the first completion", async () => {
+    const p = await freshProject("stundo");
+    const add = async (title) => (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title } })).body.item.ref;
+    const patch = (ref, body) => api(`/projects/${p}/items/${ref}`, { method: "PATCH", body });
+    const a = await add("Erledigt und zurück");
+    await patch(a, { status: "done" });
+    await patch(a, { status: "open", undo: true });
+    const b = await add("Wieder geöffnet und zurück");
+    await patch(b, { status: "done" });
+    await patch(b, { status: "open" });
+    await patch(b, { status: "done", undo: true });
+    const today = (await api(`/stats?projects=${p}`)).body.days.at(-1);
+    assert.deepEqual([today.created, today.done, today.open], [2, 1, 1]);
+  });
+});
