@@ -1262,6 +1262,9 @@ function expectPredicate(input, item) {
 
 export async function updateItem(db, project, item, input, actor) {
   const expect = expectPredicate(input, item);
+  // undo: true – the web app's undo (D33) puts back what one change set. Noted on the event, so the item's history can
+  // leave out a change and its undo even where the log does not know the value before (see itemHistBefore in the UI).
+  if (input.undo !== undefined && typeof input.undo !== "boolean") throw new HttpError(400, "invalid_field", "undo");
   const ticking = ["check", "uncheck"].some((k) => input[k] !== undefined && input[k] !== null && input[k] !== "");
   // Sub-item texts in order when the request arrived: a retry may only re-apply the selectors if they still mean the same lines.
   const layout = (it) => JSON.stringify(parseChecks(it.body).map((c) => c.text));
@@ -1341,6 +1344,7 @@ export async function updateItem(db, project, item, input, actor) {
     // The session is a note on the event ("session"), not a field change – null when the link was removed.
     data = Object.fromEntries(Object.entries(data).filter(([c]) => !SESSION_COLS.includes(c)));
     if (session || "last_session" in changes) data.session = session ?? null;
+    if (input.undo) data.undo = true;
 
     const update = db
       .prepare(

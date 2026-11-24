@@ -139,7 +139,12 @@
 - History per item (decision D22): the edit dialog's "Angelegt … · geändert …" line opens a compact table (when · who ·
   which fields; status and owner with value; same actor within 5 minutes = one row), loaded from
   `GET …/items/:ref/events` (`itemHistory` in `src/worker.js`), which follows conversions back (`from`) via the `converted` events, so deleted sources keep their history. UI:
-  `itemHistory`/`itemHistRows` in `src/ui.html`.
+  `itemHistory`/`itemHistRows` in `src/ui.html`. A row names only its net change (`itemHistRow`): a field that ends where it
+  started (done and reopened, a change and its undo), a tick taken back or a deletion restored is left out, an empty row
+  disappears. Event data holds new values only, so `itemHistBefore` replays the log for the value before each change
+  (`HIST_UNKNOWN` where it cannot tell, e.g. a body set at creation – then the field stays named); the web app's undo
+  sends `undo: true`, noted on the event (`data.undo`, like `session` not a field), which tells the value before the
+  change it reverts.
 - Footer bar in the board (A134): off by default; ☰ → Chat-Fußzeile → Im Board (`boardFooterRow`) turns it on per device –
   `state.boardFooter`, localStorage `cotrack.boardFooter` = `single` | `multi` (`BOARD_FOOTERS`). `renderFooter` fetches only
   while it is shown; `footerNodes` turns the references in it into `refLink`s (`FOOTER_REF`, `footerKey`).
