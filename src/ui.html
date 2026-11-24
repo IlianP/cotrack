@@ -3004,7 +3004,11 @@ function itemHistBefore(events) {
   return before;
 }
 // events newest first → rows { at (earliest of the group), newest, actor, session (the newest one named in the group), text }
-function itemHistRows(events) {
+// body: the item's description now – a tick is logged by its step text only, so steps whose text occurs more than once
+// cannot be told apart and are counted as logged instead of netted.
+function itemHistRows(events, body) {
+  const texts = parseChecks(body).map((c) => c.text);
+  const twins = new Set(texts.filter((t, i) => texts.indexOf(t) !== i));
   const before = itemHistBefore(events);
   const groups = [];
   for (const e of events) {
@@ -3015,11 +3019,11 @@ function itemHistRows(events) {
     if (!g.session && e.data?.session) g.session = e.data.session;
     g.events.push(e);
   }
-  return groups.map((g) => itemHistRow(g, before)).filter(Boolean);
+  return groups.map((g) => itemHistRow(g, before, twins)).filter(Boolean);
 }
 // What one row says: its whole-item events, then each field from its value before the row's first change of it to the
 // value after its last one. null when everything ends where it started.
-function itemHistRow(g, before) {
+function itemHistRow(g, before, twins) {
   const ev = tr("ev"), parts = new Map(), evs = [...g.events].reverse(); // oldest first
   const life = evs.filter((e) => e.action === "deleted" || e.action === "restored").map((e) => e.action);
   const backAgain = life[0] === "deleted" && life[life.length - 1] === "restored"; // deleted and brought back
@@ -3029,15 +3033,18 @@ function itemHistRow(g, before) {
     else if (e.action === "deleted" && !backAgain) parts.set("deleted", ev.deleted);
     else if (e.action === "restored" && !backAgain) parts.set("restored", ev.itemRestored);
   }
-  const from = {}, to = {}, ticks = new Map(); // ticks: step -> checked minus unchecked
+  const from = {}, to = {}, ticks = new Map(); // ticks: step text -> [checked, unchecked]
   for (const e of evs.filter((x) => !HIST_WHOLE.includes(x.action))) {
     const c = e.data || {};
     for (const f of HIST_FIELDS.filter((x) => x in c)) {
       if (!(f in from)) from[f] = before.get(e)[f];
       to[f] = c[f] ?? null;
     }
-    for (const t of c.checked || []) ticks.set(t, (ticks.get(t) || 0) + 1);
-    for (const t of c.unchecked || []) ticks.set(t, (ticks.get(t) || 0) - 1);
+    for (const [i, list] of [c.checked, c.unchecked].entries()) for (const t of list || []) {
+      const n = ticks.get(t) || [0, 0];
+      n[i]++;
+      ticks.set(t, n);
+    }
   }
   const changed = Object.keys(to).filter((f) => from[f] === HIST_UNKNOWN || (from[f] ?? null) !== to[f]);
   const named = { title: "fTitle", body: "fBody", short: "fShort", waiting_on: "fWaiting", also_in: "fAlsoIn", due: "fDue",
@@ -3048,7 +3055,11 @@ function itemHistRow(g, before) {
     else if (named[f]) parts.set(f, tr(named[f]));
   }
   if (changed.includes("sized_by") && to.sized_by === "user" && !parts.has("effort") && !parts.has("benefit")) parts.set("sized", ev.sized);
-  const checked = [...ticks.values()].filter((n) => n > 0).length, unchecked = [...ticks.values()].filter((n) => n < 0).length;
+  // A step ticked and unticked again ends where it started; twins (same text twice) are counted as logged.
+  let checked = 0, unchecked = 0;
+  for (const [t, [c, u]] of ticks) {
+    if (twins.has(t)) { checked += c; unchecked += u; } else { checked += Math.max(c - u, 0); unchecked += Math.max(u - c, 0); }
+  }
   if (checked) parts.set("checked", ev.checkedN(checked));
   if (unchecked) parts.set("unchecked", ev.uncheckedN(unchecked));
   // The session is a note on where a change was made (the link in its own column); only a change of the link alone is named.
@@ -3076,7 +3087,7 @@ function itemHistory(it, summaryText) {
     loaded = true;
     try {
       const r = await api(P(it.project_slug) + "/items/" + encodeURIComponent(it.ref) + "/events");
-      const byRef = (ref) => itemHistRows(r.events.filter((e) => e.item_ref === ref));
+      const byRef = (ref) => itemHistRows(r.events.filter((e) => e.item_ref === ref), ref === r.ref ? it.body : null);
       const own = byRef(r.ref);
       const earlier = r.from.map((f) => ({ f, rows: byRef(f.ref) }));
       const n = own.length + earlier.reduce((s, x) => s + x.rows.length, 0);

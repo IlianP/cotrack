@@ -146,6 +146,17 @@ describe("web app", { skip }, () => {
     await ctx.close();
   });
 
+  it("history: steps with the same text are counted as logged, never netted (D39)", async () => {
+    const ref = await byAi({ title: "Zwillinge", body: "- [ ] gleich\n- [x] gleich\n- [ ] anders" });
+    await patch(ref, { check: "1" });
+    await patch(ref, { uncheck: "2" }); // the other step of the same text – two changes, not one taken back
+    await patch(ref, { check: "3" });
+    const { page, ctx } = await open(`${p}/${ref}`);
+    await page.waitForSelector("dialog[open] .ihist");
+    assert.deepEqual(await histRows(page), ["2 Teilpunkte abgehakt, Häkchen entfernt", "angelegt"]);
+    await ctx.close();
+  });
+
   it("history: what changed in the end stays named – the latest status, a field set back whose old value is unknown", async () => {
     const ref = await byAi({ title: "Bleibt", body: "Alt" });
     await patch(ref, { status: "done" });

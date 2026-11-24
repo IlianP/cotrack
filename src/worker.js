@@ -600,7 +600,9 @@ export async function buildStats(db, { project = null, projects = null, tz = 0 }
   };
 
   // days: created / done / dropped per local day and open at the end of each day, replayed from the change log of the
-  // items that still exist – so a completion stays on its day even if the item was reopened later
+  // items that still exist – so a completion stays on its day even if the item was reopened later. An undo (data.undo,
+  // D33) takes back what it reverts instead of counting anew: reopening by undo uncounts the closing, closing again by
+  // undo uncounts the reopening.
   const tally = new Map(); // dayNum -> counts
   const at = (iso) => {
     const n = dayNum(dayKey(iso));
@@ -608,16 +610,26 @@ export async function buildStats(db, { project = null, projects = null, tz = 0 }
     return tally.get(n);
   };
   const closedNow = new Map(); // key -> closed in the replay so far
+  const lastClose = new Map(), lastReopen = new Map(); // key -> what the latest closing / reopening counted
   const close = (i, k, status, iso) => {
     if (closedNow.get(k)) return;
     closedNow.set(k, true);
-    const t = at(iso);
+    const t = at(iso), o = status === "done" ? ownerOf(i) : null;
+    lastClose.set(k, { t, status, o });
     t[status]++;
     if (status !== "done") return;
-    const o = ownerOf(i);
     if (o === "user" || o === "ai") t["done_" + o]++;
     t.refs.push(k);
   };
+  const uncount = (k) => {
+    const { t, status, o } = lastClose.get(k);
+    lastClose.delete(k);
+    t[status]--;
+    if (status !== "done") return;
+    if (o === "user" || o === "ai") t["done_" + o]--;
+    t.refs.splice(t.refs.lastIndexOf(k), 1);
+  };
+  const isUndo = (e) => { try { return !!(e.data && JSON.parse(e.data).undo); } catch { return false; } };
   const seen = new Set();
   for (const e of events) {
     const k = e.item_ref && key(e.project_slug, e.item_ref);
@@ -631,10 +643,15 @@ export async function buildStats(db, { project = null, projects = null, tz = 0 }
       try { st = e.data ? JSON.parse(e.data).status : null; } catch { st = null; }
       if (CLOSED.includes(st)) close(i, k, st, e.at);
     } else if (e.action === "done" || e.action === "converted" || e.action === "dropped") {
-      close(i, k, e.action === "dropped" ? "dropped" : "done", e.at);
+      if (!closedNow.get(k) && lastReopen.has(k) && isUndo(e)) {
+        lastReopen.get(k).reopened--; // the reopening is taken back, the earlier closing still counts
+        lastReopen.delete(k);
+        closedNow.set(k, true);
+      } else close(i, k, e.action === "dropped" ? "dropped" : "done", e.at);
     } else if (e.action === "reopened" && closedNow.get(k)) {
       closedNow.set(k, false);
-      at(e.at).reopened++;
+      if (lastClose.has(k) && isUndo(e)) uncount(k);
+      else { const t = at(e.at); t.reopened++; lastReopen.set(k, t); }
     }
   }
   // items without a creation event (none expected): fall back to their own dates

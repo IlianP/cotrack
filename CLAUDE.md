@@ -150,7 +150,9 @@
   disappears. Event data holds new values only, so `itemHistBefore` replays the log for the value before each change
   (`HIST_UNKNOWN` where it cannot tell, e.g. a body set at creation – then the field stays named); the web app's undo
   sends `undo: true`, noted on the event (`data.undo`, like `session` not a field), which tells the value before the
-  change it reverts.
+  change it reverts. Ticks are logged by step text: a step ticked and unticked nets out, steps whose text occurs twice
+  in the body (`twins`) are counted as logged (D39). Statistics (`stats` in `src/worker.js`): a reopening by undo uncounts
+  the closing, a closing by undo uncounts the reopening (A140).
 - Footer bar in the board (A134): off by default; ☰ → Chat-Fußzeile → Im Board (`boardFooterRow`) turns it on per device –
   `state.boardFooter`, localStorage `cotrack.boardFooter` = `single` | `multi` (`BOARD_FOOTERS`). `renderFooter` fetches only
   while it is shown; `footerNodes` turns the references in it into `refLink`s (`FOOTER_REF`, `footerKey`).
