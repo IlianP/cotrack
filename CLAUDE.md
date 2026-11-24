@@ -71,6 +71,10 @@
   left them (`UNDO_FIELDS`), and sends what it read as `expect` – `updateItem` compares it inside the UPDATE (`EXPECT_COLS`,
   409 `conflict`, undo then reads again). Deleting has no confirm: `POST …/items/:ref/restore` (`restoreItem` in `src/worker.js`) brings
   the item back from the snapshot in its "deleted" event (event "restored"); the history panel offers it as well.
+  Undo sends `undo: true` (noted as `data.undo`). When it puts back all of the item's latest change (same actor, that
+  change set `updated_at`), `undoStamp` in `src/worker.js` returns `updated_at`/`updated_by` (and `closed_at` when it
+  closes again) to the change before – read from the events, one per write. The undo's event keeps its real time; polling
+  goes by event ids, not `updated_at`, so others still see it.
 - Overview (decision D34): the logo (`#homeBtn`, also ☰ and quick access) opens `#home` – `openHome`/`closeHome`,
   `homeModel`, `renderHome`, `homeCard` in `src/ui.html`; like the statistics it replaces bar and board (`body.home-mode`)
   and follows the poll. It reads the open items of all projects and the newest events, ranks "your turn" with

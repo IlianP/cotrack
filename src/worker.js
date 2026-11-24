@@ -1326,6 +1326,11 @@ export async function updateItem(db, project, item, input, actor) {
     const cols = Object.keys(changes);
     if (!cols.length) return item;
 
+    // An undo of the item's whole latest change leaves no trace on the item either (D33): changed time and author go
+    // back to the change before (and a closing time to the earlier one). The undo's event keeps the real time.
+    const stamp = input.undo ? await undoStamp(db, project, item, changes, actor) : null;
+    if (stamp?.closed_at) changes.closed_at = stamp.closed_at;
+
     let action = "updated";
     if (changes.status === "done") action = "done";
     else if (changes.status === "dropped") action = "dropped";
@@ -1351,7 +1356,7 @@ export async function updateItem(db, project, item, input, actor) {
         `UPDATE items SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ?, updated_by = ? WHERE id = ?` +
           (ticks ? " AND body IS ?" : "") + expect.sql,
       )
-      .bind(...cols.map((c) => changes[c]), t, actor, item.id, ...(ticks ? [item.body] : []), ...expect.args);
+      .bind(...cols.map((c) => changes[c]), stamp?.at ?? t, stamp?.by ?? actor, item.id, ...(ticks ? [item.body] : []), ...expect.args);
     // The event is only written if the update hit the row (changes() refers to the statement before it).
     const event = db
       .prepare(
@@ -1367,6 +1372,36 @@ export async function updateItem(db, project, item, input, actor) {
     }
     item = fresh;
   }
+}
+
+// For an undo (input.undo): { at, by } of the change before the item's latest one – only when that latest change is the
+// one being undone (it set updated_at, by the same actor) and the undo sets back every field it set; otherwise null and
+// the undo counts as a change of its own. Each write of an item logs one event at its updated_at, so the event before
+// tells the time and author to go back to. closed_at: when the undo closes the item again, the time it was closed before.
+const UNDOABLE = ["updated", "done", "dropped", "reopened", "checked"];
+async function undoStamp(db, project, item, changes, actor) {
+  const { results } = await db
+    .prepare("SELECT id, action, actor, data, at FROM events WHERE project_slug = ? AND item_ref = ? ORDER BY id DESC LIMIT 2")
+    .bind(project.slug, item.ref)
+    .all();
+  const [last, prev] = results;
+  if (!prev || last.at !== item.updated_at || last.actor !== actor || !UNDOABLE.includes(last.action)) return null;
+  const d = last.data ? JSON.parse(last.data) : {};
+  const fields = Object.keys(d).filter((k) => EXPECT_COLS.includes(k));
+  if (d.checked || d.unchecked) fields.push("body"); // a tick is logged by its step, but it changed the body
+  if (!fields.length || !fields.every((k) => k in changes)) return null;
+  const stamp = { at: prev.at, by: prev.actor };
+  if (changes.closed_at) {
+    const c = await db
+      .prepare(
+        `SELECT json_extract(data, '$.closed_at') AS closed_at FROM events WHERE project_slug = ? AND item_ref = ? AND id < ?
+         AND json_extract(data, '$.closed_at') IS NOT NULL ORDER BY id DESC LIMIT 1`,
+      )
+      .bind(project.slug, item.ref, last.id)
+      .first();
+    if (c?.closed_at) stamp.closed_at = c.closed_at;
+  }
+  return stamp;
 }
 
 // also_in needs migration 0010; without it, say so instead of failing with an internal error.
