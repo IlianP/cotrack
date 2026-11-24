@@ -1,7 +1,7 @@
 // API and MCP: session links (D35), several sources (D36), the web app's version check (A124). Run with `npm test`.
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
-import { BASE, api, mcp, mcpRaw, freshProject, item, events, refOf } from "./helpers.mjs";
+import { BASE, AI, api, mcp, mcpRaw, freshProject, item, events, refOf } from "./helpers.mjs";
 
 const S1 = "https://claude.ai/code/session_01AAA", S2 = "https://claude.ai/code/session_01BBB";
 const S3 = "https://claude.ai/code/session_01CCC", S4 = "https://claude.ai/code/session_01DDD";
@@ -246,16 +246,64 @@ describe("undo noted on the event (D33)", () => {
   before(async () => { p = await freshProject("undo"); });
 
   it("undo: true lands in the event data as a note, not as a field; anything but a boolean is refused", async () => {
-    const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Undo", body: "Alt" } })).body.item.ref;
+    const created = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Undo", body: "Alt" } })).body.item;
+    const ref = created.ref;
     await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { body: "Neu" } });
     const r = await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { body: "Alt", undo: true, expect: { body: "Neu" } } });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.item.body, "Alt");
     const [ev, before] = await events(p, ref);
-    assert.deepEqual(ev.data, { body: "Alt", undo: true });
+    assert.deepEqual(ev.data, { body: "Alt", undo: { at: created.updated_at, by: "user" } }, "with the stamp it set back");
     assert.equal(before.data.undo, undefined, "an ordinary change carries no note");
     const bad = await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { title: "x", undo: "yes" } });
     assert.equal(bad.status, 400);
     assert.equal((await item(p, ref)).title, "Undo");
+  });
+
+  const patch = (ref, body, token) => api(`/projects/${p}/items/${ref}`, { method: "PATCH", body, token });
+
+  it("an undo of the whole latest change puts back the changed time and author, the event keeps the real time", async () => {
+    const created = (await api(`/projects/${p}/items`, { method: "POST", token: AI, body: { kind: "A", title: "Zeit", owner: "user" } })).body.item;
+    await patch(created.ref, { status: "done" });
+    const it = (await patch(created.ref, { status: "open", undo: true, expect: { status: "done" } })).body.item;
+    assert.equal(it.status, "open");
+    assert.equal(it.closed_at, null);
+    assert.equal(it.updated_at, created.updated_at, "changed time as before the change");
+    assert.equal(it.updated_by, "ai", "and its author");
+    const [undo] = await events(p, created.ref);
+    assert.deepEqual(undo.data.undo, { at: created.updated_at, by: "ai" });
+    assert.ok(undo.at > created.updated_at, "the log still has the undo at its own time");
+  });
+
+  it("a second edit and undo goes back to the same stamp, not to the time of the first undo", async () => {
+    const created = (await api(`/projects/${p}/items`, { method: "POST", token: AI, body: { kind: "A", title: "Zweimal", owner: "user" } })).body.item;
+    for (const title of ["Eins", "Zwei"]) {
+      await patch(created.ref, { title });
+      const it = (await patch(created.ref, { title: "Zweimal", undo: true })).body.item;
+      assert.deepEqual([it.updated_at, it.updated_by], [created.updated_at, "ai"], title);
+    }
+  });
+
+  it("undoing a reopen closes the item again at the time it was closed before", async () => {
+    const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Wieder zu" } })).body.item.ref;
+    const done = (await patch(ref, { status: "done" })).body.item;
+    await patch(ref, { status: "open" });
+    const it = (await patch(ref, { status: "done", undo: true })).body.item;
+    assert.equal(it.closed_at, done.closed_at);
+    assert.equal(it.updated_at, done.updated_at);
+  });
+
+  it("an undo that leaves part of the latest change, or comes after someone else's change, counts as a change of its own", async () => {
+    const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Teil", body: "x" } })).body.item.ref;
+    const two = (await patch(ref, { title: "Teil 2", body: "y" })).body.item;
+    let it = (await patch(ref, { title: "Teil", undo: true })).body.item;
+    assert.ok(it.updated_at > two.updated_at, "only the title went back – a change of its own");
+    assert.equal((await events(p, ref))[0].data.undo, true, "noted without a stamp");
+    const ref2 = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Dazwischen" } })).body.item.ref;
+    await patch(ref2, { status: "doing" });
+    const ai = (await patch(ref2, { title: "Von der KI" }, AI)).body.item;
+    it = (await patch(ref2, { status: "open", undo: true })).body.item;
+    assert.ok(it.updated_at > ai.updated_at);
+    assert.equal(it.updated_by, "user");
   });
 });

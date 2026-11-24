@@ -125,8 +125,9 @@ describe("web app", { skip }, () => {
     await ctx.close();
   });
 
-  it("history: a change undone in the web app leaves no row, even where the log does not know the value before", async () => {
+  it("undo in the web app leaves no trace: no history row (even where the log lacks the value before), changed time as before", async () => {
     const ref = await byAi({ title: "Rückgängig", body: "Alt" }); // the creation event does not record the body
+    const created = await item(p, ref);
     const { page, ctx, errors } = await open(`${p}/${ref}`);
     await page.waitForSelector("dialog[open] .ihist");
     await page.fill("dialog[open] textarea:not(.src-input)", "Neu");
@@ -135,7 +136,9 @@ describe("web app", { skip }, () => {
     await page.click("#toast button");
     await page.waitForFunction(() => /rückgängig gemacht/.test(document.querySelector("#toast")?.textContent || ""));
     assert.equal((await item(p, ref)).body, "Alt");
-    assert.equal((await events(p, ref))[0].data.undo, true, "the undo notes itself on the event");
+    assert.deepEqual((await events(p, ref))[0].data.undo, { at: created.updated_at, by: "ai" }, "the undo notes itself and the stamp it set back");
+    const after = await item(p, ref);
+    assert.deepEqual([after.updated_at, after.updated_by], [created.updated_at, "ai"], "changed time and author as before");
     await page.goto(`${BASE}/?t=${Math.random()}#${p}/${ref}`);
     await page.waitForSelector("dialog[open] .ihist");
     assert.deepEqual(await histRows(page), ["angelegt"]);
