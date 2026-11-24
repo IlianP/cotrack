@@ -246,8 +246,9 @@ body.snug .tg { padding: 0 7px; }
 /* the toggles do not fit in one row (narrow phone, many categories): the counts go first, the column heads show them */
 #filterBar.tight #kindChips .n { display: none; }
 
-/* board (D30, layoutBoard): "page" = the page scrolls, columns fill the width (each at most BOARD_MAX px); "fit" = portrait
-   screens, the board fills the screen and every category scrolls on its own; "swipe" = phones, one category per screen.
+/* board (D30, layoutBoard): "fit" = the board fills the screen and every category scrolls on its own (landscape since A136,
+   portrait from two columns on); "page" = the page scrolls, columns fill the width (each at most BOARD_MAX px) – only on
+   low landscape screens (phones held sideways); "swipe" = phones, one category per screen.
    --board-h = the height left below the bars and above the footer line (setBoardHeight). */
 .board { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); align-items: start; margin-inline: auto; }
 body.on-board:not(.stats-mode):not(.home-mode) main { max-width: none; }
@@ -269,8 +270,10 @@ body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
 .board.fit .col-head, .board.swipe .col-head { flex: none; }
 /* only up and down stay inside a category: "contain" on both axes would also swallow the sideways swipe to the next one */
 .board.fit .items, .board.swipe .items { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; }
-/* room to scroll the last items out from under the floating "+" */
-.board.fit .fitcol:last-child > .col:last-child .items, .board.swipe .items { padding-bottom: 68px; }
+/* room for the floating "+" at the bottom right: on phones the last items scroll out from under it; in "fit" the last
+   column ends above it – a short category keeps its own height instead of an empty strip inside its box */
+.board.swipe .items { padding-bottom: 68px; }
+.board.fit .fitcol:last-child { padding-bottom: 54px; }
 .board.swipe {
   position: relative; display: flex; align-items: stretch; gap: 10px; height: var(--board-h, 70vh); margin: 0 -16px; padding: 0 28px;
   overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none;
@@ -336,9 +339,10 @@ body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
 .pill.age { color: var(--text); }
 .pill.size.est { border-style: dashed; color: var(--muted); }
 
-/* compact board (density toggle): one line per item – reference, title, a few signs; the description stays in the dialog */
+/* compact board (density button, three steps: cards → "wrap" → "line"): reference, title, a few signs; the description
+   stays in the dialog. "line" = one line per item, "wrap" = the whole title (narrow columns, e.g. tablets) */
 .sort-btn[hidden] { display: none; }
-.sort-btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+#denseBtn svg:not(.cur) { display: none; }
 .item.dense { padding: 5px 12px; align-items: center; }
 .item.dense .check { width: 18px; height: 18px; margin-top: 0; font-size: 10px; }
 .item.dense .l1 { align-items: center; }
@@ -349,8 +353,17 @@ body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
 .mini .pill { flex: none; padding: 0 1px; border: 0; background: none; font-size: 12px; line-height: 18px; }
 .mini .dot { flex: none; width: 9px; height: 9px; margin: 0 2px; border-radius: 50%; background: var(--accent); }
 .mini .dot.st-blocked { background: var(--danger); }
+/* "wrap": reference and title flow like a sentence, the signs float at the right of the first line – every further line
+   has the full width, not only the room right of the reference */
+.item.dense.wrap { align-items: flex-start; padding: 6px 12px; }
+.item.dense.wrap .check { margin-top: 2px; }
+.item.dense.wrap .l1 { display: block; }
+.item.dense.wrap .ref { margin-right: 6px; }
+.item.dense.wrap .title { white-space: normal; overflow: visible; }
+.item.dense.wrap .mini { float: right; margin: 2px 0 0 8px; }
 
-/* footer line */
+/* footer line: off by default (A134), ☰ → Chat-Fußzeile → Im Board turns it on for this device – the whole footer in one
+   line (at most two on screen) or one line per group as in the chat; the references in it open their item */
 .footline {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; gap: 10px; align-items: center;
   padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
@@ -367,6 +380,8 @@ body.board-fill:not(.stats-mode):not(.home-mode) { padding-bottom: 0; }
   flex: 1; min-width: 0; font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted);
   overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
+.footline.multi code { display: block; -webkit-line-clamp: none; white-space: pre-line; max-height: 35vh; overflow-y: auto; }
+.footline .reflink { color: var(--text); }
 
 /* dialogs */
 dialog {
@@ -1015,9 +1030,13 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
           d="M13.5 15.5L17 19l3.5-3.5"/></svg></button>
         <div id="sortPop" class="sort-pop" hidden></div>
       </div>
-      <!-- density: full cards or one line per item; label and title are set by syncDenseBtn() -->
-      <button type="button" id="denseBtn" class="sort-btn" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path
-        d="M4 6h16"/><path d="M4 10.5h16"/><path d="M4 15h16"/><path d="M4 19.5h16"/></svg></button>
+      <!-- density, three steps: cards · compact with the whole title · one line per item; the icon shows the current one,
+           label, title and icon are set by syncDenseBtn() -->
+      <button type="button" id="denseBtn" class="sort-btn"><svg data-density="" class="cur" viewBox="0 0 24 24" aria-hidden="true"><rect
+        x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/></svg><svg data-density="wrap"
+        viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16"/><path d="M4 9h10"/><path d="M4 15h16"/><path d="M4 19h10"/></svg><svg
+        data-density="line" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16"/><path d="M4 10.5h16"/><path d="M4 15h16"/><path
+        d="M4 19.5h16"/></svg></button>
     </div>
     <div class="bar-filter" id="filterBar">
       <div class="tgs" id="kindChips" role="group" aria-label="Nach Kategorie filtern" data-t-attr="aria-label:kindsGroup"></div>
@@ -1063,7 +1082,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
   data-t-attr="aria-label:addOpen;title:addOpen" hidden><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
   stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
 
-<footer class="footline">
+<footer class="footline" hidden>
   <code id="footerText" title="Fußzeile für den Chat" data-t-attr="title:footerTitle"></code>
   <button type="button" id="copyFooter" class="icon-copy" aria-label="Fußzeile kopieren" title="Fußzeile kopieren"
     data-t-attr="aria-label:footerCopyTitle;title:footerCopyTitle"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
@@ -1161,6 +1180,9 @@ const STRINGS = {
     menuStatusMd: "STATUS.md-Abschnitt kopieren", statusMdCopied: "STATUS.md-Abschnitt kopiert",
     secDevice: "Dieses Gerät", secProjects: "Projekte", secFooter: "Chat-Fußzeile", secAccess: (who) => "Zugang · angemeldet als " + who,
     footerCopy: "Kopieren", footerCopyTitle: "Fußzeile kopieren", footerCustomize: "Anpassen …", menuApi: "API-Doku ↗",
+    boardFooter: "Im Board", boardFooterHelp: "Die Leiste unten im Board – nur auf diesem Gerät. Ihre Kennungen öffnen den Punkt.",
+    boardFooterOpt: { off: "Aus", single: "Eine Zeile", multi: "Je Gruppe" },
+    boardFooterTip: { off: "Keine Leiste im Board", single: "Die ganze Fußzeile in einer Zeile", multi: "Eine Zeile je Gruppe, wie im Chat" },
     apiDocs: "https://github.com/IlianP/cotrack/blob/main/README.de.md#api",
     demoWelcome: "Öffentliche Demo: Probier alles aus – jede Nacht wird alles zurückgesetzt.", demoSignIn: "Mit Token anmelden",
     secAccessGuest: "Zugang · Demo ohne Token",
@@ -1175,7 +1197,7 @@ const STRINGS = {
     language: "Sprache", langAuto: "Automatisch – Web-App nach der Sprache des Browsers, KI auf Deutsch",
     langHelp: "Gilt auf allen Geräten und für deine KI-Assistenten (Anweisungen, Werkzeuge, Antworten, Fußzeile).",
     footerDialog: "Chat-Fußzeile anpassen",
-    settingsIntro: "Gilt auf allen Geräten: für jede KI, die die Fußzeile über cotrack holt (MCP und API), und für ☰ → Chat-Fußzeile → Kopieren. Die Leiste unten zeigt sie immer einzeilig. Wann die Fußzeile im Chat erscheint, regelt dein Prompt.",
+    settingsIntro: "Gilt auf allen Geräten: für jede KI, die die Fußzeile über cotrack holt (MCP und API), und für ☰ → Chat-Fußzeile → Kopieren. Wann die Fußzeile im Chat erscheint, regelt dein Prompt. Die Leiste unten im Board schaltest du pro Gerät unter ☰ → Chat-Fußzeile → Im Board ein.",
     layoutMulti: "Mehrzeilig – je Gruppe eine Zeile", layoutSingle: "Einzeilig – alles in einer Zeile",
     defaultMark: (v) => `${v}  (Standard)`, defaultLayout: "Standard-Layout",
     markerUser: "Kennzeichen für deine Punkte", markerAi: "Kennzeichen für Punkte der KI", previewLabel: "Vorschau:",
@@ -1349,7 +1371,8 @@ const STRINGS = {
     // Fälligkeiten
     dueOver: (n) => (n === 1 ? "seit gestern überfällig" : `${n} Tage überfällig`), dueToday: "heute", dueTomorrow: "morgen",
     dueIn: (n) => `in ${n} Tagen`, nextDue: (t) => `Fällig ${t}`,
-    denseOn: "Kompakt: eine Zeile je Punkt", denseOff: "Ausführlich: Karten mit Beschreibung", waitDone: "Voraussetzung erledigt – wartet nicht mehr darauf",
+    density: { cards: "Karten mit Beschreibung", wrap: "Kompakt, ganzer Titel", line: "Kompakt, eine Zeile" },
+    densityLabel: (cur, next) => `Ansicht: ${cur} – nächste: ${next}`, waitDone: "Voraussetzung erledigt – wartet nicht mehr darauf",
   },
   en: {
     owners: { user: "You", ai: "AI" },
@@ -1401,6 +1424,9 @@ const STRINGS = {
     menuStatusMd: "Copy STATUS.md section", statusMdCopied: "STATUS.md section copied",
     secDevice: "This device", secProjects: "Projects", secFooter: "Chat footer", secAccess: (who) => "Access · signed in as " + who,
     footerCopy: "Copy", footerCopyTitle: "Copy footer", footerCustomize: "Customize …", menuApi: "API docs ↗",
+    boardFooter: "On the board", boardFooterHelp: "The bar at the bottom of the board – this device only. Its references open the item.",
+    boardFooterOpt: { off: "Off", single: "One line", multi: "Per group" },
+    boardFooterTip: { off: "No bar on the board", single: "The whole footer on one line", multi: "One line per group, as in the chat" },
     apiDocs: "https://github.com/IlianP/cotrack#api",
     demoWelcome: "Public demo: try anything – everything is reset every night.", demoSignIn: "Sign in with token",
     secAccessGuest: "Access · demo without a token",
@@ -1415,7 +1441,7 @@ const STRINGS = {
     language: "Language", langAuto: "Automatic – web app in the browser's language, AI in German",
     langHelp: "Applies on every device and to your AI assistants (instructions, tools, answers, footer).",
     footerDialog: "Customize chat footer",
-    settingsIntro: "Applies on every device: to every AI that fetches the footer from cotrack (MCP and API) and to ☰ → Chat footer → Copy. The bar at the bottom always shows it on one line. When the footer appears in the chat is up to your prompt.",
+    settingsIntro: "Applies on every device: to every AI that fetches the footer from cotrack (MCP and API) and to ☰ → Chat footer → Copy. When the footer appears in the chat is up to your prompt. The bar at the bottom of the board is turned on per device under ☰ → Chat footer → On the board.",
     layoutMulti: "Multi-line – one line per group", layoutSingle: "Single line – everything on one line",
     defaultMark: (v) => `${v}  (default)`, defaultLayout: "Default layout",
     markerUser: "Marker for your items", markerAi: "Marker for the AI's items", previewLabel: "Preview:",
@@ -1589,7 +1615,8 @@ const STRINGS = {
     // Due dates
     dueOver: (n) => (n === 1 ? "overdue since yesterday" : `${n} days overdue`), dueToday: "today", dueTomorrow: "tomorrow",
     dueIn: (n) => `in ${n} days`, nextDue: (t) => `Due ${t}`,
-    denseOn: "Compact: one line per item", denseOff: "Detailed: cards with description", waitDone: "Prerequisite done – no longer waiting for it",
+    density: { cards: "Cards with description", wrap: "Compact, whole title", line: "Compact, one line" },
+    densityLabel: (cur, next) => `View: ${cur} – next: ${next}`, waitDone: "Prerequisite done – no longer waiting for it",
   },
 };
 const lookup = (dict, key) => key.split(".").reduce((o, k) => (o == null ? o : o[k]), dict);
@@ -1630,6 +1657,11 @@ const VIEWS = ["open", "closed", "all"];
 const MODES = ["board", "next", "deps"]; // the icons in the top bar: Board · Next (A53) · Ketten (A55)
 // Board order within a column (A81): "num" = by number (the server's order), otherwise newest first by that time.
 const SORTS = ["num", "changed", "created", "due"];
+// Board density (A135), cycled by one button: "" = cards with description, "wrap" = compact with the whole title, "line" =
+// one line per item. localStorage "cotrack.dense": "1" = line (as before the middle step existed), "wrap".
+const DENSITIES = ["", "wrap", "line"];
+// The footer bar at the bottom of the board (A134), per device: "" = off (default), "single" | "multi" = its layout.
+const BOARD_FOOTERS = ["", "single", "multi"];
 const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
 const SORT_SYM = { num: "#", changed: "↻", created: "+", due: "◷" };
 // Order of the project lists (A120, D37), chosen in the picker's "Alle Projekte" row and remembered on this device:
@@ -1656,7 +1688,8 @@ const state = {
   projectSort: PROJECT_SORTS.includes(store.get("cotrack.projectSort")) ? store.get("cotrack.projectSort") : "changed",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
-  dense: store.get("cotrack.dense") === "1", // board: one line per item (this device)
+  density: store.get("cotrack.dense") === "1" ? "line" : store.get("cotrack.dense") === "wrap" ? "wrap" : "", // board (this device)
+  boardFooter: BOARD_FOOTERS.includes(store.get("cotrack.boardFooter")) ? store.get("cotrack.boardFooter") : "",
 };
 
 /* tiny DOM helper: never uses innerHTML, so user text cannot inject markup */
@@ -1946,7 +1979,7 @@ function renderProjects() {
   const noAdd = state.project === ALL || !state.project;
   $("#fab").hidden = noAdd;
   if (noAdd) setAddOpen(false);
-  $("#footerText").parentElement.hidden = state.project === ALL;
+  syncFooterBar();
 }
 
 function renderKindSeg() {
@@ -2029,7 +2062,7 @@ function render(before) {
   if (mode === "deps") return renderDeps(cols, before);
   // Columns that scroll on their own (fit, swipe) keep their place across live updates; another filter, search, view or
   // order starts them at the top.
-  const sig = [state.project, state.view, state.q, state.owner, state.kind, state.sort].join("|");
+  const sig = [state.project, state.view, state.q, state.owner, state.kind, state.sort, state.density].join("|");
   const kept = sig === boardSig
     ? new Map([...board.querySelectorAll("section.col")].map((s) => [s.dataset.kind, s.querySelector(".items")?.scrollTop || 0]))
     : new Map();
@@ -2049,22 +2082,24 @@ function render(before) {
 }
 
 /* Board layout (D30), chosen by the screen:
-   - "page" (landscape): the page scrolls. As many columns as fit (BOARD_MIN px each), across the whole width but at most
-     BOARD_MAX px each; with more categories than columns the extra ones go under the shortest column (packBoard).
-   - "fit" (portrait from two columns on: a monitor turned upright, a tablet): the board fills the screen and every
-     category scrolls on its own. The categories are spread over the columns by their number of items (fitPlan), so a
-     large one gets a column of its own and small ones share one; within a column they keep their order.
+   - "fit" (landscape, and portrait from two columns on: a monitor turned upright, a tablet): the board fills the screen
+     and every category scrolls on its own, so the others stay in view (landscape too since A136). As many columns as fit
+     (BOARD_MIN px each), at most BOARD_MAX px each. The categories are spread over the columns by their number of items
+     (fitPlan), so a large one gets a column of its own and small ones share one; within a column they keep their order.
+   - "page" (landscape screens too low for columns that scroll – a phone held sideways – or with room for only one
+     column): the page scrolls; with more categories than columns the extra ones go under the shortest column (packBoard).
    - "swipe" (phones, and portrait screens too narrow for two columns): one category per screen, swiped sideways; the
      category toggles jump to a category and show which one is in view (jumpLane, syncLaneChips). */
 const BOARD_MIN = 290, BOARD_MAX = 640, BOARD_SOLO = 760, BOARD_GAP = 14;
-const PHONE = matchMedia("(max-width: 560px)"), PORTRAIT = matchMedia("(orientation: portrait)");
+const PHONE = matchMedia("(max-width: 560px)"), PORTRAIT = matchMedia("(orientation: portrait)"), LOW = matchMedia("(max-height: 500px)");
 let boardSig = "", boardShape = "";
 function boardWidth() { return $("main").clientWidth - 32; } // main's padding
 function boardColumns(width) { return Math.max(1, Math.floor((width + BOARD_GAP) / (BOARD_MIN + BOARD_GAP))); }
 function boardLayout() {
   if (PHONE.matches) return "swipe";
-  if (!PORTRAIT.matches) return "page";
-  return boardColumns(boardWidth()) < 2 ? "swipe" : "fit";
+  const two = boardColumns(boardWidth()) >= 2;
+  if (PORTRAIT.matches) return two ? "fit" : "swipe";
+  return two && !LOW.matches ? "fit" : "page";
 }
 function layoutBoard(layout, visible, sections) {
   const board = $("#board");
@@ -2124,7 +2159,8 @@ function setBoardHeight() {
   if (!board.classList.contains("fit") && !board.classList.contains("swipe")) return board.style.removeProperty("--board-h");
   const foot = $(".footline");
   const top = board.getBoundingClientRect().top + window.scrollY;
-  const h = window.innerHeight - top - (foot.hidden ? 0 : foot.offsetHeight) - 12;
+  // below it: main's bottom padding (14px) – the page itself must not scroll, also without the footer bar (A134)
+  const h = window.innerHeight - top - (foot.hidden ? 0 : foot.offsetHeight) - 14;
   board.style.setProperty("--board-h", Math.max(280, Math.floor(h)) + "px");
 }
 // Width or orientation changed: a new layout or column count builds the board again, otherwise only its height follows.
@@ -2411,8 +2447,8 @@ function renderItem(it, k, before) {
   const check = h("button", { class: "check", title: closed ? tr("reopen") : tr("markDone"), "aria-label": closed ? tr("reopenAria", it.ref) : tr("doneAria", it.ref),
     onclick: () => setStatus(it, closed ? "open" : "done") }, closed ? "✓" : "");
   const ref = h("button", { class: "ref", title: tr("copyRef"), onclick: (e) => { e.stopPropagation(); copy(`${refLabel(it)} ${it.title}`); } }, refLabel(it));
-  if (state.dense) {
-    // One line: what is needed to pick an item – does it wait, is someone on it, how far, for whom. Everything else in the dialog.
+  if (state.density) {
+    // Compact: what is needed to pick an item – does it wait, is someone on it, how far, for whom. Everything else in the dialog.
     const mini = [];
     // (the project is already in the reference: "WEB:A4" in "Alle Projekte" and for items shown from another project)
     if (age) mini.push(age);
@@ -2423,9 +2459,13 @@ function renderItem(it, k, before) {
     if (checks.length) mini.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
     if (it.due) mini.push(duePill(it, true));
     if (k.actionable && it.owner && it.owner !== k.default_owner) mini.push(h("span", { class: "pill", title: ownerLabel(it.owner) }, it.owner === "ai" ? "🤖" : "👤"));
-    return h("li", { class: cls + " dense" + (waits.length ? " waits" : ""), title: it.title }, check,
+    const signs = mini.length ? h("span", { class: "mini" }, mini) : null, title = h("span", { class: "title" }, it.title);
+    // "line" cuts the title at the end of the line (the tooltip has it all); "wrap" shows it whole, the signs float at the
+    // right of the first line (so they come first).
+    const wrap = state.density === "wrap";
+    return h("li", { class: cls + " dense" + (wrap ? " wrap" : "") + (waits.length ? " waits" : ""), title: wrap ? null : it.title }, check,
       h("div", { class: "main", onclick: () => openEdit(it) },
-        h("div", { class: "l1" }, ref, h("span", { class: "title" }, it.title), mini.length ? h("span", { class: "mini" }, mini) : null)));
+        h("div", { class: "l1" }, wrap ? [signs, ref, title] : [ref, title, signs])));
   }
   if (age) meta.unshift(age);
   return h("li", { class: cls },
@@ -2472,12 +2512,51 @@ function ageText(iso) {
   return days < 30 ? tr("ageDays", days) : tr("ageOn", shortDate(iso));
 }
 
+/* The footer bar at the bottom of the board (A134): off by default; ☰ → Chat-Fußzeile → Im Board turns it on for this
+   device, in one line or one line per group. Only in a project, not in "Alle Projekte". */
+const footerShown = () => !!state.boardFooter && !!state.project && state.project !== ALL;
+function syncFooterBar() {
+  const bar = $(".footline");
+  bar.hidden = !footerShown();
+  bar.classList.toggle("multi", state.boardFooter === "multi");
+}
 async function renderFooter() {
-  if (!state.project || state.project === ALL) return;
+  syncFooterBar();
+  if (!footerShown()) return;
+  const slug = state.project, layout = state.boardFooter;
   try {
-    const { footer } = await api(P(state.project) + "/footer?layout=single&lang=" + LANG);
-    $("#footerText").textContent = footer || tr("footerEmpty");
+    const { footer } = await api(P(slug) + "/footer?layout=" + layout + "&lang=" + LANG);
+    if (slug !== state.project || layout !== state.boardFooter) return; // an older request
+    $("#footerText").replaceChildren(...(footer ? footerNodes(footer) : [tr("footerEmpty")]));
   } catch {}
+}
+function setBoardFooter(value) {
+  state.boardFooter = value;
+  store.set("cotrack.boardFooter", value || null);
+  $("#footerText").replaceChildren(); // no text of the other layout while the new one loads
+  renderFooter();
+}
+// References in the footer ("A4", "▶A15,A12", "UZ:A4", "BUG12") open their item; everything else stays text. A category
+// code has 1–4 letters (KIND_RE in src/worker.js); only known categories count, so "HTML5" in a short label stays text.
+const FOOTER_REF = /(?<![\w:])((?:[A-Za-z0-9][\w-]*:)?([A-Z]{1,4})\d{1,6})(?!\w)/g;
+function footerNodes(text) {
+  const out = [];
+  let at = 0;
+  for (const m of text.matchAll(FOOTER_REF)) {
+    const key = state.allKinds.some((k) => k.code === m[2]) && footerKey(m[1]);
+    if (!key) continue;
+    out.push(text.slice(at, m.index), refLink(key));
+    at = m.index + m[1].length;
+  }
+  out.push(text.slice(at));
+  return out;
+}
+// "A4" belongs to the project in view, "UZ:A4" to the project with that code (or slug).
+function footerKey(label) {
+  const n = label.indexOf(":");
+  if (n < 0) return state.project + ":" + label;
+  const pre = label.slice(0, n), p = state.projects.find((x) => x.code === pre || x.slug === pre);
+  return p ? p.slug + ":" + label.slice(n + 1) : null;
 }
 
 /* ---------------------------------------------------------- Next (A53) */
@@ -4195,18 +4274,23 @@ $("#sortPop").addEventListener("keydown", (e) => {
   else if (e.key === "Escape") { e.preventDefault(); setSortOpen(false, true); }
   else if (e.key === "Tab") setSortOpen(false);
 });
-/* density: full cards or one line per item (board only); remembered on this device */
+/* density (A135): one button steps through cards → compact with the whole title → one line → cards (board only); the icon
+   shows the current step, the label also the next one; remembered on this device */
+const densityName = (d) => tr("density." + (d || "cards"));
+const nextDensity = () => DENSITIES[(DENSITIES.indexOf(state.density) + 1) % DENSITIES.length];
 function syncDenseBtn() {
-  const b = $("#denseBtn"), label = tr(state.dense ? "denseOff" : "denseOn");
+  const b = $("#denseBtn"), label = tr("densityLabel", densityName(state.density), densityName(nextDensity()));
   b.title = label; b.setAttribute("aria-label", label);
-  b.setAttribute("aria-pressed", String(state.dense));
+  b.classList.toggle("on", !!state.density);
+  for (const svg of b.querySelectorAll("svg")) svg.classList.toggle("cur", svg.dataset.density === state.density);
 }
 syncDenseBtn();
 $("#denseBtn").addEventListener("click", () => {
-  state.dense = !state.dense;
-  store.set("cotrack.dense", state.dense ? "1" : null);
+  state.density = nextDensity();
+  store.set("cotrack.dense", { line: "1", wrap: "wrap" }[state.density] || null);
   syncDenseBtn();
   render();
+  toast(densityName(state.density));
 });
 // Sorted by time, "vor 5 Min." and the 24-hour tint depend on the clock, not only on data: poll() re-renders only when
 // something changed, so a quiet board is redrawn every minute while visible, and right away when it comes back.
@@ -5009,6 +5093,7 @@ function openMenu() {
       state.projects.length ? h("button", { type: "button", class: "btn", onclick: go(openHome) }, tr("menuHome")) : null,
       state.project ? h("button", { type: "button", class: "btn", onclick: go(openStats) }, tr("menuStats")) : null),
     sec(tr("secFooter")),
+    boardFooterRow(),
     h("div", { class: "menu-row" },
       inProject ? h("button", { type: "button", class: "btn", onclick: go(copyFooter) }, tr("footerCopy")) : null,
       state.guest ? null : h("button", { type: "button", class: "btn", onclick: go(openFooterSettings) }, tr("footerCustomize"))),
@@ -5060,6 +5145,16 @@ function installRow() {
     } }, tr("installApp")));
   }
   return isIos() ? h("p", { class: "small" }, tr("installIos")) : null;
+}
+// The footer bar at the bottom of the board (A134), per device: off, one line, one line per group. Applies at once, the menu
+// stays open.
+function boardFooterRow() {
+  const seg = h("div", { class: "seg txt", role: "group", "aria-label": tr("boardFooter") }, BOARD_FOOTERS.map((value) =>
+    h("button", { type: "button", title: tr("boardFooterTip." + (value || "off")), "aria-pressed": String(value === state.boardFooter),
+      onclick: (e) => { setBoardFooter(value); for (const b of seg.children) b.setAttribute("aria-pressed", String(b === e.currentTarget)); } },
+    tr("boardFooterOpt." + (value || "off")))));
+  return [h("div", { class: "theme-row" }, h("span", { class: "small" }, tr("boardFooter")), h("span", { class: "spacer" }), seg),
+    h("p", { class: "small" }, tr("boardFooterHelp"))];
 }
 // Language (setting `language`, D19): one choice for the web app on every device and for the AI. Saved on the server –
 // only with the user token – then the page reloads so that every text switches. "Auto" removes the choice.

@@ -110,9 +110,9 @@ Alles, was cotrack kann – von Teilpunkten, Fälligkeiten und Rückgängig bis 
 - **MCP-Server** – funktioniert mit Claude (claude.ai, Claude Code) und ChatGPT; die Antworten sind kompakter Text, um
   Tokens zu sparen.
 - **Live** – die Web-App übernimmt Änderungen von dir oder einer KI innerhalb weniger Sekunden.
-- **Board für jeden Bildschirm** – quer füllen die Spalten die ganze Breite. Hochkant (Monitor, Tablet) passt das Board auf
-  einen Bildschirm: Jede Kategorie scrollt für sich, kleine Kategorien teilen sich eine Spalte. Auf dem Handy wischst du von
-  Kategorie zu Kategorie, ein Tipp auf D, A, I oder W springt direkt hin.
+- **Board für jeden Bildschirm** – das Board passt auf einen Bildschirm, jede Kategorie scrollt für sich, die anderen bleiben
+  im Blick: Quer füllen die Spalten die ganze Breite, hochkant (Monitor, Tablet) teilen sich kleine Kategorien eine Spalte.
+  Auf dem Handy wischst du von Kategorie zu Kategorie, ein Tipp auf D, A, I oder W springt direkt hin.
 - **Übersicht** – ein Tipp auf das Logo zeigt alle Projekte auf einer Seite: vier Zahlen über alle Projekte (du bist dran,
   überfällig, bei der KI, neu für dich – jede führt in die passende Ansicht) und je Projekt eine Karte mit den offenen
   Punkten nach Kategorie, deinen drei nächsten Punkten, dem, was wartet oder bei der KI liegt, und dem, was fällig ist.
@@ -123,8 +123,9 @@ Alles, was cotrack kann – von Teilpunkten, Fälligkeiten und Rückgängig bis 
   (⏸ A10, ▶ A16) öffnen den Punkt, den sie nennen.
 - **Sortierung und Kompakt-Ansicht** – das Symbol neben der Suche sortiert das Board nach Nummer (Standard), nach letzter
   Änderung, nach Anlage oder nach Fälligkeit. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip),
-  und was in den letzten 24 Stunden geändert wurde, ist leicht hinterlegt. Das Symbol daneben zeigt eine Zeile je Punkt
-  statt Karten. Eine erledigte Voraussetzung steht als ✓ statt ⏸ da. Gespeichert pro Gerät.
+  und was in den letzten 24 Stunden geändert wurde, ist leicht hinterlegt. Das Symbol daneben schaltet durch: Karten, kompakt
+  mit ganzem Titel (für schmale Spalten, z. B. auf dem Tablet) und eine Zeile je Punkt. Eine erledigte Voraussetzung steht
+  als ✓ statt ⏸ da. Gespeichert pro Gerät.
 - **Reihenfolge der Projekte** – der Knopf in der Zeile „Alle Projekte“ der Projektauswahl legt fest, wie Projekte
   aufgelistet werden: zuletzt geändert (Standard; von dir oder der KI), nach Name (A–Z) oder zuletzt auf diesem Gerät
   geöffnet. Gilt für alle Projektlisten der Web-App, gespeichert pro Gerät.
@@ -137,7 +138,8 @@ Alles, was cotrack kann – von Teilpunkten, Fälligkeiten und Rückgängig bis 
   oder ChatGPT trägst du den Link selbst ein.
 - **Chat-Fußzeile** – die Zusammenfassung oben, eine Zeile je Gruppe oder alles in einer Zeile – das stellst du in der
   Web-App ein (☰ → Chat-Fußzeile → Anpassen), ebenso die Kennzeichen 👤 / 🤖; eine kurze „neu / erledigt“-Zeile für Antworten, die
-  etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind.
+  etwas ändern; ein Block pro Projekt, wenn mehrere im Spiel sind. Im Board erscheint sie als Leiste unten nur, wenn du sie
+  einschaltest (☰ → Chat-Fußzeile → Im Board, pro Gerät: eine Zeile oder eine Zeile je Gruppe); ihre Kennungen öffnen den Punkt.
 - **PrioFlow** – ein Skill, mit dem die KI die offenen Punkte bewertet und dich durch die nächsten führt
   ([Details unten](#prioflow-was-ist-als-nächstes-dran)).
 - **Next** – eine Ansicht, die dir einen deiner Punkte nach dem anderen zeigt: zuerst Angefangenes, dann was überfällig

@@ -1,5 +1,5 @@
-// The web app in a real browser (Playwright): several sources in the edit dialog (D36), what an outdated page does (A124)
-// and the layout of top bar and board on a monitor turned upright (A127).
+// The web app in a real browser (Playwright): several sources in the edit dialog (D36), what an outdated page does (A124),
+// the layout of top bar and board on a monitor turned upright (A127) and on a tablet (A134–A136).
 // Skipped when Playwright is not installed (`npm i -D playwright` and `npx playwright install chromium` to run them).
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
@@ -22,10 +22,12 @@ describe("web app", { skip }, () => {
 
   // A signed-in page; serve() may replace the page itself (an outdated version), api() may rewrite API answers.
   // noAutoReload: as if the page had just reloaded itself (it does so at most once a minute), so it stays as it is.
-  async function open(path, { serve, apiHeader, noAutoReload, locale = "de-DE", viewport = { width: 1000, height: 900 }, dense } = {}) {
+  // storage: further localStorage entries for this device (density, footer bar, …).
+  async function open(path, { serve, apiHeader, noAutoReload, locale = "de-DE", viewport = { width: 1000, height: 900 }, dense, storage } = {}) {
     const ctx = await browser.newContext({ viewport, locale });
     await ctx.addInitScript((t) => { try { localStorage.setItem("cotrack.token", t); } catch {} }, USER);
     if (dense) await ctx.addInitScript(() => { try { localStorage.setItem("cotrack.dense", "1"); } catch {} });
+    if (storage) await ctx.addInitScript((s) => { try { for (const [k, v] of Object.entries(s)) localStorage.setItem(k, v); } catch {} }, storage);
     if (noAutoReload) await ctx.addInitScript(() => { try { sessionStorage.setItem("cotrack.reloadAt", String(Date.now())); } catch {} });
     const page = await ctx.newPage();
     const errors = [];
@@ -203,6 +205,145 @@ describe("web app", { skip }, () => {
       assert.ok(boxes.length >= 2, "at least one column holds two categories");
       for (const b of boxes) assert.ok(b.bottom <= b.content + 4, `${b.kind}: box ends at ${b.bottom}px, its items at ${b.content}px`);
       await ctx.close();
+    });
+  });
+
+  // A tablet: the user's Redmi Pad 2 Pro, about 1280 × 800 CSS px, minus the browser's bars – long titles, a long category.
+  describe("tablet", () => {
+    const LAND = { width: 1280, height: 720 }, PORT = { width: 800, height: 1200 };
+    const LONG = "Impressum und Datenschutzerklärung an die neue Adresse anpassen";
+    let tp;
+    before(async () => {
+      tp = await freshProject("ui-tablet");
+      for (const [kind, n] of [["D", 3], ["A", 30], ["I", 4], ["W", 2]]) {
+        for (let i = 1; i <= n; i++) await api(`/projects/${tp}/items`, { method: "POST", body: { kind, title: `${LONG} ${i}` } });
+      }
+    });
+    const board = (page) => page.evaluate(() => {
+      const cols = [...document.querySelectorAll("#board section.col")], a = document.querySelector('#board section.col[data-kind="A"] .items');
+      return { layout: document.querySelector("#board").className, page: document.documentElement.scrollHeight - innerHeight,
+        lefts: new Set(cols.map((s) => Math.round(s.getBoundingClientRect().left))).size, scrolls: a.scrollHeight > a.clientHeight + 1 };
+    });
+
+    it("landscape: every category scrolls on its own, the others stay in view (A136)", async () => {
+      const { page, ctx, errors } = await open(tp, { viewport: LAND });
+      await page.waitForSelector("#board section.col li.item");
+      const b = await board(page);
+      assert.match(b.layout, /\bfit\b/);
+      assert.equal(b.lefts, 4, "four categories side by side");
+      assert.ok(b.page <= 0, `the page itself does not scroll (${b.page}px)`);
+      assert.ok(b.scrolls, "the long category scrolls inside its column");
+      const top = () => page.evaluate(() => document.querySelector('#board section.col[data-kind="D"]').getBoundingClientRect().top);
+      const before = await top();
+      await page.mouse.move(400, 500); // over the second column (A)
+      await page.mouse.wheel(0, 900);
+      await page.waitForTimeout(300);
+      assert.ok(await page.evaluate(() => document.querySelector('#board section.col[data-kind="A"] .items').scrollTop) > 0, "A scrolled");
+      assert.equal(await top(), before, "D did not move");
+      assert.deepEqual(errors, []);
+      await ctx.close();
+    });
+
+    it("portrait: two columns that scroll on their own; a phone held sideways keeps the scrolling page", async () => {
+      let { page, ctx } = await open(tp, { viewport: PORT });
+      await page.waitForSelector("#board section.col li.item");
+      let b = await board(page);
+      assert.match(b.layout, /\bfit\b/);
+      assert.equal(b.lefts, 2);
+      await ctx.close();
+      ({ page, ctx } = await open(tp, { viewport: { width: 844, height: 390 } }));
+      await page.waitForSelector("#board section.col li.item");
+      b = await board(page);
+      assert.match(b.layout, /\bpage\b/, "too low for columns that scroll");
+      await ctx.close();
+    });
+
+    it("density: one button steps through cards → whole title → one line and remembers it (A135)", async () => {
+      const { page, ctx, errors } = await open(tp, { viewport: LAND });
+      await page.waitForSelector("#board li.item");
+      const look = () => page.evaluate(() => {
+        const li = document.querySelector('#board section.col[data-kind="A"] li.item'), t = li.querySelector(".title");
+        const r = li.getBoundingClientRect(), last = [...t.getClientRects()].pop();
+        return { cls: li.className, saved: localStorage.getItem("cotrack.dense"), label: document.querySelector("#denseBtn").getAttribute("aria-label"),
+          desc: !!li.querySelector(".desc, .meta"), cut: getComputedStyle(t).whiteSpace === "nowrap" && t.scrollWidth > t.clientWidth + 1,
+          lines: t.getClientRects().length, inside: last.bottom <= r.bottom && last.right <= r.right };
+      });
+      let s = await look();
+      assert.ok(!/\bdense\b/.test(s.cls), "starts with cards");
+      assert.match(s.label, /Karten.*Kompakt, ganzer Titel/);
+      await page.click("#denseBtn");
+      s = await look();
+      assert.match(s.cls, /\bdense\b.*\bwrap\b/);
+      assert.equal(s.saved, "wrap");
+      assert.equal(s.desc, false, "no description, no pills");
+      assert.equal(s.cut, false, "the title is not cut");
+      assert.ok(s.lines >= 2 && s.inside, `the whole title over ${s.lines} lines inside the item`);
+      await page.click("#denseBtn");
+      s = await look();
+      assert.match(s.cls, /\bdense\b/);
+      assert.ok(!/\bwrap\b/.test(s.cls));
+      assert.equal(s.saved, "1", "one line – stored as before, so older pages and this one agree");
+      assert.equal(s.cut, true, "one line: the long title is cut");
+      await page.reload();
+      await page.waitForSelector("#board li.item.dense");
+      await page.click("#denseBtn");
+      s = await look();
+      assert.ok(!/\bdense\b/.test(s.cls), "back to cards");
+      assert.equal(s.saved, null);
+      assert.deepEqual(errors, []);
+      await ctx.close();
+    });
+
+    it("footer bar: off by default, ☰ turns it on for this device, its references open the item (A134)", async () => {
+      const { page, ctx, errors } = await open(tp, { viewport: LAND });
+      await page.waitForSelector("#board li.item");
+      assert.equal(await page.isVisible(".footline"), false, "no bar by default");
+      const fill = () => page.evaluate(() => innerHeight - document.querySelector("#board").getBoundingClientRect().bottom);
+      const free = await fill();
+      await page.click("#menuBtn");
+      await page.click("dialog[open] button:text-is('Je Gruppe')");
+      await page.waitForSelector(".footline.multi #footerText .reflink");
+      assert.equal(await page.evaluate(() => localStorage.getItem("cotrack.boardFooter")), "multi");
+      assert.equal(await page.evaluate(() => document.querySelector("#footerText").textContent.split("\n").length), 3, "one line per group: 👤, 💡, ⚠️");
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(200);
+      const foot = await page.evaluate(() => document.querySelector(".footline").offsetHeight);
+      assert.ok(Math.abs(await fill() - free - foot) <= 2, "the board ends above the bar");
+      const ref = await page.textContent("#footerText .reflink");
+      await page.click("#footerText .reflink");
+      await page.waitForSelector("dialog[open] input");
+      assert.equal(await page.inputValue("dialog[open] input"), (await item(tp, ref)).title, `the bar's ${ref} opens ${ref}`);
+      await page.keyboard.press("Escape");
+      await page.reload();
+      await page.waitForSelector(".footline.multi #footerText .reflink");
+      await page.click("#menuBtn");
+      await page.click("dialog[open] button:text-is('Aus')");
+      await page.waitForTimeout(200);
+      assert.equal(await page.isVisible(".footline"), false);
+      assert.equal(await page.evaluate(() => localStorage.getItem("cotrack.boardFooter")), null);
+      assert.deepEqual(errors, []);
+      await ctx.close();
+    });
+
+    it("footer bar: references of categories with longer codes open too, other words stay text", async () => {
+      // categories are instance-wide: one of its own, retired again at the end (it then shows only where it holds items)
+      const kind = { code: "TBUG", name: "Fehler", actionable: true, sort_order: 90 };
+      assert.equal((await api("/kinds", { method: "POST", body: kind })).status, 200);
+      try {
+        const fp = await freshProject("ui-footer");
+        await api(`/projects/${fp}/items`, { method: "POST", body: { kind: "TBUG", title: "Absturz beim Speichern", short: "Absturz" } });
+        await api(`/projects/${fp}/items`, { method: "POST", body: { kind: "W", title: "Export veraltet", short: "HTML5 Export" } });
+        const { page, ctx } = await open(fp, { viewport: LAND, storage: { "cotrack.boardFooter": "single" } });
+        await page.waitForSelector("#footerText .reflink");
+        const links = await page.evaluate(() => [...document.querySelectorAll("#footerText .reflink")].map((b) => b.textContent));
+        assert.deepEqual(links, ["TBUG1", "W1"], "TBUG1 is a link, HTML5 is not");
+        await page.click("#footerText .reflink");
+        await page.waitForSelector("dialog[open] input");
+        assert.equal(await page.inputValue("dialog[open] input"), "Absturz beim Speichern");
+        await ctx.close();
+      } finally {
+        await api("/kinds", { method: "POST", body: { ...kind, active: false } });
+      }
     });
   });
 });

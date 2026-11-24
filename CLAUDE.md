@@ -93,7 +93,9 @@
   lands in `source`. UI: `sessionLink`/`sessionAnchor`, the field in `openEdit` (shown when set, otherwise "🔗 Session-Link
   eintragen"; `save` sends `session` only when the field was changed), a ↗ column in `itemHistTable`; undo restores it via
   `last_session` in `UNDO_FIELDS`/`EXPECT_COLS`, sent back as `session`. Session links never go into `source`; search (`q`) covers `source` as well.
-- Compact board (D34): `state.dense` (`#denseBtn`, localStorage `cotrack.dense`) renders one line per item in `renderItem`.
+- Compact board (D34, three steps since A135): `#denseBtn` steps `state.density` through `DENSITIES` – cards · `wrap`
+  (whole title, no description; reference and title flow like a sentence, the signs float right of the first line) ·
+  `line` (one line, title cut) – rendered in `renderItem`; localStorage `cotrack.dense` = `wrap` | `1` (= line, as before).
   A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
   therefore annotates `ext_open`/`ext_next` like the project lists.
 - Project order (D37, A120): the server lists projects by `updated_at` (every item change, by user or AI). The web app
@@ -121,10 +123,11 @@
   fails without the fix. Each test file uses a project of its own (`freshProject`). Tests run **locally only – never in GitHub
   Actions or any other CI** (the user's decision: Actions minutes cost real money); do not add workflows that run them.
 - All user text in the UI must be rendered via `textContent` (the `h()` helper) – never `innerHTML`.
-- Board layout (decision D30): `layoutBoard` in `src/ui.html` picks one of three by the screen – `page` (landscape: the page
-  scrolls, columns fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`),
-  `fit` (portrait with room for two columns: the board fills the screen, `fitPlan` spreads the categories over the columns by
-  item count, each scrolls on its own) and `swipe` (phones: one category per screen, one swipe = exactly one category (`scroll-snap-stop`); the
+- Board layout (decision D30, landscape changed with A136): `layoutBoard` in `src/ui.html` picks one of three by the screen
+  (`boardLayout`) – `fit` (landscape and portrait with room for two columns: the board fills the screen, `fitPlan` spreads the
+  categories over the columns by item count, each scrolls on its own; the last column ends above the floating "+"), `page`
+  (only landscape screens lower than 500px – phones held sideways – or with room for one column: the page scrolls, columns
+  fill the width up to `BOARD_MAX` each, extra categories go under the shortest column, `packBoard`) and `swipe` (phones: one category per screen, one swipe = exactly one category (`scroll-snap-stop`); the
   neighbours are only hinted – faded, their items take no taps, a tap there jumps to them (class `cur`, `syncLaneChips`);
   the item lists contain only vertical overscroll, otherwise the sideways swipe is swallowed; the category toggles jump there
   instead of filtering). Column scroll positions survive live updates (`boardSig`).
@@ -136,6 +139,9 @@
   which fields; status and owner with value; same actor within 5 minutes = one row), loaded from
   `GET …/items/:ref/events` (`itemHistory` in `src/worker.js`), which follows conversions back (`from`) via the `converted` events, so deleted sources keep their history. UI:
   `itemHistory`/`itemHistRows` in `src/ui.html`.
+- Footer bar in the board (A134): off by default; ☰ → Chat-Fußzeile → Im Board (`boardFooterRow`) turns it on per device –
+  `state.boardFooter`, localStorage `cotrack.boardFooter` = `single` | `multi` (`BOARD_FOOTERS`). `renderFooter` fetches only
+  while it is shown; `footerNodes` turns the references in it into `refLink`s (`FOOTER_REF`, `footerKey`).
 - Instance settings (table `settings`, migration 0006; web app ☰ → Chat-Fußzeile → Anpassen; `GET/PATCH /api/settings`) set the footer's
   default layout and group markers for API and MCP. Only the user token may change them; a `layout` in a request wins. A marker gets a ":" only when it ends in text ("Du:"), never after an emoji (`groupMark` in `src/worker.js`, `mark` in
   `src/ui.html` – keep both in sync).

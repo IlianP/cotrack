@@ -107,9 +107,9 @@ Everything cotrack does – from sub-items, due dates and undo to statistics and
   ([details below](#linking-a-repository)).
 - **MCP server** – works with Claude (claude.ai, Claude Code) and ChatGPT; answers are compact text to save tokens.
 - **Live** – the web app picks up changes made by you or an AI within a few seconds.
-- **A board for every screen** – in landscape the columns fill the whole width. Upright (monitor, tablet) the board fits on
-  one screen: every category scrolls on its own, small categories share a column. On phones you swipe from category to
-  category, and a tap on D, A, I or W jumps right there.
+- **A board for every screen** – the board fits on one screen and every category scrolls on its own, so the others stay in
+  view: in landscape the columns fill the whole width, upright (monitor, tablet) small categories share a column. On phones
+  you swipe from category to category, and a tap on D, A, I or W jumps right there.
 - **Overview** – a tap on the logo shows all projects on one page: four figures across all projects (your turn, overdue,
   with the AI, new for you – each leads to the matching view) and one card per project with its open items by category,
   your next three items, what waits or sits with the AI, and what is due. Projects that need you come first.
@@ -118,8 +118,9 @@ Everything cotrack does – from sub-items, due dates and undo to statistics and
   dialog; `cotrack_get` tells the AI), and references on the cards (⏸ A10, ▶ A16) open the item they name.
 - **Sort and compact view** – the icon next to the search sorts the board by number (default), by last change, by date
   added or by due date. Sorted by time, each card shows how long ago it was (who: in the tooltip), and what changed in the
-  last 24 hours is tinted. The icon next to it shows one line per item instead of cards. A prerequisite that is done shows
-  as ✓ instead of ⏸. Remembered on each device.
+  last 24 hours is tinted. The icon next to it steps through cards, a compact view with the whole title (for narrow
+  columns, e.g. on a tablet) and one line per item. A prerequisite that is done shows as ✓ instead of ⏸. Remembered on
+  each device.
 - **Project order** – the button in the "All projects" row of the project list chooses how projects are listed: recently
   changed (default; by you or the AI), by name (A–Z) or recently opened on this device. Applies to every list of projects
   in the web app, remembered on each device.
@@ -131,7 +132,8 @@ Everything cotrack does – from sub-items, due dates and undo to statistics and
   item was last worked on (and the first one), the history every step. For a claude.ai chat or ChatGPT, paste the link yourself.
 - **Chat footer** – the summary above, one line per group or everything in one line – your choice in the web app
   (☰ → Chat footer → Customize), as are the markers 👤 / 🤖; a short "new / done" line for answers that change things; one block
-  per project when several are in play.
+  per project when several are in play. On the board it shows as a bar at the bottom only if you turn it on (☰ → Chat footer
+  → On the board, per device: one line or one line per group); its references open the item.
 - **PrioFlow** – a skill that has the AI rate the open items and guide you through the next ones
   ([details below](#prioflow-what-is-next)).
 - **Next** – a view that shows one of your items at a time: first what you have started, then what is overdue or due
