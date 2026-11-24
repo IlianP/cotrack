@@ -240,3 +240,22 @@ describe("statistics limited to some projects (A132)", () => {
     assert.ok((await api("/stats")).body.items_total >= 3);
   });
 });
+
+describe("undo noted on the event (D33)", () => {
+  let p;
+  before(async () => { p = await freshProject("undo"); });
+
+  it("undo: true lands in the event data as a note, not as a field; anything but a boolean is refused", async () => {
+    const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Undo", body: "Alt" } })).body.item.ref;
+    await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { body: "Neu" } });
+    const r = await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { body: "Alt", undo: true, expect: { body: "Neu" } } });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.item.body, "Alt");
+    const [ev, before] = await events(p, ref);
+    assert.deepEqual(ev.data, { body: "Alt", undo: true });
+    assert.equal(before.data.undo, undefined, "an ordinary change carries no note");
+    const bad = await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { title: "x", undo: "yes" } });
+    assert.equal(bad.status, 400);
+    assert.equal((await item(p, ref)).title, "Undo");
+  });
+});

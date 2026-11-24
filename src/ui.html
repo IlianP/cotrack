@@ -1829,6 +1829,7 @@ async function revertChange(before, after) {
       if (fields.length) {
         body.expect = Object.fromEntries([...fields, "sized_by"].filter((f) => f in cur).map((f) => [f, v(cur, f)]));
         if ("last_session" in body) { body.session = body.last_session; delete body.last_session; }
+        body.undo = true; // noted on the event: the item's history leaves out the change and its undo (itemHistBefore)
         await api(path, { method: "PATCH", body });
       }
       toast(kept ? tr("undoPartial", label, kept) : tr("undone", label));
@@ -2909,7 +2910,8 @@ function histDetails(e) {
   for (const t of c.checked || []) parts.push(`☑ ${t}`);
   for (const t of c.unchecked || []) parts.push(`☐ ${t}`);
   if ("source" in c) parts.push(ev.sourceChanged);
-  if ("session" in c && Object.keys(c).length === 1) parts.push(ev.sessionChanged); // otherwise only a note where it happened
+  // otherwise only a note where it happened (undo: a note too)
+  if ("session" in c && Object.keys(c).filter((k) => k !== "undo").length === 1) parts.push(ev.sessionChanged);
   return parts.length ? parts : [ev.updated];
 }
 function histEntry(e) {
@@ -2958,50 +2960,105 @@ async function openHistItem(e) {
 }
 
 /* History per item (D22): a collapsible line at the bottom of the edit dialog. Rows = when · who · which fields; only
-   status and owner with their new value. Changes by the same person within 5 minutes form one row. An item that came
-   from a conversion also shows the history of the idea/warning it came from, below a divider. Loaded on first open. */
+   status and owner with their new value. Changes by the same person within 5 minutes form one row, and a row names only
+   what it changed in the end: a field back where it started (set to done and reopened, a change and its undo – D33) is
+   left out, a row with nothing left disappears. An item that came from a conversion also shows the history of the
+   idea/warning it came from, below a divider. Loaded on first open. */
 const ITEM_HIST_GROUP_MS = 5 * 60 * 1000;
 const ITEM_HIST_ORDER = ["created", "converted", "status", "owner", "title", "body", "checked", "unchecked", "short",
   "waiting_on", "also_in", "due", "effort", "benefit", "sized", "source", "session", "deleted", "restored", "updated"];
-// The parts of one event, keyed so a group can merge them: [key, text, count?]
-function itemHistParts(e) {
-  const ev = tr("ev"), c = e.data || {};
-  if (e.action === "created") return [["created", ev.created]];
-  if (e.action === "converted") return [["converted", ev.converted(c.to)]];
-  if (e.action === "deleted") return [["deleted", ev.deleted]];
-  if (e.action === "restored") return [["restored", ev.itemRestored]];
-  const out = [];
-  if ("status" in c) out.push(["status", `${tr("fStatus")}: ${STATUS_LABELS[c.status] || c.status}`]);
-  if ("owner" in c) out.push(["owner", `${tr("responsible")}: ${c.owner ? ownerLabel(c.owner) : "–"}`]);
+// The fields a row can name, keyed as in the event data ("session" = the session link, D35), and those a creation event
+// always records (absent there = empty); the others stay unknown until a change sets them.
+const HIST_FIELDS = ["status", "owner", "title", "body", "short", "waiting_on", "also_in", "due", "effort", "benefit", "source", "sized_by", "session"];
+const HIST_CREATED = ["title", "owner", "status", "effort", "benefit", "sized_by", "also_in", "session"];
+const HIST_WHOLE = ["created", "converted", "deleted", "restored"]; // about the whole item, not a field change
+const HIST_UNKNOWN = Symbol("unknown");
+// One item's events (newest first), replayed oldest first: event -> { field: its value before the event } for the fields
+// the event sets, HIST_UNKNOWN where the log does not tell (data holds new values only). Known from the creation event,
+// a deletion's snapshot, an earlier change, the *_was notes – and from an undo (data.undo): it puts back the value before
+// the change it reverts, so that change's "before" is the undo's value.
+function itemHistBefore(events) {
+  const state = {}, before = new Map();
+  let last = {}; // field -> the latest event that set it
+  for (const e of [...events].reverse()) {
+    const c = e.data || {}, b = {};
+    if (e.action === "created" || e.action === "deleted") {
+      for (const f of HIST_FIELDS) {
+        if (e.action === "deleted") state[f] = c[f === "session" ? "last_session" : f] ?? null; // the whole item
+        else state[f] = HIST_CREATED.includes(f) ? c[f] ?? null : HIST_UNKNOWN;
+      }
+      last = {};
+    } else {
+      for (const f of HIST_FIELDS.filter((x) => x in c)) {
+        b[f] = `${f}_was` in c ? c[`${f}_was`] : f in state ? state[f] : HIST_UNKNOWN;
+        const prev = last[f] && before.get(last[f]);
+        if (c.undo && prev?.[f] === HIST_UNKNOWN && last[f].actor === e.actor) prev[f] = c[f] ?? null;
+        state[f] = c[f] ?? null;
+        last[f] = e;
+      }
+      if (c.checked || c.unchecked) state.body = HIST_UNKNOWN; // a tick rewrites the body without logging it
+      if (e.action === "converted") state.status = "done";
+    }
+    before.set(e, b);
+  }
+  return before;
+}
+// events newest first → rows { at (earliest of the group), newest, actor, session (the newest one named in the group), text }
+function itemHistRows(events) {
+  const before = itemHistBefore(events);
+  const groups = [];
+  for (const e of events) {
+    const last = groups[groups.length - 1];
+    let g = last && last.actor === e.actor && Date.parse(last.newest) - Date.parse(e.at) <= ITEM_HIST_GROUP_MS ? last : null;
+    if (!g) groups.push(g = { newest: e.at, actor: e.actor, events: [] });
+    g.at = e.at;
+    if (!g.session && e.data?.session) g.session = e.data.session;
+    g.events.push(e);
+  }
+  return groups.map((g) => itemHistRow(g, before)).filter(Boolean);
+}
+// What one row says: its whole-item events, then each field from its value before the row's first change of it to the
+// value after its last one. null when everything ends where it started.
+function itemHistRow(g, before) {
+  const ev = tr("ev"), parts = new Map(), evs = [...g.events].reverse(); // oldest first
+  const life = evs.filter((e) => e.action === "deleted" || e.action === "restored").map((e) => e.action);
+  const backAgain = life[0] === "deleted" && life[life.length - 1] === "restored"; // deleted and brought back
+  for (const e of evs) {
+    if (e.action === "created") parts.set("created", ev.created);
+    else if (e.action === "converted") parts.set("converted", ev.converted(e.data?.to));
+    else if (e.action === "deleted" && !backAgain) parts.set("deleted", ev.deleted);
+    else if (e.action === "restored" && !backAgain) parts.set("restored", ev.itemRestored);
+  }
+  const from = {}, to = {}, ticks = new Map(); // ticks: step -> checked minus unchecked
+  for (const e of evs.filter((x) => !HIST_WHOLE.includes(x.action))) {
+    const c = e.data || {};
+    for (const f of HIST_FIELDS.filter((x) => x in c)) {
+      if (!(f in from)) from[f] = before.get(e)[f];
+      to[f] = c[f] ?? null;
+    }
+    for (const t of c.checked || []) ticks.set(t, (ticks.get(t) || 0) + 1);
+    for (const t of c.unchecked || []) ticks.set(t, (ticks.get(t) || 0) - 1);
+  }
+  const changed = Object.keys(to).filter((f) => from[f] === HIST_UNKNOWN || (from[f] ?? null) !== to[f]);
   const named = { title: "fTitle", body: "fBody", short: "fShort", waiting_on: "fWaiting", also_in: "fAlsoIn", due: "fDue",
     effort: "effort", benefit: "benefit", source: "fSource" };
-  for (const [key, label] of Object.entries(named)) if (key in c) out.push([key, tr(label)]);
-  if (c.sized_by === "user" && !("effort" in c) && !("benefit" in c)) out.push(["sized", ev.sized]);
-  if (c.checked?.length) out.push(["checked", null, c.checked.length]);
-  if (c.unchecked?.length) out.push(["unchecked", null, c.unchecked.length]);
-  // The session is a note on where a change was made (the link in its own column); only a change of the link alone is named.
-  if ("session" in c && Object.keys(c).length === 1) out.push(["session", ev.sessionChanged]);
-  return out.length ? out : [["updated", ev.updated]];
-}
-// events newest first → rows { at (earliest of the group), actor, parts, session (the newest one named in the group) }
-function itemHistRows(events) {
-  const rows = [];
-  for (const e of events) {
-    const last = rows[rows.length - 1];
-    const t = Date.parse(e.at);
-    let row = last && last.actor === e.actor && Date.parse(last.newest) - t <= ITEM_HIST_GROUP_MS ? last : null;
-    if (!row) rows.push(row = { newest: e.at, at: e.at, actor: e.actor, parts: new Map() });
-    row.at = e.at;
-    if (!row.session && e.data?.session) row.session = e.data.session;
-    for (const [key, text, n] of itemHistParts(e)) {
-      const had = row.parts.get(key);
-      if (n) row.parts.set(key, { n: (had?.n || 0) + n });
-      else if (!had) row.parts.set(key, { text }); // newest value wins (the list runs newest first)
-    }
+  for (const f of changed) {
+    if (f === "status") parts.set(f, `${tr("fStatus")}: ${STATUS_LABELS[to.status] || to.status}`);
+    else if (f === "owner") parts.set(f, `${tr("responsible")}: ${to.owner ? ownerLabel(to.owner) : "–"}`);
+    else if (named[f]) parts.set(f, tr(named[f]));
   }
-  const ev = tr("ev");
-  return rows.map((r) => ({ ...r, text: ITEM_HIST_ORDER.filter((k) => r.parts.has(k))
-    .map((k) => r.parts.get(k).text ?? (k === "checked" ? ev.checkedN : ev.uncheckedN)(r.parts.get(k).n)).join(", ") }));
+  if (changed.includes("sized_by") && to.sized_by === "user" && !parts.has("effort") && !parts.has("benefit")) parts.set("sized", ev.sized);
+  const checked = [...ticks.values()].filter((n) => n > 0).length, unchecked = [...ticks.values()].filter((n) => n < 0).length;
+  if (checked) parts.set("checked", ev.checkedN(checked));
+  if (unchecked) parts.set("unchecked", ev.uncheckedN(unchecked));
+  // The session is a note on where a change was made (the link in its own column); only a change of the link alone is named.
+  if (changed.length === 1 && changed[0] === "session" && !checked && !unchecked) parts.set("session", ev.sessionChanged);
+  if (!parts.size) {
+    if (!changed.length && (Object.keys(to).length || ticks.size || backAgain)) return null; // all of it undone
+    parts.set("updated", ev.updated); // a change the list has no name for
+  }
+  return { newest: g.newest, at: g.at, actor: g.actor, session: g.session,
+    text: ITEM_HIST_ORDER.filter((k) => parts.has(k)).map((k) => parts.get(k)).join(", ") };
 }
 function itemHistTable(rows) {
   return h("table", { class: "ihist-tab" }, h("tbody", null, rows.map((r) => h("tr", null,

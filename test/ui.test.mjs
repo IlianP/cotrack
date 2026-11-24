@@ -1,10 +1,10 @@
 // The web app in a real browser (Playwright): several sources in the edit dialog (D36), what an outdated page does (A124),
-// the layout of top bar and board on a monitor turned upright (A127) and on a tablet (A134–A136).
+// the item history after a change was set back or undone (D22, D33), the layout of top bar and board on a monitor turned upright (A127) and on a tablet (A134–A136).
 // Skipped when Playwright is not installed (`npm i -D playwright` and `npx playwright install chromium` to run them).
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { BASE, USER, api, freshProject, item } from "./helpers.mjs";
+import { BASE, USER, AI, api, freshProject, item, events } from "./helpers.mjs";
 
 let chromium = null;
 try { ({ chromium } = createRequire(import.meta.url)("playwright")); } catch {}
@@ -97,6 +97,62 @@ describe("web app", { skip }, () => {
     await page.waitForTimeout(400);
     assert.equal(await page.locator("dialog[open] .src-input").count(), 1, "the dialog stays open");
     assert.equal((await item(p, ref)).source, TWO);
+    await ctx.close();
+  });
+
+  // The rows of the item history in the open edit dialog (D22), newest first.
+  async function histRows(page) {
+    await page.click("dialog[open] .ihist summary");
+    await page.waitForSelector("dialog[open] .ihist-tab");
+    return page.$$eval("dialog[open] .ihist-tab td.a", (tds) => tds.map((td) => td.textContent));
+  }
+  const byAi = async (body) => (await api(`/projects/${p}/items`, { method: "POST", token: AI, body: { kind: "A", owner: "user", ...body } })).body.item.ref;
+  const patch = (ref, body) => api(`/projects/${p}/items/${ref}`, { method: "PATCH", body });
+
+  it("history: what was set back within minutes leaves no row – done and reopened, a tick, a deletion", async () => {
+    const ref = await byAi({ title: "Erledigt und zurück", body: "- [ ] eins" });
+    await patch(ref, { status: "done" });
+    await patch(ref, { status: "open" }); // by hand, as before undo noted itself (the reported case)
+    await patch(ref, { check: "1" });
+    await patch(ref, { uncheck: "1" });
+    await api(`/projects/${p}/items/${ref}`, { method: "DELETE" });
+    await api(`/projects/${p}/items/${ref}/restore`, { method: "POST" });
+    const { page, ctx, errors } = await open(`${p}/${ref}`);
+    await page.waitForSelector("dialog[open] .ihist");
+    assert.deepEqual(await histRows(page), ["angelegt"]);
+    assert.equal(await page.textContent("dialog[open] .ihist-toggle"), "Verlauf (1)");
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("history: a change undone in the web app leaves no row, even where the log does not know the value before", async () => {
+    const ref = await byAi({ title: "Rückgängig", body: "Alt" }); // the creation event does not record the body
+    const { page, ctx, errors } = await open(`${p}/${ref}`);
+    await page.waitForSelector("dialog[open] .ihist");
+    await page.fill("dialog[open] textarea:not(.src-input)", "Neu");
+    await page.click("dialog[open] button.primary");
+    await page.waitForSelector("#toast.show button");
+    await page.click("#toast button");
+    await page.waitForFunction(() => /rückgängig gemacht/.test(document.querySelector("#toast")?.textContent || ""));
+    assert.equal((await item(p, ref)).body, "Alt");
+    assert.equal((await events(p, ref))[0].data.undo, true, "the undo notes itself on the event");
+    await page.goto(`${BASE}/?t=${Math.random()}#${p}/${ref}`);
+    await page.waitForSelector("dialog[open] .ihist");
+    assert.deepEqual(await histRows(page), ["angelegt"]);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
+
+  it("history: what changed in the end stays named – the latest status, a field set back whose old value is unknown", async () => {
+    const ref = await byAi({ title: "Bleibt", body: "Alt" });
+    await patch(ref, { status: "done" });
+    await patch(ref, { status: "open" });
+    await patch(ref, { status: "doing" });
+    await patch(ref, { body: "Neu" });
+    await patch(ref, { body: "Alt" }); // by hand: the log cannot tell it is the old text, so it stays named
+    const { page, ctx } = await open(`${p}/${ref}`);
+    await page.waitForSelector("dialog[open] .ihist");
+    assert.deepEqual(await histRows(page), ["Status: in Arbeit, Beschreibung", "angelegt"]);
     await ctx.close();
   });
 
