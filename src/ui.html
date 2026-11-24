@@ -2075,6 +2075,7 @@ function render(before) {
         ? h("ul", { class: "items" }, sortItems(list).map((it) => renderItem(it, k, before)))
         : h("p", { class: "empty" }, state.view === "open" ? tr("nothingOpen") : tr("noItems"))));
   layoutBoard(layout, visible, sections);
+  fitTitles();
   for (const s of sections) {
     const top = kept.get(s.dataset.kind), ul = s.querySelector(".items");
     if (top && ul) ul.scrollTop = top;
@@ -2175,7 +2176,7 @@ function onBoardResize() {
     const n = layout === "swipe" ? 1 : boardColumns(boardWidth());
     const was = boardShape.split(":");
     if (layout !== was[0] || (layout !== "swipe" && Math.min(n, board.querySelectorAll("section.col").length) !== +was[1])) render();
-    else setBoardHeight();
+    else { setBoardHeight(); fitTitles(); }
   });
 }
 window.addEventListener("resize", onBoardResize);
@@ -2254,7 +2255,7 @@ function packObserve() {
   packObs ??= new ResizeObserver(() => {
     if (packQueued) return;
     packQueued = true;
-    requestAnimationFrame(() => { packQueued = false; packBoard(); });
+    requestAnimationFrame(() => { packQueued = false; packBoard(); fitTitles(); });
   });
   packObs.disconnect();
   for (const el of $("#board").children) packObs.observe(el);
@@ -2459,7 +2460,9 @@ function renderItem(it, k, before) {
     if (checks.length) mini.push(h("span", { class: "pill checks-pill", title: tr("checksTitle") }, `☑ ${checks.filter((c) => c.done).length}/${checks.length}`));
     if (it.due) mini.push(duePill(it, true));
     if (k.actionable && it.owner && it.owner !== k.default_owner) mini.push(h("span", { class: "pill", title: ownerLabel(it.owner) }, it.owner === "ai" ? "🤖" : "👤"));
-    const signs = mini.length ? h("span", { class: "mini" }, mini) : null, title = h("span", { class: "title" }, it.title);
+    // "line": an item with a short label shows it when the title does not fit (fitTitles); the tooltip keeps the title.
+    const title = h("span", { class: "title", "data-short": state.density === "line" && it.short ? it.short : null }, it.title);
+    const signs = mini.length ? h("span", { class: "mini" }, mini) : null;
     // "line" cuts the title at the end of the line (the tooltip has it all); "wrap" shows it whole, the signs float at the
     // right of the first line (so they come first).
     const wrap = state.density === "wrap";
@@ -2475,6 +2478,17 @@ function renderItem(it, k, before) {
       preview ? h("p", { class: "desc" }, preview.length > 160 ? preview.slice(0, 160) + " …" : preview) : null,
       meta.length ? h("div", { class: "meta" }, meta) : null));
 }
+
+/* One-line view (A138): a title that does not fit its line gives way to the item's short label ("Prompt v2.9" instead of
+   "Prompt in Claude und Ch…"); one that fits stays, and so does a cut title without a short label. Written all at once,
+   then measured all at once, then shortened – one layout pass. Again when the columns change width. */
+function fitTitles() {
+  const spans = [...$("#board").querySelectorAll(".item.dense:not(.wrap) .title[data-short]")];
+  for (const t of spans) { t.textContent = t.closest("li").title; t.classList.remove("short"); }
+  const cut = spans.filter((t) => t.scrollWidth > t.clientWidth + 1);
+  for (const t of cut) { t.textContent = t.dataset.short; t.classList.add("short"); }
+}
+document.fonts?.ready.then(() => fitTitles()); // the widths change once the font is there
 
 /* Due dates: days until the date (negative = overdue). Open items say how far away it is and turn amber from DUE_SOON
    days before, red once the date has passed; closed items only show the date. */

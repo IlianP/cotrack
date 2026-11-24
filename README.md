@@ -119,8 +119,8 @@ Everything cotrack does – from sub-items, due dates and undo to statistics and
 - **Sort and compact view** – the icon next to the search sorts the board by number (default), by last change, by date
   added or by due date. Sorted by time, each card shows how long ago it was (who: in the tooltip), and what changed in the
   last 24 hours is tinted. The icon next to it steps through cards, a compact view with the whole title (for narrow
-  columns, e.g. on a tablet) and one line per item. A prerequisite that is done shows as ✓ instead of ⏸. Remembered on
-  each device.
+  columns, e.g. on a tablet) and one line per item (a title that does not fit shows its short label instead). A
+  prerequisite that is done shows as ✓ instead of ⏸. Remembered on each device.
 - **Project order** – the button in the "All projects" row of the project list chooses how projects are listed: recently
   changed (default; by you or the AI), by name (A–Z) or recently opened on this device. Applies to every list of projects
   in the web app, remembered on each device.

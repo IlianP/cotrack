@@ -95,7 +95,8 @@
   `last_session` in `UNDO_FIELDS`/`EXPECT_COLS`, sent back as `session`. Session links never go into `source`; search (`q`) covers `source` as well.
 - Compact board (D34, three steps since A135): `#denseBtn` steps `state.density` through `DENSITIES` – cards · `wrap`
   (whole title, no description; reference and title flow like a sentence, the signs float right of the first line) ·
-  `line` (one line, title cut) – rendered in `renderItem`; localStorage `cotrack.dense` = `wrap` | `1` (= line, as before).
+  `line` (one line; a title that does not fit gives way to its short label, `fitTitles` after layout and resize – A138) –
+  rendered in `renderItem`; localStorage `cotrack.dense` = `wrap` | `1` (= line, as before).
   A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
   therefore annotates `ext_open`/`ext_next` like the project lists.
 - Project order (D37, A120): the server lists projects by `updated_at` (every item change, by user or AI). The web app

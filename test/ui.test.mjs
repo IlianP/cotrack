@@ -294,6 +294,36 @@ describe("web app", { skip }, () => {
       await ctx.close();
     });
 
+    it("one line: a title that does not fit shows its short label, one that fits stays (A138)", async () => {
+      // four categories, so the columns are narrow on the tablet and wide on a large screen
+      const sp = await freshProject("ui-short"), MID = "Impressum und Datenschutz anpassen";
+      await api(`/projects/${sp}/items`, { method: "POST", body: { kind: "A", title: MID, short: "Impressum" } });
+      await api(`/projects/${sp}/items`, { method: "POST", body: { kind: "A", title: `${MID} ohne Kurzlabel` } });
+      await api(`/projects/${sp}/items`, { method: "POST", body: { kind: "A", title: "Kurz genug", short: "Anderes Label" } });
+      for (const kind of ["D", "I", "W"]) await api(`/projects/${sp}/items`, { method: "POST", body: { kind, title: "Noch einer" } });
+      const titles = (page) => page.evaluate(() => [...document.querySelectorAll('#board section.col[data-kind="A"] li.item')]
+        .map((li) => ({ text: li.querySelector(".title").textContent, tip: li.title })));
+      const { page, ctx, errors } = await open(sp, { viewport: LAND, storage: { "cotrack.dense": "1" } });
+      await page.waitForSelector("#board li.item.dense");
+      let t = await titles(page);
+      assert.deepEqual(t.map((x) => x.text), ["Impressum", `${MID} ohne Kurzlabel`, "Kurz genug"]);
+      assert.equal(t[0].tip, MID, "the tooltip keeps the whole title");
+      // wide enough for the title: it comes back
+      await page.setViewportSize({ width: 2400, height: 900 });
+      await page.waitForTimeout(400);
+      t = await titles(page);
+      assert.equal(t[0].text, MID);
+      // the other compact step shows the whole title anyway
+      await page.setViewportSize(LAND);
+      await page.click("#denseBtn"); // line → cards
+      await page.click("#denseBtn"); // → whole title
+      await page.waitForSelector("#board li.item.wrap");
+      t = await titles(page);
+      assert.equal(t[0].text, MID);
+      assert.deepEqual(errors, []);
+      await ctx.close();
+    });
+
     it("footer bar: off by default, ☰ turns it on for this device, its references open the item (A134)", async () => {
       const { page, ctx, errors } = await open(tp, { viewport: LAND });
       await page.waitForSelector("#board li.item");
