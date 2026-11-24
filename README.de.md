@@ -124,8 +124,8 @@ Alles, was cotrack kann – von Teilpunkten, Fälligkeiten und Rückgängig bis 
 - **Sortierung und Kompakt-Ansicht** – das Symbol neben der Suche sortiert das Board nach Nummer (Standard), nach letzter
   Änderung, nach Anlage oder nach Fälligkeit. Nach Zeit sortiert zeigt jede Karte, wie lange es her ist (wer: im Tooltip),
   und was in den letzten 24 Stunden geändert wurde, ist leicht hinterlegt. Das Symbol daneben schaltet durch: Karten, kompakt
-  mit ganzem Titel (für schmale Spalten, z. B. auf dem Tablet) und eine Zeile je Punkt. Eine erledigte Voraussetzung steht
-  als ✓ statt ⏸ da. Gespeichert pro Gerät.
+  mit ganzem Titel (für schmale Spalten, z. B. auf dem Tablet) und eine Zeile je Punkt (passt der Titel nicht, steht dort
+  sein Kurzlabel). Eine erledigte Voraussetzung steht als ✓ statt ⏸ da. Gespeichert pro Gerät.
 - **Reihenfolge der Projekte** – der Knopf in der Zeile „Alle Projekte“ der Projektauswahl legt fest, wie Projekte
   aufgelistet werden: zuletzt geändert (Standard; von dir oder der KI), nach Name (A–Z) oder zuletzt auf diesem Gerät
   geöffnet. Gilt für alle Projektlisten der Web-App, gespeichert pro Gerät.
