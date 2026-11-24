@@ -246,13 +246,14 @@ describe("undo noted on the event (D33)", () => {
   before(async () => { p = await freshProject("undo"); });
 
   it("undo: true lands in the event data as a note, not as a field; anything but a boolean is refused", async () => {
-    const ref = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Undo", body: "Alt" } })).body.item.ref;
+    const created = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Undo", body: "Alt" } })).body.item;
+    const ref = created.ref;
     await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { body: "Neu" } });
     const r = await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { body: "Alt", undo: true, expect: { body: "Neu" } } });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.item.body, "Alt");
     const [ev, before] = await events(p, ref);
-    assert.deepEqual(ev.data, { body: "Alt", undo: true });
+    assert.deepEqual(ev.data, { body: "Alt", undo: { at: created.updated_at, by: "user" } }, "with the stamp it set back");
     assert.equal(before.data.undo, undefined, "an ordinary change carries no note");
     const bad = await api(`/projects/${p}/items/${ref}`, { method: "PATCH", body: { title: "x", undo: "yes" } });
     assert.equal(bad.status, 400);
@@ -270,8 +271,17 @@ describe("undo noted on the event (D33)", () => {
     assert.equal(it.updated_at, created.updated_at, "changed time as before the change");
     assert.equal(it.updated_by, "ai", "and its author");
     const [undo] = await events(p, created.ref);
-    assert.equal(undo.data.undo, true);
+    assert.deepEqual(undo.data.undo, { at: created.updated_at, by: "ai" });
     assert.ok(undo.at > created.updated_at, "the log still has the undo at its own time");
+  });
+
+  it("a second edit and undo goes back to the same stamp, not to the time of the first undo", async () => {
+    const created = (await api(`/projects/${p}/items`, { method: "POST", token: AI, body: { kind: "A", title: "Zweimal", owner: "user" } })).body.item;
+    for (const title of ["Eins", "Zwei"]) {
+      await patch(created.ref, { title });
+      const it = (await patch(created.ref, { title: "Zweimal", undo: true })).body.item;
+      assert.deepEqual([it.updated_at, it.updated_by], [created.updated_at, "ai"], title);
+    }
   });
 
   it("undoing a reopen closes the item again at the time it was closed before", async () => {
@@ -288,6 +298,7 @@ describe("undo noted on the event (D33)", () => {
     const two = (await patch(ref, { title: "Teil 2", body: "y" })).body.item;
     let it = (await patch(ref, { title: "Teil", undo: true })).body.item;
     assert.ok(it.updated_at > two.updated_at, "only the title went back – a change of its own");
+    assert.equal((await events(p, ref))[0].data.undo, true, "noted without a stamp");
     const ref2 = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Dazwischen" } })).body.item.ref;
     await patch(ref2, { status: "doing" });
     const ai = (await patch(ref2, { title: "Von der KI" }, AI)).body.item;

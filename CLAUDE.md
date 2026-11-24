@@ -73,8 +73,10 @@
   the item back from the snapshot in its "deleted" event (event "restored"); the history panel offers it as well.
   Undo sends `undo: true` (noted as `data.undo`). When it puts back all of the item's latest change (same actor, that
   change set `updated_at`), `undoStamp` in `src/worker.js` returns `updated_at`/`updated_by` (and `closed_at` when it
-  closes again) to the change before – read from the events, one per write. The undo's event keeps its real time; polling
-  goes by event ids, not `updated_at`, so others still see it.
+  closes again) to the change before – read from the events, one per write (`eventStamp`: its own time and actor, or for
+  an undo that set a stamp back, `data.undo = {at, by}`). The UPDATE takes the stamp only while `updated_at` is still as
+  read (CASE in the statement), and only then does the event note it. The undo's event keeps its real time; polling goes
+  by event ids, not `updated_at`, so others still see it.
 - Overview (decision D34): the logo (`#homeBtn`, also ☰ and quick access) opens `#home` – `openHome`/`closeHome`,
   `homeModel`, `renderHome`, `homeCard` in `src/ui.html`; like the statistics it replaces bar and board (`body.home-mode`)
   and follows the poll. It reads the open items of all projects and the newest events, ranks "your turn" with

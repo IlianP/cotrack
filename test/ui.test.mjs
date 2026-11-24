@@ -136,7 +136,7 @@ describe("web app", { skip }, () => {
     await page.click("#toast button");
     await page.waitForFunction(() => /rückgängig gemacht/.test(document.querySelector("#toast")?.textContent || ""));
     assert.equal((await item(p, ref)).body, "Alt");
-    assert.equal((await events(p, ref))[0].data.undo, true, "the undo notes itself on the event");
+    assert.deepEqual((await events(p, ref))[0].data.undo, { at: created.updated_at, by: "ai" }, "the undo notes itself and the stamp it set back");
     const after = await item(p, ref);
     assert.deepEqual([after.updated_at, after.updated_by], [created.updated_at, "ai"], "changed time and author as before");
     await page.goto(`${BASE}/?t=${Math.random()}#${p}/${ref}`);
