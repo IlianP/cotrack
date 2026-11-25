@@ -100,6 +100,48 @@ describe("web app", { skip }, () => {
     await ctx.close();
   });
 
+  // Empty fields (I34): a slim "+ Feld" button in the field's own cell – same cells in the same order and columns as a
+  // filled item, on a wide screen and on a phone; a tap opens the field right there.
+  it("edit dialog: empty fields are slim buttons in their own place, filled ones are shown as fields", async () => {
+    const empty = (await api(`/projects/${p}/items`, { method: "POST", body: { kind: "A", title: "Leer" } })).body.item.ref;
+    const full = (await api(`/projects/${p}/items`, { method: "POST", token: AI, body: { kind: "A", owner: "ai", title: "Voll",
+      short: "Voll", body: "Text\n\n- [ ] eins", source: "docs/x.md", due: "2026-12-01", effort: "S", benefit: "high",
+      waiting_on: empty, also_in: "", session: "https://claude.ai/code/session_01ABC" } })).body.item.ref;
+    const cells = (page) => page.$$eval("dialog[open] .opt", (els) => els.map((c) => {
+      const btn = c.querySelector(":scope > .ai-add:not([hidden])"), r = c.getBoundingClientRect();
+      return { f: c.dataset.field, slim: !!btn, h: Math.round(r.height), x: Math.round(r.left), y: Math.round(r.top) };
+    }));
+    const order = ["checks", "effort", "benefit", "short", "waiting_on", "source", "due", "session", "also_in"];
+    for (const viewport of [{ width: 1000, height: 1200 }, { width: 390, height: 1400 }]) {
+      const a = await open(`${p}/${empty}`, { viewport });
+      await a.page.waitForSelector("dialog[open] .opt");
+      const e = await cells(a.page);
+      assert.deepEqual(e.map((c) => c.f), order, "fixed order");
+      assert.ok(e.every((c) => c.slim && c.h <= 34), `every empty field is a slim button (${viewport.width}px)`);
+      // pairs stay side by side, also on a phone: same row, left one first
+      for (const [l, r] of [["effort", "benefit"], ["short", "waiting_on"], ["source", "due"], ["session", "also_in"]]) {
+        const [cl, cr] = [e.find((c) => c.f === l), e.find((c) => c.f === r)];
+        assert.ok(cl.y === cr.y && cl.x < cr.x, `${l} | ${r} side by side (${viewport.width}px)`);
+      }
+      const b = await open(`${p}/${full}`, { viewport });
+      await b.page.waitForSelector("dialog[open] .opt");
+      const g = await cells(b.page);
+      assert.deepEqual(g.map((c) => c.f), order, "same cells in the same order when filled");
+      assert.ok(g.filter((c) => c.f !== "also_in").every((c) => !c.slim), "filled fields are shown as fields");
+      if (viewport.width > 560) assert.deepEqual(g.map((c) => c.x), e.map((c) => c.x), "each field keeps its column");
+      // a tap opens the field in its cell
+      await a.page.click('dialog[open] .opt[data-field="due"] > .ai-add');
+      assert.equal(await a.page.evaluate(() => {
+        const c = document.querySelector('dialog[open] .opt[data-field="due"]');
+        return c.querySelector('input[type="date"]').checkVisibility() && document.activeElement.type;
+      }), "date");
+      await a.page.click('dialog[open] .opt[data-field="checks"] > .ai-add');
+      assert.equal(await a.page.evaluate(() => document.activeElement.classList.contains("check-add")), true, "the sub-item field opens and has the focus");
+      assert.deepEqual([...a.errors, ...b.errors], []);
+      await a.ctx.close(); await b.ctx.close();
+    }
+  });
+
   // The rows of the item history in the open edit dialog (D22), newest first.
   async function histRows(page) {
     await page.click("dialog[open] .ihist summary");
