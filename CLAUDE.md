@@ -110,6 +110,11 @@
   rendered in `renderItem`; localStorage `cotrack.dense` = `wrap` | `1` (= line, as before).
   A prerequisite that is done shows as ✓ instead of ⏸: `stillOpen` (open in the list, or in `ext_open`) – `GET /api/items`
   therefore annotates `ext_open`/`ext_next` like the project lists.
+- Chain order and filter (D41, A143): Ketten reuses the board's sort button with a list of its own – `DEPS_SORTS`,
+  `state.depsSort`, localStorage `cotrack.depsSort`; `sortSpec` in `src/ui.html` picks the list by mode. `depsCompare`
+  orders the chains ("rank": cycle, unknown reference, free, most open items behind (`v.behind`, the same count as
+  "Auffällig"); in "Erledigt" the latest finished first; every other order falls back to it). The chips in the "Auffällig"
+  heading are buttons (`depsFilter`, `deps.noteFilter`, this page only): only chains with an item of that note.
 - Project order (D37, A120): the server lists projects by `updated_at` (every item change, by user or AI). The web app
   re-sorts on each device (`state.projectSort`, localStorage `cotrack.projectSort`; `sortProjects`, `PROJECT_SORTS` in
   `src/ui.html`): changed · name · opened (`noteProjectOpened`, localStorage `cotrack.projectOpened`). Chosen with the

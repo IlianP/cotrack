@@ -488,4 +488,48 @@ describe("web app", { skip }, () => {
       }
     });
   });
+
+  it("Ketten: sort menu orders the chains, the chips in „Auffällig“ filter them (D41)", async () => {
+    const dp = await freshProject("ui-deps");
+    const add = async (body) => (await api(`/projects/${dp}/items`, { method: "POST", body: { kind: "A", ...body } })).body.item.ref;
+    // chain 1: A1 ← A2 ← A3 (A1 holds up two, one directly); chain 2: A4 ← A5, A4 ← A6 (two directly); chain 3: A7 done ← A8 (free)
+    const a1 = await add({ title: "Eins" }); const a2 = await add({ title: "Zwei", waiting_on: a1 }); await add({ title: "Drei", waiting_on: a2 });
+    const a4 = await add({ title: "Vier" }); await add({ title: "Fünf", waiting_on: a4, benefit: "high" }); await add({ title: "Sechs", waiting_on: a4 });
+    const a7 = await add({ title: "Sieben" }); await add({ title: "Acht", waiting_on: a7 });
+    assert.equal((await api(`/projects/${dp}/items/${a7}`, { method: "PATCH", body: { status: "done" } })).status, 200);
+    const { page, ctx, errors } = await open(dp, { storage: { "cotrack.mode": "deps" } });
+    await page.waitForSelector("#deps .dg-chain");
+    // each chain by its smallest reference
+    const order = () => page.evaluate(() => [...document.querySelectorAll("#deps .dg-chain")].map((c) =>
+      [...c.querySelectorAll("[data-key]")].map((el) => el.dataset.key.split(":").pop()).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0]));
+    assert.deepEqual(await order(), ["A7", "A1", "A4"], "Wichtig: free first, then what holds up most counted behind (A1 = A4 = 2), then the number");
+    assert.equal(await page.isVisible("#sortBtn"), true, "the sort button is there in Ketten");
+    await page.click("#sortBtn");
+    assert.deepEqual(await page.$$eval("#sortPop [role=menuitemradio] .sl", (b) => b.map((x) => x.textContent)),
+      ["Wichtig", "Nummer", "Größe", "Zuletzt geändert", "Fälligkeit", "Nutzen"]);
+    await page.click("#sortPop [role=menuitemradio]:has-text('Nummer')");
+    assert.deepEqual(await order(), ["A1", "A4", "A7"]);
+    assert.equal(await page.evaluate(() => localStorage.getItem("cotrack.depsSort")), "num");
+    assert.equal(await page.evaluate(() => localStorage.getItem("cotrack.sort")), null, "the board's order stays");
+    await page.click("#sortBtn");
+    await page.click("#sortPop [role=menuitemradio]:has-text('Nutzen')");
+    assert.deepEqual(await order(), ["A4", "A7", "A1"], "the chain with the high benefit first, the rest by Wichtig");
+    // filter: "Frei" → only the chain with the freed item, again → all; the panel stays folded
+    await page.click("#deps .dg-fchip[data-note=freed]");
+    assert.deepEqual(await order(), ["A7"]);
+    assert.equal(await page.getAttribute("#deps .dg-fchip[data-note=freed]", "aria-pressed"), "true");
+    assert.equal(await page.evaluate(() => document.querySelector("#deps .dg-side").open), false, "a chip does not unfold the panel");
+    assert.match(await page.textContent("#deps .dg-head"), /1 Kette .*nur „Frei“/);
+    await page.click("#deps .dg-unfilter");
+    assert.equal((await order()).length, 3);
+    // the board keeps its own menu
+    await page.reload();
+    await page.waitForSelector("#deps .dg-chain");
+    assert.deepEqual(await order(), ["A4", "A7", "A1"], "remembered on this device");
+    await page.click("#modeSwitch [data-mode=board]");
+    await page.click("#sortBtn");
+    assert.equal(await page.locator("#sortPop [role=menuitemradio]").count(), 4);
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
 });
