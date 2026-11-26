@@ -592,6 +592,16 @@ dialog.pal[open] { display: flex; flex-direction: column; }
   font-variant-numeric: tabular-nums;
 }
 .dg-note .t .dg-chips { margin-top: 3px; }
+/* the chips in the heading filter the chains (D41) */
+.dg-fchip { border: 1px solid transparent; cursor: pointer; font: inherit; font-size: 12px; font-weight: 550; line-height: inherit; }
+.dg-fchip:hover { border-color: color-mix(in srgb, var(--tc) 45%, transparent); }
+.dg-fchip.on { background: var(--tc); color: #fff; }
+.dg-fchip.on::after { content: "\00a0✕"; }
+.dg-sep { white-space: pre; }
+.dg-unfilter {
+  border: 0; padding: 0 2px; background: none; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .dg-side[open] summary { padding-bottom: 2px; }
 .dg-note { padding: 4px 12px 10px; margin: 0; list-style: none; }
 .dg-note h3 { margin: 8px 4px 2px; font-size: 13.5px; }
@@ -1023,7 +1033,7 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
           data-t-attr="aria-label:searchClose;title:searchClose"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none"
           stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></button>
       </div>
-      <!-- sort (A81): the board's order within each column; label and title are set by syncSortBtn() -->
+      <!-- sort (A81): the board's order within each column, in Ketten the order of the chains (D41); label and title are set by syncSortBtn() -->
       <div class="sortw" id="sortBox">
         <button type="button" id="sortBtn" class="sort-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="sortPop"><svg
           viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h9"/><path d="M4 12h6"/><path d="M4 18h3"/><path d="M17 5v14"/><path
@@ -1264,6 +1274,17 @@ const STRINGS = {
     depsYours: "Du bist dran",
     depsTag_cycle: "im Kreis", depsTag_missing: "unbekannt", depsTag_freed: "frei geworden", depsTagHolds: (n) => `bremst ${n}`, depsTag_yours: "du bist dran",
     depsChip_cycle: "Kreis", depsChip_missing: "Unbekannt", depsChip_freed: "Frei", depsChip_holds: "Bremst", depsChip_yours: "Du dran",
+    // Ketten: Filter über „Auffällig“ und Sortierung (D41)
+    depsFilterOn: (name) => `Nur Ketten mit „${name}“ zeigen`, depsFilterOff: (name) => `Filter „${name}“ aufheben`,
+    depsHeadFilter: (name) => `nur „${name}“`, depsFilterClear: "Alle Ketten zeigen",
+    depsSortNote: "Gilt für die Ketten · auf diesem Gerät gespeichert",
+    depsSortNames: { rank: "Wichtig", num: "Nummer", size: "Größe", changed: "Zuletzt geändert", due: "Fälligkeit", benefit: "Nutzen" },
+    depsSortHints: {
+      rank: "Kreise und Unbekanntes, dann Freies, dann was am meisten aufhält · bei „Erledigt“: zuletzt abgeschlossen oben",
+      num: "Nach der ersten Kennung der Kette", size: "Ketten mit den meisten Punkten oben",
+      changed: "Jüngste Änderung in der Kette oben", due: "Was in der Kette zuerst fällig ist, steht oben",
+      benefit: "Höchster Nutzen eines offenen Punkts oben",
+    },
     // Verlauf (A54)
     hist: "Verlauf", histClose: "Verlauf schließen", histWho: "Wer", histAll: "Alle", histAi: "🤖 KI", histUser: "👤 Du",
     histNew: (n) => (n === 1 ? "1 neue Änderung seit deinem letzten Blick" : `${n} neue Änderungen seit deinem letzten Blick`),
@@ -1508,6 +1529,17 @@ const STRINGS = {
     depsYours: "Your turn",
     depsTag_cycle: "in a cycle", depsTag_missing: "unknown", depsTag_freed: "freed up", depsTagHolds: (n) => `holds up ${n}`, depsTag_yours: "your turn",
     depsChip_cycle: "Cycle", depsChip_missing: "Unknown", depsChip_freed: "Free", depsChip_holds: "Holding up", depsChip_yours: "Yours",
+    // Chains: filter from "Worth a look" and order (D41)
+    depsFilterOn: (name) => `Show only chains with “${name}”`, depsFilterOff: (name) => `Remove the filter “${name}”`,
+    depsHeadFilter: (name) => `only “${name}”`, depsFilterClear: "Show all chains",
+    depsSortNote: "Applies to the chains · saved on this device",
+    depsSortNames: { rank: "Important", num: "Number", size: "Size", changed: "Recently changed", due: "Due date", benefit: "Benefit" },
+    depsSortHints: {
+      rank: "Cycles and unknown references, then what is free, then what holds up most · in “Done”: latest finished on top",
+      num: "By the chain's first reference", size: "Chains with the most items on top",
+      changed: "Latest change in the chain on top", due: "What in the chain is due first comes first",
+      benefit: "Highest benefit of an open item on top",
+    },
     // History (A54)
     hist: "History", histClose: "Close history", histWho: "Who", histAll: "All", histAi: "🤖 AI", histUser: "👤 You",
     histNew: (n) => (n === 1 ? "1 new change since you last looked" : `${n} new changes since you last looked`),
@@ -1664,6 +1696,13 @@ const DENSITIES = ["", "wrap", "line"];
 const BOARD_FOOTERS = ["", "single", "multi"];
 const SORT_FIELD = { changed: ["updated_at", "updated_by"], created: ["created_at", "created_by"] };
 const SORT_SYM = { num: "#", changed: "↻", created: "+", due: "◷" };
+// Order of the chains in Ketten (D41), same menu, remembered on this device (localStorage "cotrack.depsSort"): "rank" =
+// what needs a look first (cycle, unknown reference, free, holds up most; in "Erledigt" the latest finished first), "num"
+// = by the chain's first reference, "size" = most items first, "changed" = latest change first, "due" = earliest due date
+// of an open item first, "benefit" = highest benefit of an open item first. Ties: "rank", then the reference.
+const DEPS_SORTS = ["rank", "num", "size", "changed", "due", "benefit"];
+const DEPS_SORT_SYM = { rank: "!", num: "#", size: "⛓", changed: "↻", due: "◷", benefit: "★" };
+let sortMenuMode = "board"; // which of the two lists the open sort menu shows
 // Order of the project lists (A120, D37), chosen in the picker's "Alle Projekte" row and remembered on this device:
 // "changed" = newest change first (by you or the AI; the server's order), "name" = alphabetical,
 // "opened" = what was opened last on this device (localStorage "cotrack.projectOpened"), the rest by "changed".
@@ -1685,6 +1724,7 @@ const state = {
   nextTime: ["5", "30", "120"].includes(store.get("cotrack.nextTime")) ? store.get("cotrack.nextTime") : "", // Next: time filter in minutes
   mode: MODES.includes(store.get("cotrack.mode")) ? store.get("cotrack.mode") : "board",
   sort: SORTS.includes(store.get("cotrack.sort")) ? store.get("cotrack.sort") : "num",
+  depsSort: DEPS_SORTS.includes(store.get("cotrack.depsSort")) ? store.get("cotrack.depsSort") : "rank",
   projectSort: PROJECT_SORTS.includes(store.get("cotrack.projectSort")) ? store.get("cotrack.projectSort") : "changed",
   view: VIEWS.includes(store.get("cotrack.view")) ? store.get("cotrack.view") : "open", q: "", owner: "", kind: "", kinds: [], projects: [], items: [], version: -1, globalVersion: -1,
   actor: null, addKind: null, addOwner: "user", allKinds: [], lastRefs: new Set(),
@@ -2019,9 +2059,10 @@ function render(before) {
   const mode = state.project ? state.mode : "board";
   board.hidden = mode !== "board"; $("#next").hidden = mode !== "next"; $("#deps").hidden = mode !== "deps";
   $("#bar").hidden = mode === "next"; // Next has neither filters nor Offen/Erledigt/Alle
-  $("#sortBox").hidden = mode !== "board"; // Next and Ketten have an order of their own
+  $("#sortBox").hidden = mode === "next"; // Next has an order of its own; Ketten a list of its own (D41)
   $("#denseBtn").hidden = mode !== "board";
-  if (mode !== "board") setSortOpen(false);
+  if (mode === "next" || mode !== sortMenuMode) setSortOpen(false);
+  syncSortBtn();
   if (mode !== "deps") deps.chains = [];
   document.body.classList.toggle("on-board", mode === "board");
   if (mode !== "board" || !state.project) { boardShape = ""; document.body.classList.remove("board-fill"); }
@@ -3711,7 +3752,7 @@ function waitCard(d) {
 // all closed, "Alle": every chain). Filters and search never cut a chain: items they hide fold into "⋯ n", and in "Offen"
 // closed items shrink to "✓ A36" (dropped: "✕ A36"), so the order stays visible. Columns: prerequisites left, what waits right
 // (phones: a list, one card per line, column after column); arrows are an SVG drawn over the cards from their positions.
-const deps = { model: null, chains: [], expanded: new Set(), sideOpen: null };
+const deps = { model: null, chains: [], expanded: new Set(), sideOpen: null, noteFilter: "", noteProject: "" };
 const NARROW = matchMedia("(max-width: 699px)");
 const SVGNS = "http://www.w3.org/2000/svg";
 const isClosed = (i) => i.status === "done" || i.status === "dropped";
@@ -3771,6 +3812,10 @@ function depsModel(items) {
     v.resolved = v.pre.filter((p) => (p.item && isClosed(p.item)) || p.extDone);
     // frei: everything it waited for is closed (unknown references never count as closed)
     v.free = v.open && v.item.status !== "blocked" && v.pre.length > 0 && v.resolved.length === v.pre.length;
+    // what it holds up: everything still open behind it, not only what waits for it directly ("Auffällig" and "Wichtig")
+    const seen = new Set(), todo = [...v.post];
+    while (todo.length) { const w = todo.pop(); if (w === v || seen.has(w)) continue; seen.add(w); todo.push(...w.post); }
+    v.behind = v.open ? [...seen].filter((w) => w.open).length : 0;
   }
   const comps = [], seen = new Set();
   for (const v of sorted) {
@@ -3799,6 +3844,30 @@ function depsPrepare() {
   return m.shown.flatMap((c) => c.nodes.filter((v) => v.item && hit(v.item)).map((v) => v.item));
 }
 
+// Order of the chains (D41, state.depsSort); every order falls back to "rank", then to the reference.
+function depsCompare() {
+  const time = (iso) => (iso ? Date.parse(iso) || 0 : 0);
+  const openItems = (c) => c.nodes.filter((v) => v.open).map((v) => v.item);
+  // "rank" – in "Erledigt" nothing is open, so there: the latest finished chain first
+  const rank = state.view === "closed"
+    ? (c) => [-Math.max(0, ...c.nodes.map((v) => time(v.item?.closed_at || v.item?.updated_at)))]
+    : (c) => [c.nodes.some((v) => v.cycle) ? 0 : 1, c.nodes.some((v) => !v.item && !v.external) ? 0 : 1,
+      c.nodes.some((v) => v.free) ? 0 : 1, -Math.max(0, ...c.nodes.map((v) => v.behind))];
+  const first = {
+    size: (c) => [-c.nodes.filter((v) => v.item).length],
+    changed: (c) => [-Math.max(0, ...c.nodes.map((v) => time(v.item?.updated_at)))],
+    due: (c) => [time(openItems(c).map((i) => i.due).filter(Boolean).sort()[0]) || Infinity],
+    benefit: (c) => [-Math.max(0, ...openItems(c).map((i) => BENEFIT_PTS[i.benefit] || 0))],
+  }[state.depsSort] || (() => []);
+  const key = (c) => (state.depsSort === "num" ? [c.key] : [...first(c), ...rank(c), c.key]);
+  return (a, b) => cmpRank(key(a), key(b));
+}
+// A chip in "Auffällig": only the chains with such an item; again = all (this page only)
+function depsFilter(id) {
+  deps.noteFilter = deps.noteFilter === id ? "" : id;
+  render();
+}
+
 function renderDeps(cols, before) {
   const m = deps.model, box = $("#deps");
   const filtered = !!(state.kind || state.owner || state.q);
@@ -3807,13 +3876,17 @@ function renderDeps(cols, before) {
   if (deps.sig !== sig) { deps.sig = sig; deps.expanded.clear(); }
   const match = new Set(cols.filter((c) => c.shown).flatMap((c) => c.list.map(itemKey)));
   const compact = state.view === "open";
-  const chains = m.shown.filter((c) => !filtered || deps.expanded.has(c.key) || c.nodes.some((v) => match.has(v.key)));
-  const rank = (c) => [c.nodes.some((v) => v.cycle) ? 0 : 1, c.nodes.some((v) => !v.item && !v.external) ? 0 : 1,
-    c.nodes.some((v) => v.free) ? 0 : 1, -Math.max(0, ...c.nodes.map((v) => v.openPost.length)), c.key];
-  chains.sort((a, b) => cmpRank(rank(a), rank(b)));
-  deps.chains = [];
+  // "Auffällig" over all chains in view; its chips filter the chains (D41): only those with an item of that kind
   const notes = depsNotes(m);
+  if (deps.noteProject !== state.project) { deps.noteProject = state.project; deps.noteFilter = ""; }
+  if (deps.noteFilter && !notes.some((n) => n.id === deps.noteFilter)) deps.noteFilter = "";
+  const noted = deps.noteFilter ? new Set(notes.find((n) => n.id === deps.noteFilter).rows.map((r) => r.v)) : null;
+  const chains = m.shown.filter((c) => (!filtered || deps.expanded.has(c.key) || c.nodes.some((v) => match.has(v.key)))
+    && (!noted || c.nodes.some((v) => noted.has(v))));
+  chains.sort(depsCompare());
+  deps.chains = [];
   box.classList.toggle("no-side", !notes.length);
+  const noteName = deps.noteFilter ? tr("depsChip_" + deps.noteFilter) : "";
   if (!chains.length) {
     const [title, hint] = m.shown.length ? ["depsNoMatch", "depsNoMatchHint"]
       : state.view === "closed" ? ["depsNoneClosed", "depsNoneClosedHint"] : ["depsNone", "depsNoneHint"];
@@ -3824,7 +3897,9 @@ function renderDeps(cols, before) {
   // "Alle Projekte": one block per project, in the order of the project list
   const order = new Map(state.projects.map((p, i) => [p.slug, i]));
   const slugs = [...new Set(chains.map((c) => c.slug))].sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
-  const main = [h("p", { class: "dg-head" }, tr("depsHead", chains.length, state.project === ALL ? tr("allProjects") : currentProject()?.name || ""))];
+  const main = [h("p", { class: "dg-head" }, tr("depsHead", chains.length, state.project === ALL ? tr("allProjects") : currentProject()?.name || ""),
+    ...(noteName ? [h("span", { class: "dg-sep" }, " · "), h("button", { type: "button", class: "dg-unfilter", title: tr("depsFilterClear"), onclick: () => depsFilter("") },
+      tr("depsHeadFilter", noteName), h("span", { "aria-hidden": "true" }, " ✕"))] : []))];
   for (const slug of slugs) {
     if (state.project === ALL) {
       const p = state.projects.find((x) => x.slug === slug);
@@ -4064,12 +4139,7 @@ function depsNotes(m) {
   const freed = shown.filter((v) => v.free);
   if (freed.length) notes.push({ id: "freed", title: tr("depsFreed"), rows: freed.map((v) => row(v, tr("depsFreedWhy", v.resolved.map(label).join(", ")))) });
   // holds up the most: everything still open behind an item, not only what waits for it directly
-  const behind = (v) => {
-    const seen = new Set(), todo = [...v.post];
-    while (todo.length) { const w = todo.pop(); if (w === v || seen.has(w)) continue; seen.add(w); todo.push(...w.post); }
-    return [...seen].filter((w) => w.open).length;
-  };
-  const holds = shown.filter((v) => v.open).map((v) => [v, behind(v)]).filter(([, n]) => n >= 2)
+  const holds = shown.filter((v) => v.open).map((v) => [v, v.behind]).filter(([, n]) => n >= 2)
     .sort((a, b) => b[1] - a[1] || natural(a[0].key, b[0].key)).slice(0, 3);
   if (holds.length) notes.push({ id: "holds", title: tr("depsHolds"), rows: holds.map(([v, n]) => ({ ...row(v, tr("depsHoldsWhy", n, v.openPost.length)), n })) });
   // your turn: yours, nothing left to wait for, and something waits for it
@@ -4111,13 +4181,21 @@ function depsSide(notes) {
     if (n.bad) { it.bad = true; it.why.push(r.why); if (n.id === "cycle") it.r = { ...it.r, sub: r.sub }; }
     if (n.id === "holds") it.holds = r.n;
   }
-  const rows = [...items.values()].sort((a, b) => (a.bad === b.bad ? 0 : a.bad ? -1 : 1) || b.tags.length - a.tags.length
+  const rows = [...items.values()].filter((it) => !deps.noteFilter || it.tags.some((t) => t.id === deps.noteFilter)).sort((a, b) => (a.bad === b.bad ? 0 : a.bad ? -1 : 1) || b.tags.length - a.tags.length
     || b.holds - a.holds || natural(a.r.v.key, b.r.v.key));
   const chip = (id, text, title) => h("span", { class: "dg-chip", style: `--tc:${NOTE_TONE[id]}`, title }, text);
   return h("details", { class: "dg-side", open: deps.sideOpen, ontoggle: (e) => { deps.sideOpen = e.target.open; } },
     h("summary", null,
       h("span", { class: "dg-side-t" }, tr("depsNotable")),
-      h("span", { class: "dg-chips" }, notes.map((n) => chip(n.id, `${n.rows.length} ${tr("depsChip_" + n.id)}`, n.title)))),
+      // the chips filter the chains (D41); a click on one does not fold the panel
+      h("span", { class: "dg-chips" }, notes.map((n) => {
+        const name = tr("depsChip_" + n.id), on = deps.noteFilter === n.id;
+        return h("button", {
+          type: "button", class: "dg-chip dg-fchip" + (on ? " on" : ""), style: `--tc:${NOTE_TONE[n.id]}`, "data-note": n.id,
+          "aria-pressed": String(on), title: `${n.title} – ${tr(on ? "depsFilterOff" : "depsFilterOn", name)}`,
+          onclick: (e) => { e.preventDefault(); e.stopPropagation(); depsFilter(n.id); },
+        }, `${n.rows.length} ${name}`);
+      }))),
     h("ul", { class: "dg-note" }, rows.map((it) => h("li", null,
       h("button", { type: "button", onclick: () => depsJump(it.r.v.key) },
         h("span", { class: "ref", style: `--kc:${it.r.kc}` }, it.r.text),
@@ -4312,39 +4390,49 @@ $("#modeSwitch").addEventListener("click", (e) => {
 });
 $("#ownerChips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) toggleOwner(b.dataset.owner); });
 
-/* sort (A81): icon → short menu (Nummer · Zuletzt geändert · Zuletzt angelegt); remembered on this device */
+/* sort (A81): icon → short menu (Nummer · Zuletzt geändert · Zuletzt angelegt · Fälligkeit); remembered on this device.
+   In Ketten the same button orders the chains (D41) with a list of its own (DEPS_SORTS, state.depsSort). */
+function sortSpec() {
+  return state.mode === "deps" && state.project
+  ? { mode: "deps", list: DEPS_SORTS, cur: state.depsSort, def: "rank", sym: DEPS_SORT_SYM, names: "depsSortNames", hints: "depsSortHints", note: "depsSortNote", key: "cotrack.depsSort", field: "depsSort" }
+  : { mode: "board", list: SORTS, cur: state.sort, def: "num", sym: SORT_SYM, names: "sortNames", hints: "sortHints", note: "sortNote", key: "cotrack.sort", field: "sort" };
+}
 function syncSortBtn() {
-  const b = $("#sortBtn"), label = tr("sortBy", tr("sortNames." + state.sort));
+  const sp = sortSpec(), b = $("#sortBtn"), label = tr("sortBy", tr(sp.names + "." + sp.cur));
   b.title = label; b.setAttribute("aria-label", label);
-  b.classList.toggle("on", state.sort !== "num");
+  b.classList.toggle("on", sp.cur !== sp.def);
 }
 syncSortBtn();
 const sortOptions = () => [...$("#sortPop").querySelectorAll('[role="menuitemradio"]')];
 function setSortOpen(open, refocus = false) {
   const pop = $("#sortPop");
   if (open === !pop.hidden) return;
+  const sp = sortSpec();
   if (open) {
+    sortMenuMode = sp.mode;
     pop.replaceChildren(
       h("div", { class: "sort-head", id: "sortHead" }, tr("sort")),
-      h("div", { role: "menu", "aria-labelledby": "sortHead" }, SORTS.map((s) => h("button", {
-        type: "button", role: "menuitemradio", "aria-checked": String(state.sort === s), tabindex: "-1", onclick: () => setSort(s),
-      }, h("span", { class: "sy", "aria-hidden": "true" }, SORT_SYM[s]),
-        h("span", null, h("span", { class: "sl" }, tr("sortNames." + s)), h("span", { class: "sh" }, tr("sortHints." + s))),
-        h("span", { class: "ok", "aria-hidden": "true" }, state.sort === s ? "✓" : "")))),
-      h("p", { class: "sort-note" }, tr("sortNote")));
+      h("div", { role: "menu", "aria-labelledby": "sortHead" }, sp.list.map((s) => h("button", {
+        type: "button", role: "menuitemradio", "aria-checked": String(sp.cur === s), tabindex: "-1", onclick: () => setSort(s),
+      }, h("span", { class: "sy", "aria-hidden": "true" }, sp.sym[s]),
+        h("span", null, h("span", { class: "sl" }, tr(sp.names + "." + s)), h("span", { class: "sh" }, tr(sp.hints + "." + s))),
+        h("span", { class: "ok", "aria-hidden": "true" }, sp.cur === s ? "✓" : "")))),
+      h("p", { class: "sort-note" }, tr(sp.note)));
   }
   pop.hidden = !open;
   $("#sortBtn").setAttribute("aria-expanded", String(open));
-  if (open) sortOptions()[SORTS.indexOf(state.sort)]?.focus();
+  if (open) sortOptions()[sp.list.indexOf(sp.cur)]?.focus();
   else if (refocus) $("#sortBtn").focus();
 }
 function setSort(s) {
   setSortOpen(false, true);
-  if (s === state.sort) return;
-  state.sort = s;
-  store.set("cotrack.sort", s);
+  const sp = sortSpec();
+  if (s === sp.cur) return;
+  state[sp.field] = s;
+  store.set(sp.key, s);
   syncSortBtn();
-  render(); toBoardTop();
+  render();
+  if (sp.mode === "board") toBoardTop(); else window.scrollTo(0, 0);
 }
 $("#sortBtn").addEventListener("click", () => setSortOpen($("#sortPop").hidden));
 $("#sortPop").addEventListener("keydown", (e) => {

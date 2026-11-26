@@ -148,7 +148,10 @@ Everything cotrack does – from sub-items, due dates and undo to statistics and
 - **Chains** – the third view (switch at the top: Board · Next · Chains) shows what waits for what: arrows from the
   prerequisite to the waiting item, done prerequisites dashed, freed-up items highlighted, cycles and unknown references in
   red; plus "Worth a look" (freed up, holds up the most, your turn). Filters and search only fold items away ("⋯ 2"), the
-  chain stays whole. On phones held upright a chain is a list, one card per line, with the arrows running along the left side.
+  chain stays whole. Its chips filter the chains (only those with something freed up, for example). The sort button orders the
+  chains: Important (cycles and unknown references, then what is free, then what holds up most), Number, Size, Recently
+  changed, Due date or Benefit – remembered on each device. On phones held upright a chain is a list, one card per line, with
+  the arrows running along the left side.
 - **STATUS.md export** – the "Offene Punkte" section for handovers.
 - **Audit trail and history** – every change is logged with who made it (you or the AI); the clock in the top bar shows
   it, marks what the AI changed since you last looked and counts it on the button. Each item's edit dialog has a
