@@ -81,7 +81,7 @@
   - Im Heimatprojekt zeigt **⇄ IMM**, wo ein Punkt noch angezeigt wird. In der Fußzeile über mehrere Projekte steht ein
     Punkt nur einmal, im Block seines Heimatprojekts.
   - Das Feld „Auch angezeigt in“ pflegt die KI; im Bearbeiten-Dialog erscheint es nur, wenn es befüllt ist. Selbst eintragen
-    geht über „⇄ Auch in anderem Projekt anzeigen“: Name, Kürzel oder Repo tippen und aus den Vorschlägen wählen (bis zu 5 Projekte).
+    geht über „+ Auch angezeigt in“: Name, Kürzel oder Repo tippen und aus den Vorschlägen wählen (bis zu 5 Projekte).
 - **Fußzeile:** voll nur bei „Stand?“, am Ende größerer Arbeiten oder etwa alle vier Antworten;
   bei Änderungen nur die Kurzzeile „neu: … · erledigt: …“; sonst gar nichts.
 - **Gruppenzeichen (v2.6):** In der Fußzeile steht `👤` für deine Punkte und `🤖` für die der KI (statt „Du:“ und „🤖KI:“) –
@@ -125,7 +125,7 @@
   - Session-Links gehören **nicht in die Quelle**: Die Quelle sagt, wo die Details stehen (Dokument, PR, Recherche), die
     Session, wo daran gearbeitet wurde. Landet doch einer in der Quelle, antwortet der MCP-Server mit einem Hinweis.
   - Nur Claude Code kennt seine Session-Adresse. claude.ai-Chat und ChatGPT geben dem Modell ihre Adresse nicht – dort bleibt
-    das Feld leer, die KI rät nie. Den Link trägst du dann im Bearbeiten-Dialog selbst ein („🔗 Session-Link eintragen“).
+    das Feld leer, die KI rät nie. Den Link trägst du dann im Bearbeiten-Dialog selbst ein („+ Session“).
   - Im Bearbeiten-Dialog steht er unter „Session“, benannt nach dem Ziel („Claude Code ↗“, „claude.ai ↗“, „ChatGPT ↗“),
     darunter die erste Session, wenn es eine andere war; der Verlauf zeigt je Zeile ein ↗. Das Board zeigt ihn nicht.
   - Fußzeile und Prompt bleiben unverändert; die Regel steht in der Server-Anweisung und in den Werkzeugbeschreibungen.

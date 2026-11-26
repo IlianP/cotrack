@@ -109,7 +109,7 @@
   - In its home project, **⇄ IMM** shows where an item is shown as well. In a footer for several projects an item appears
     once, in the block of its home project.
   - The AI keeps the "Also shown in" field; in the edit dialog it only appears when it is set. To add a project yourself,
-    use "⇄ Also show in another project": type name, code or repository and pick from the suggestions (up to 5 projects).
+    use "+ Also shown in": type name, code or repository and pick from the suggestions (up to 5 projects).
 - **Due dates (v2.14, decision D34):** If an item has a **real date** (deadline, event, commitment), it goes into the
   "Due" field (`due`, YYYY-MM-DD). The AI sets it when adding or changing the item – and **never estimates** a date;
   without a real date the field stays empty. Notes on the deadline may still go into the description.
@@ -126,7 +126,7 @@
   - Session links do **not go into the source**: the source says where the details are (document, PR, research), the
     session where the work happened. If one lands in the source anyway, the MCP server answers with a note.
   - Only Claude Code knows its session address. claude.ai chats and ChatGPT do not give the model their address – there the
-    field stays empty, and the AI never guesses. You can enter the link yourself in the edit dialog ("🔗 Add session link").
+    field stays empty, and the AI never guesses. You can enter the link yourself in the edit dialog ("+ Session").
   - The edit dialog shows it under "Session", named after where it leads ("Claude Code ↗", "claude.ai ↗", "ChatGPT ↗"),
     with the first session below when it was a different one; the history shows a ↗ per row. The board does not show it.
   - Footer and prompt stay unchanged; the rule lives in the server's instructions and in the tool descriptions.

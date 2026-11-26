@@ -99,6 +99,11 @@
   lands in `source`. UI: `sessionLink`/`sessionAnchor`, the field in `openEdit` (shown when set, otherwise "🔗 Session-Link
   eintragen"; `save` sends `session` only when the field was changed), a ↗ column in `itemHistTable`; undo restores it via
   `last_session` in `UNDO_FIELDS`/`EXPECT_COLS`, sent back as `session`. Session links never go into `source`; search (`q`) covers `source` as well.
+- Empty fields in the edit dialog (I34): every optional field (sub-items, effort/benefit, short label, waiting on, source,
+  due, session, also in) sits in a cell of its own (`optCell`, `.opt[data-field]` in `src/ui.html`); empty, the cell holds a
+  slim dashed "+ <label>" button that opens the field in place. Fixed order and pairs whatever is set – status and owner
+  (always set) share the first pair, then short label | source (nearly always set), waiting on | due and session | also in
+  (mostly both empty – D42); a pair with both empty keeps its two columns on phones too. Nothing moves or reorders.
 - Compact board (D34, three steps since A135): `#denseBtn` steps `state.density` through `DENSITIES` – cards · `wrap`
   (whole title, no description; reference and title flow like a sentence, the signs float right of the first line) ·
   `line` (one line; a title that does not fit gives way to its short label, `fitTitles` after layout and resize – A138) –

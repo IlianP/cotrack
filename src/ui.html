@@ -859,11 +859,16 @@ dialog.pal[open] { display: flex; flex-direction: column; }
   padding: 4px; max-height: 232px; background: var(--surface); color: var(--text); font-size: 15px; box-shadow: 0 8px 28px rgb(0 0 0 / .16); }
 .ai-list.up { box-shadow: 0 -8px 28px rgb(0 0 0 / .16); }
 .btn.ai-add { justify-self: start; height: 32px; font-size: 13px; color: var(--muted); }
-/* Small "add" buttons for fields shown only when set (also_in, session link) share one row; gone when both are hidden. */
-.add-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.add-row:not(:has(> :not([hidden]))) { display: none; }
 .sess-field { display: grid; gap: 4px; }
 .sess-field[hidden] { display: none; }
+/* Empty fields in the edit dialog (I34): the field's own cell holds a slim "+ Feld" button instead – same order and column
+   whether set or not, so nothing changes place; the field opens right there (optCell). Pushed to the bottom of its cell,
+   so beside a filled field it sits on the input's line. */
+.opt { display: flex; flex-direction: column; min-width: 0; }
+.opt > .ai-add { margin-top: auto; text-align: left; padding: 0 10px; border-style: dashed; background: none;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.opt > .ai-add:hover { background: var(--surface-2); }
+.opt > label[hidden], .checks[hidden] { display: none; }
 .sess-first { margin: 0; }
 .sess-first a { color: var(--accent); }
 .pill.checks-pill { color: var(--accent); font-variant-numeric: tabular-nums; }
@@ -957,6 +962,8 @@ button.hev { width: 100%; border: 0; background: none; text-align: left; font: i
 @media (max-width: 560px) {
   .brand span { display: none; }
   .row2 { grid-template-columns: 1fr; }
+  /* a pair with nothing filled keeps its two columns: two slim buttons side by side, left one first */
+  .row2:not(:has(> label, > .opt > :not(.ai-add, [hidden]))) { grid-template-columns: 1fr 1fr; }
   .board { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -4764,6 +4771,16 @@ const closeDialog = () => {
   if (d.open) { d.dataset.closing = "1"; d.close(); }
 };
 const field = (label, input) => h("label", null, label, input);
+// An optional field in the edit dialog (I34): shown when set, otherwise a slim "+ label" button in the same place. A tap
+// opens the field there (date and select pickers right away where the browser allows) – it stays open until the dialog closes.
+function optCell(key, labelEl, el, filled, text, onOpen) {
+  labelEl.hidden = !filled;
+  const btn = h("button", { type: "button", class: "btn ai-add", hidden: filled, onclick: () => {
+    labelEl.hidden = false; btn.hidden = true; onOpen?.(); el.focus();
+    try { if (el.type === "date" || el.tagName === "SELECT") el.showPicker(); } catch { /* not offered: the focus is enough */ }
+  } }, text);
+  return h("div", { class: "opt", "data-field": key }, labelEl, btn);
+}
 
 // Values of all fields, to tell whether something was changed since the dialog opened.
 let dialogInitial = "";
@@ -4944,8 +4961,8 @@ function alsoInPicker(it) {
   list.addEventListener("mousedown", (e) => e.preventDefault());
   const box = h("div", { class: "ai-box", onclick: (e) => { if (e.target === e.currentTarget && !input.disabled) input.focus(); } }, chips, input);
   const fieldEl = h("div", { class: "ai-field", hidden: !chosen.length }, h("span", null, tr("fAlsoIn")), box, list, value);
-  const add = h("button", { type: "button", class: "btn ai-add", hidden: !!chosen.length,
-    onclick: () => { fieldEl.hidden = false; add.hidden = true; input.focus(); } }, "⇄ " + tr("alsoInAdd"));
+  const add = h("button", { type: "button", class: "btn ai-add", hidden: !!chosen.length, title: tr("alsoInAdd"),
+    onclick: () => { fieldEl.hidden = false; add.hidden = true; input.focus(); } }, "+ " + tr("fAlsoIn"));
   sync();
   return {
     field: fieldEl, add, value,
@@ -4987,7 +5004,7 @@ function openEdit(it) {
   // One source per line (D36): a link for each that leads somewhere – "öffnen ↗" for one, named by target for several.
   // The field grows by one line per source (no wrapping), up to a limit in CSS; measured once the dialog is open.
   const fitSrc = () => {
-    if (!f.source.isConnected) return;
+    if (!f.source.isConnected || !f.source.getClientRects().length) return; // hidden while empty: measured when opened
     f.source.style.height = "auto";
     f.source.style.height = f.source.scrollHeight + f.source.offsetHeight - f.source.clientHeight + "px";
   };
@@ -5020,8 +5037,8 @@ function openEdit(it) {
   const sessField = h("div", { class: "sess-field", hidden: !it.last_session && !firstSess },
     h("label", null, h("span", { class: "lbl-row" }, tr("fSession"), sessOpen), f.session),
     firstSess ? h("p", { class: "small sess-first" }, tr("sessionFirst"), " ", sessionAnchor(firstSess, firstSess.label + " ↗")) : null);
-  const sessAdd = h("button", { type: "button", class: "btn ai-add", hidden: !sessField.hidden,
-    onclick: () => { sessField.hidden = false; sessAdd.hidden = true; f.session.focus(); } }, "🔗 " + tr("sessionAdd"));
+  const sessAdd = h("button", { type: "button", class: "btn ai-add", hidden: !sessField.hidden, title: tr("sessionAdd"),
+    onclick: () => { sessField.hidden = false; sessAdd.hidden = true; f.session.focus(); } }, "+ " + tr("fSession"));
   const ai = alsoInPicker(it);
   // Effort and benefit (actions and ideas): an untouched estimate stays an estimate unless "confirm" is ticked.
   const sizable = isSizable(it), est = isEstimate(it);
@@ -5076,6 +5093,8 @@ function openEdit(it) {
     if (focusAt != null) checkBox.querySelectorAll("input[type=checkbox]")[focusAt]?.focus();
   };
   if (isTask) renderChecks();
+  // No sub-items yet: a slim button where the list would be, which opens it (I34).
+  const checkCell = isTask ? optCell("checks", checkBox, addInput, checks.length > 0, "+ " + tr("checks")) : null;
   const save = async (e) => {
     e.preventDefault();
     const body = {};
@@ -5125,15 +5144,22 @@ function openEdit(it) {
           svg("path", { d: "M14 10.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2" })))),
     h("label", null, tr("fTitle"), f.title, titleCount),
     h("label", null, tr("fBody"), f.body, bodyCount),
-    checkBox,
-    sz ? h("div", { class: "row2" }, field(tr("effort"), sz.effort), field(tr("benefit"), sz.benefit)) : null,
+    checkCell,
+    // Fixed order (I34): always-set fields first, then the optional ones in pairs – an empty one is a slim button in its
+    // own cell, so nothing moves whether a field is set or not, on wide screens and on phones. Pairs by how often they are
+    // filled (D42, open items on the live instance): short label and source nearly always, so together; waiting on | due
+    // and session | also in are mostly both empty, so their row turns slim as a whole.
+    sz ? h("div", { class: "row2" }, optCell("effort", field(tr("effort"), sz.effort), sz.effort, !!it.effort, "+ " + tr("effort")),
+      optCell("benefit", field(tr("benefit"), sz.benefit), sz.benefit, !!it.benefit, "+ " + tr("benefit"))) : null,
     sz?.confirm ? h("label", { class: "chk size-confirm" }, sz.confirm, h("span", null, `${tr("sizeEstimated")} – ${tr("sizeConfirm")}`)) : null,
-    h("div", { class: "row2" }, field(tr("fShort"), f.short), field(tr("responsible"), f.owner)),
-    h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("fWaiting"), f.waiting_on)),
-    h("div", { class: "row2" }, h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source, srcCount), field(tr("fDue"), f.due)),
-    sessField,
-    ai.field,
-    h("div", { class: "add-row" }, ai.add, sessAdd),
+    h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("responsible"), f.owner)),
+    h("div", { class: "row2" }, optCell("short", field(tr("fShort"), f.short), f.short, !!it.short, "+ " + tr("fShort")),
+      optCell("source", h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source, srcCount),
+        f.source, !!it.source, "+ " + tr("fSource"), fitSrc)),
+    h("div", { class: "row2" }, optCell("waiting_on", field(tr("fWaiting"), f.waiting_on), f.waiting_on, !!f.waiting_on.value, "+ " + tr("fWaiting")),
+      optCell("due", field(tr("fDue"), f.due), f.due, !!it.due, "+ " + tr("fDue"))),
+    h("div", { class: "row2" }, h("div", { class: "opt", "data-field": "session" }, sessField, sessAdd),
+      h("div", { class: "opt", "data-field": "also_in" }, ai.field, ai.add)),
     // never changed since it was created (both times are set together): only "Angelegt …"
     itemHistory(it, it.updated_at && it.updated_at !== it.created_at
       ? tr("history", fmt(it.created_at), actorLabel(it.created_by), fmt(it.updated_at), actorLabel(it.updated_by))
