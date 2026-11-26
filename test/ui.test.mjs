@@ -111,7 +111,7 @@ describe("web app", { skip }, () => {
       const btn = c.querySelector(":scope > .ai-add:not([hidden])"), r = c.getBoundingClientRect();
       return { f: c.dataset.field, slim: !!btn, h: Math.round(r.height), x: Math.round(r.left), y: Math.round(r.top) };
     }));
-    const order = ["checks", "effort", "benefit", "short", "waiting_on", "source", "due", "session", "also_in"];
+    const order = ["checks", "effort", "benefit", "short", "source", "waiting_on", "due", "session", "also_in"];
     for (const viewport of [{ width: 1000, height: 1200 }, { width: 390, height: 1400 }]) {
       const a = await open(`${p}/${empty}`, { viewport });
       await a.page.waitForSelector("dialog[open] .opt");
@@ -119,7 +119,7 @@ describe("web app", { skip }, () => {
       assert.deepEqual(e.map((c) => c.f), order, "fixed order");
       assert.ok(e.every((c) => c.slim && c.h <= 34), `every empty field is a slim button (${viewport.width}px)`);
       // pairs stay side by side, also on a phone: same row, left one first
-      for (const [l, r] of [["effort", "benefit"], ["short", "waiting_on"], ["source", "due"], ["session", "also_in"]]) {
+      for (const [l, r] of [["effort", "benefit"], ["short", "source"], ["waiting_on", "due"], ["session", "also_in"]]) {
         const [cl, cr] = [e.find((c) => c.f === l), e.find((c) => c.f === r)];
         assert.ok(cl.y === cr.y && cl.x < cr.x, `${l} | ${r} side by side (${viewport.width}px)`);
       }

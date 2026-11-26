@@ -5146,15 +5146,17 @@ function openEdit(it) {
     h("label", null, tr("fBody"), f.body, bodyCount),
     checkCell,
     // Fixed order (I34): always-set fields first, then the optional ones in pairs – an empty one is a slim button in its
-    // own cell, so nothing moves whether a field is set or not, on wide screens and on phones.
+    // own cell, so nothing moves whether a field is set or not, on wide screens and on phones. Pairs by how often they are
+    // filled (D42, open items on the live instance): short label and source nearly always, so together; waiting on | due
+    // and session | also in are mostly both empty, so their row turns slim as a whole.
     sz ? h("div", { class: "row2" }, optCell("effort", field(tr("effort"), sz.effort), sz.effort, !!it.effort, "+ " + tr("effort")),
       optCell("benefit", field(tr("benefit"), sz.benefit), sz.benefit, !!it.benefit, "+ " + tr("benefit"))) : null,
     sz?.confirm ? h("label", { class: "chk size-confirm" }, sz.confirm, h("span", null, `${tr("sizeEstimated")} – ${tr("sizeConfirm")}`)) : null,
     h("div", { class: "row2" }, field(tr("fStatus"), f.status), field(tr("responsible"), f.owner)),
     h("div", { class: "row2" }, optCell("short", field(tr("fShort"), f.short), f.short, !!it.short, "+ " + tr("fShort")),
-      optCell("waiting_on", field(tr("fWaiting"), f.waiting_on), f.waiting_on, !!f.waiting_on.value, "+ " + tr("fWaiting"))),
-    h("div", { class: "row2" }, optCell("source", h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source, srcCount),
-      f.source, !!it.source, "+ " + tr("fSource"), fitSrc),
+      optCell("source", h("label", null, h("span", { class: "lbl-row" }, tr("fSource"), srcOpen), f.source, srcCount),
+        f.source, !!it.source, "+ " + tr("fSource"), fitSrc)),
+    h("div", { class: "row2" }, optCell("waiting_on", field(tr("fWaiting"), f.waiting_on), f.waiting_on, !!f.waiting_on.value, "+ " + tr("fWaiting")),
       optCell("due", field(tr("fDue"), f.due), f.due, !!it.due, "+ " + tr("fDue"))),
     h("div", { class: "row2" }, h("div", { class: "opt", "data-field": "session" }, sessField, sessAdd),
       h("div", { class: "opt", "data-field": "also_in" }, ai.field, ai.add)),
