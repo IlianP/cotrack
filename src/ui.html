@@ -1270,7 +1270,7 @@ const STRINGS = {
     depsHolds: "Hält am meisten auf", depsHoldsWhy: (n, direct) => `${n} warten dahinter${direct < n ? ` (${direct} direkt)` : ""}`,
     depsYours: "Du bist dran",
     depsTag_cycle: "im Kreis", depsTag_missing: "unbekannt", depsTag_freed: "frei geworden", depsTagHolds: (n) => `bremst ${n}`, depsTag_yours: "du bist dran",
-    depsChip_cycle: "Kreis", depsChip_missing: "Unbekannt", depsChip_freed: "Frei", depsChip_holds: "Bremst", depsChip_yours: "Du dran",
+    depsChip_cycle: "Kreis", depsChip_missing: "Unbekannt", depsChip_freed: "Frei", depsChip_holds: "Bremser",depsChip_yours: "Du dran",
     // Verlauf (A54)
     hist: "Verlauf", histClose: "Verlauf schließen", histWho: "Wer", histAll: "Alle", histAi: "🤖 KI", histUser: "👤 Du",
     histNew: (n) => (n === 1 ? "1 neue Änderung seit deinem letzten Blick" : `${n} neue Änderungen seit deinem letzten Blick`),
@@ -4103,7 +4103,7 @@ function cyclePath(part) {
   return path;
 }
 
-// "Auffällig" (demo trial): the heading names what is there per category ("1 Kreis · 3 Bremst · 5 Du dran"), also when
+// "Auffällig" (demo trial): the heading names what is there per category ("1 Kreis · 3 Bremser · 5 Du dran"), also when
 // folded; open, every item appears once, with its reasons as tags (an item can be freed, hold up others and be yours at once).
 const NOTE_TONE = { cycle: "var(--danger)", missing: "var(--danger)", freed: "var(--accent)", holds: "#d97706", yours: "#2563eb" };
 function depsSide(notes) {
