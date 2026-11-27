@@ -68,8 +68,8 @@ button { cursor: pointer; }
 .psel-caret { color: var(--muted); font-size: 11px; flex: none; }
 .psel-pop {
   position: absolute; left: 0; top: calc(100% + 6px); z-index: 20;
-  /* as wide as its longest row (so counts sit close to the names), but not below the order menu (300px + 2 × 8px) and not wider than 380px; openPicker pins the width of the whole list while filtering */
-  width: max-content; min-width: min(316px, calc(100vw - 32px)); max-width: min(380px, calc(100vw - 32px));
+  /* as wide as its longest row (so counts sit close to the names), but not below the order menu (300px + 2 × 8px) and not wider than 380px; openPicker pins the width of the whole list while filtering (--pop-w, still capped by the window) */
+  width: max-content; min-width: min(var(--pop-w, 316px), calc(100vw - 32px)); max-width: min(380px, calc(100vw - 32px));
   display: grid; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: 0 8px 28px rgb(0 0 0 / .16);
 }
@@ -4627,10 +4627,10 @@ function openPicker(text = "") {
   pop.hidden = false;
   $("#projectBtn").setAttribute("aria-expanded", "true");
   // The width follows the longest entry of the whole list; measured once with every project shown, so it does not jump while filtering.
-  pop.style.minWidth = "";
+  pop.style.removeProperty("--pop-w");
   input.value = "";
   renderPicker();
-  pop.style.minWidth = pop.getBoundingClientRect().width + "px";
+  pop.style.setProperty("--pop-w", pop.getBoundingClientRect().width + "px");
   input.value = text;
   if (text) renderPicker();
   input.focus();

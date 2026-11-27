@@ -554,6 +554,10 @@ describe("web app", { skip }, () => {
       await page.fill("#projectSearch", q);
       await page.waitForTimeout(100);
       assert.equal((await box()).width, all.width, "same width while filtering");
+      // the window gets narrower while the list is open (phone turned): it follows
+      await page.setViewportSize({ width: 340, height: 800 });
+      const narrow = await box();
+      assert.ok(narrow.right <= 340, `after narrowing the list ends at ${narrow.right}px in a 340px window`);
       assert.deepEqual(errors, []);
       await ctx.close();
     }
