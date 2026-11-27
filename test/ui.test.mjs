@@ -34,15 +34,16 @@ describe("web app", { skip }, () => {
     page.on("pageerror", (e) => errors.push(e.message));
     if (serve) {
       await page.route((url) => url.pathname === "/", async (route) => {
-        const res = await route.fetch();
-        await route.fulfill({ response: res, body: serve(await res.text()) });
+        const res = await route.fetch().catch(() => null); // the page may be closed while a request is in flight
+        if (res) await route.fulfill({ response: res, body: serve(await res.text()) }).catch(() => {});
       });
     }
     if (apiHeader) {
       await page.route((url) => url.pathname.startsWith("/api/"), async (route) => {
-        const res = await route.fetch();
+        const res = await route.fetch().catch(() => null); // the page may be closed while a request is in flight
+        if (!res) return;
         const v = apiHeader();
-        await route.fulfill({ response: res, headers: { ...res.headers(), ...(v ? { "x-cotrack-ui": v } : {}) } });
+        await route.fulfill({ response: res, headers: { ...res.headers(), ...(v ? { "x-cotrack-ui": v } : {}) } }).catch(() => {});
       });
     }
     await page.goto(`${BASE}/?t=${Math.random()}#${path}`);
@@ -561,5 +562,41 @@ describe("web app", { skip }, () => {
       assert.deepEqual(errors, []);
       await ctx.close();
     }
+  });
+
+  it("filters per project: view, Du/KI and category come back when the project is opened again", async () => {
+    const small = await freshProject("ui-fsmall"), big = await freshProject("ui-fbig");
+    for (const slug of [small, big]) {
+      await api(`/projects/${slug}/items`, { method: "POST", body: { kind: "A", title: "Aufgabe offen" } });
+      await api(`/projects/${slug}/items`, { method: "POST", body: { kind: "I", title: "Idee offen" } });
+    }
+    const { page, ctx, errors } = await open(small);
+    await page.waitForSelector("#kindChips .tg");
+    const pressed = (sel) => page.evaluate((q) => [...document.querySelectorAll(q)].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.dataset.view || b.dataset.owner || b.dataset.kind), sel);
+    const filters = async () => ({ view: await pressed("#viewChips button"), owner: await pressed("#ownerChips button"), kind: await pressed("#kindChips .tg") });
+    const go = async (slug) => { await page.evaluate((x) => { location.hash = x; }, slug); await page.waitForTimeout(500); };
+    assert.deepEqual(await filters(), { view: ["open"], owner: [], kind: [] }, "a project without a record starts with the open items");
+    // small project: everything, only ideas
+    await page.click('#viewChips [data-view="all"]');
+    await page.click('#kindChips .tg[data-kind="I"]');
+    assert.deepEqual(await filters(), { view: ["all"], owner: [], kind: ["I"] });
+    // the other project has its own: nothing carries over, then it gets its own choice (Du, open)
+    await go(big);
+    assert.deepEqual(await filters(), { view: ["open"], owner: [], kind: [] }, "the other project is not touched");
+    await page.click('#ownerChips [data-owner="user"]');
+    assert.deepEqual(await filters(), { view: ["open"], owner: ["user"], kind: [] });
+    // back: each project shows what it showed the last time
+    await go(small);
+    assert.deepEqual(await filters(), { view: ["all"], owner: [], kind: ["I"] });
+    await go(big);
+    assert.deepEqual(await filters(), { view: ["open"], owner: ["user"], kind: [] });
+    // and after a reload
+    await page.reload();
+    await page.waitForSelector("#kindChips .tg");
+    assert.deepEqual(await filters(), { view: ["open"], owner: ["user"], kind: [] }, "reload keeps the project's filters");
+    await go(small);
+    assert.deepEqual(await filters(), { view: ["all"], owner: [], kind: ["I"] });
+    assert.deepEqual(errors, []);
+    await ctx.close();
   });
 });
