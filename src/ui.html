@@ -67,7 +67,9 @@ button { cursor: pointer; }
 .psel-btn > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .psel-caret { color: var(--muted); font-size: 11px; flex: none; }
 .psel-pop {
-  position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; width: min(420px, calc(100vw - 32px));
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 20;
+  /* as wide as its longest row (so counts sit close to the names), but not below the order menu (300px + 2 × 8px) and not wider than 380px; openPicker pins the width of the whole list while filtering */
+  width: max-content; min-width: min(316px, calc(100vw - 32px)); max-width: min(380px, calc(100vw - 32px));
   display: grid; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--radius); box-shadow: 0 8px 28px rgb(0 0 0 / .16);
 }
@@ -95,10 +97,10 @@ button { cursor: pointer; }
 .psel-sort.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
 .psel-pop .psel-sortpop { right: 8px; }
 .psel-empty { padding: 10px 8px; color: var(--muted); font-size: 13px; }
-/* narrow screens: the list spans the whole top bar (its containing block) instead of starting at the button */
+/* narrow screens: the list starts at the left edge of the top bar (its containing block) instead of at the button, and keeps its own width */
 @media (max-width: 560px) {
   .psel { position: static; }
-  .psel-pop { left: 16px; right: 16px; width: auto; top: calc(100% + 4px); }
+  .psel-pop { left: 16px; top: calc(100% + 4px); }
 }
 .live { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; transition: background .3s; }
 .live.on { background: #16a34a; box-shadow: 0 0 0 3px color-mix(in srgb, #16a34a 25%, transparent); }
@@ -4593,10 +4595,10 @@ function renderPicker() {
       h("li", { id: "popt-" + i, role: "option", class: [p.slug === state.project ? "cur" : "", p.all && i === 0 && picker.options.length > 1 ? "psel-all" : ""].filter(Boolean).join(" "), "aria-selected": "false",
           onmousemove: () => setPickerActive(i), onclick: () => choosePicker(i) },
         h("span", { class: "psel-code" }, p.all ? "" : p.code || ""),
-        h("span", { class: "psel-name" }, p.name),
+        h("span", { class: "psel-name", title: p.name }, p.name),
         p.all && i === 0 && state.projects.length > 1 ? projectSortBtn()
           : h("span", { class: "psel-count", title: tr("openItems") }, p.open_count ? String(p.open_count) : ""),
-        p.repo ? h("span", { class: "psel-repo" }, p.repo) : null,
+        p.repo ? h("span", { class: "psel-repo", title: p.repo }, p.repo) : null,
       ),
     ),
   );
@@ -4621,9 +4623,16 @@ function openPicker(text = "") {
   input.value = text;
   picker.open = true;
   picker.active = text ? 0 : Math.max(0, pickerMatches("").findIndex((p) => p.slug === state.project));
-  $("#projectPop").hidden = false;
+  const pop = $("#projectPop");
+  pop.hidden = false;
   $("#projectBtn").setAttribute("aria-expanded", "true");
+  // The width follows the longest entry of the whole list; measured once with every project shown, so it does not jump while filtering.
+  pop.style.minWidth = "";
+  input.value = "";
   renderPicker();
+  pop.style.minWidth = pop.getBoundingClientRect().width + "px";
+  input.value = text;
+  if (text) renderPicker();
   input.focus();
 }
 

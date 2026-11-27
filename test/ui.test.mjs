@@ -532,4 +532,30 @@ describe("web app", { skip }, () => {
     assert.deepEqual(errors, []);
     await ctx.close();
   });
+
+  it("project picker: as wide as its longest row but at most 380px, long repositories are cut, the width stays while filtering", async () => {
+    const long = "SehrLangerOrganisationsname/ein-extrem-langer-repository-name-der-nicht-in-das-menue-passt";
+    const q = await freshProject("ui-pick", { repo: long });
+    for (const viewport of [{ width: 1000, height: 900 }, { width: 425, height: 800 }]) {
+      const { page, ctx, errors } = await open(q, { viewport });
+      await page.waitForSelector("#projectBtn");
+      await page.click("#projectBtn");
+      await page.waitForSelector("#projectPop:not([hidden])");
+      const box = () => page.evaluate(() => {
+        const pop = document.querySelector("#projectPop").getBoundingClientRect();
+        const repo = [...document.querySelectorAll("#projectList .psel-repo")].find((el) => el.textContent.startsWith("SehrLanger"));
+        return { width: pop.width, right: pop.right, cut: repo ? repo.scrollWidth > repo.clientWidth : null, title: repo?.title };
+      });
+      const all = await box();
+      assert.ok(all.width <= 380.5, `the list is ${all.width}px wide (${viewport.width}px window)`);
+      assert.ok(all.right <= viewport.width, "stays on screen");
+      assert.equal(all.cut, true, "the long repository is cut");
+      assert.equal(all.title, long, "its full name is the tooltip");
+      await page.fill("#projectSearch", q);
+      await page.waitForTimeout(100);
+      assert.equal((await box()).width, all.width, "same width while filtering");
+      assert.deepEqual(errors, []);
+      await ctx.close();
+    }
+  });
 });
