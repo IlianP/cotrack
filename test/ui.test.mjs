@@ -599,4 +599,20 @@ describe("web app", { skip }, () => {
     assert.deepEqual(errors, []);
     await ctx.close();
   });
+
+  it("filters per project: a project replaced by the first one (archived while open) shows the filters of the new one", async () => {
+    const gone = await freshProject("ui-fgone"), next = await freshProject("ui-fnext");
+    const { page, ctx, errors } = await open(gone, { storage: { "cotrack.filters": JSON.stringify({ [gone]: { view: "all", owner: "ai", kind: "" }, [next]: { view: "closed", owner: "", kind: "" } }) } });
+    await page.waitForSelector("#kindChips .tg");
+    const view = () => page.evaluate(() => [...document.querySelectorAll("#viewChips button")].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.dataset.view));
+    assert.deepEqual(await view(), ["all"]);
+    assert.equal((await api(`/projects/${gone}`, { method: "PATCH", body: { archived: true } })).status, 200);
+    await page.waitForFunction((slug) => location.hash === "#" + slug || document.querySelector("#projectBtn")?.getAttribute("aria-label")?.includes(slug), next, { timeout: 15000 }).catch(() => {});
+    await page.waitForFunction(() => [...document.querySelectorAll("#viewChips button")].some((b) => b.getAttribute("aria-pressed") === "true" && b.dataset.view !== "all"), null, { timeout: 15000 });
+    assert.deepEqual(await view(), ["closed"], "the new project's own view, not the archived one's");
+    await page.waitForFunction(() => !document.querySelector('#ownerChips [aria-pressed="true"]'), null, { timeout: 15000 }).catch(() => {}); // the bar follows with the next render
+    assert.equal(await page.evaluate(() => document.querySelector('#ownerChips [aria-pressed="true"]')?.dataset.owner || ""), "", "no Du/KI of the archived project");
+    assert.deepEqual(errors, []);
+    await ctx.close();
+  });
 });

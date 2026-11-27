@@ -1941,6 +1941,7 @@ async function loadProjects(notify) {
   loadProjects.done = true;
   if (state.project !== ALL && !state.projects.some((p) => p.slug === state.project)) {
     state.project = state.projects[0]?.slug || "";
+    applyFilters(state.project); // the replacement shows its own filters, not those of the project that is gone
   }
   renderProjects();
   if (added.length === 1) {
