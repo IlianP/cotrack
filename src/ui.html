@@ -1914,6 +1914,7 @@ async function boot() {
     state.actor = me.actor; state.allKinds = kinds.kinds.map(localizeKind); state.kinds = state.allKinds.filter((k) => k.active);
     state.addKind = state.addKind || state.kinds[0]?.code;
     await loadProjects();
+    applyFilters(state.project);
     noteProjectOpened(state.project);
     renderKindSeg();
     const linked = hashTarget(); // before the first refresh: selecting the project rewrites the address
@@ -1940,6 +1941,7 @@ async function loadProjects(notify) {
   loadProjects.done = true;
   if (state.project !== ALL && !state.projects.some((p) => p.slug === state.project)) {
     state.project = state.projects[0]?.slug || "";
+    applyFilters(state.project); // the replacement shows its own filters, not those of the project that is gone
   }
   renderProjects();
   if (added.length === 1) {
@@ -2337,16 +2339,18 @@ function toggleKind(k) {
   if (state.mode === "board" && $("#board").classList.contains("swipe")) {
     state.lane = k.code;
     // I and W have no owner: like filtering, going there lifts Du/KI
-    if (!k.actionable && state.owner) { state.owner = ""; return render(); }
+    if (!k.actionable && state.owner) { state.owner = ""; saveFilters(); return render(); }
     return jumpLane(k.code, true);
   }
   state.kind = state.kind === k.code ? "" : k.code;
   if (state.kind && !k.actionable) state.owner = "";
+  saveFilters();
   render(); toBoardTop();
 }
 function toggleOwner(o) {
   state.owner = state.owner === o ? "" : o;
   if (state.owner && state.kind && !kindBy(state.kind)?.actionable) state.kind = "";
+  saveFilters();
   render(); toBoardTop();
 }
 // After a filter change the board starts right below the sticky bars again (scrolls up only, never down).
@@ -3214,10 +3218,10 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && state.home && !e.defaultPrevented && !hist.open && !document.querySelector("dialog[open]")) homeGo(state.project);
 });
 // From the overview to a project (or "Alle Projekte"), optionally in a certain view.
-function homeGo(slug, mode) {
+function homeGo(slug, mode, keepFilters = false) {
   closeHome();
   if (mode && state.mode !== mode) { state.mode = mode; state.nextPick = null; store.set("cotrack.mode", mode); syncModes(); }
-  if (slug && slug !== state.project) selectProject(slug); else refresh(true);
+  if (slug && slug !== state.project) selectProject(slug, keepFilters); else refresh(true);
   window.scrollTo(0, 0);
 }
 function homeModel() {
@@ -3274,12 +3278,12 @@ function renderHome() {
       state.sort = "due"; store.set("cotrack.sort", "due"); syncSortBtn();
       state.view = "open"; store.set("cotrack.view", "open"); syncViewChips();
       state.owner = ""; state.kind = "";
-      homeGo(ALL, "board");
+      homeGo(ALL, "board", true);
     }),
     tile("", tr("homeOther", actorLabel(other)), sum((c) => c.other), tr("homeDoing", sum((c) => c.otherDoing)), () => {
       state.view = "open"; store.set("cotrack.view", "open"); syncViewChips();
       state.owner = other; state.kind = "";
-      homeGo(ALL, "board");
+      homeGo(ALL, "board", true);
     }),
     tile("", tr("homeNews"), news, since, () => { homeGo(ALL); openHist(); }));
   box.replaceChildren(head, tiles, h("div", { class: "hm-grid" }, cards.map((c) => homeCard(c, other))));
@@ -4376,10 +4380,36 @@ $("#add").addEventListener("submit", async (e) => {
 
 function syncViewChips() { for (const x of $("#viewChips").children) x.setAttribute("aria-pressed", String(x.dataset.view === state.view)); }
 syncViewChips();
+/* Filters per project (this device): view (open · closed · all), Du/KI and category are remembered for each project and come
+   back when it is opened again. A project without a record starts with open items and no further filter. */
+const FILTERS_KEY = "cotrack.filters";
+function loadFilters() {
+  try {
+    const all = JSON.parse(store.get(FILTERS_KEY) || "{}");
+    return all && typeof all === "object" && !Array.isArray(all) ? all : {};
+  } catch { return {}; }
+}
+function saveFilters() {
+  if (!state.project) return;
+  const all = loadFilters();
+  all[state.project] = { view: state.view, owner: state.owner, kind: state.kind };
+  store.set(FILTERS_KEY, JSON.stringify(all));
+}
+function applyFilters(slug) {
+  const f = loadFilters()[slug] || {};
+  state.view = VIEWS.includes(f.view) ? f.view : "open";
+  state.owner = f.owner === "user" || f.owner === "ai" ? f.owner : "";
+  state.kind = typeof f.kind === "string" ? f.kind : "";
+  // a stored category that no longer exists is dropped by render(); Du/KI never goes together with a kind nobody owns
+  if (state.owner && state.kind && kindBy(state.kind) && !kindBy(state.kind).actionable) state.kind = "";
+  store.set("cotrack.view", state.view);
+  syncViewChips();
+}
 $("#viewChips").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   state.view = b.dataset.view;
   store.set("cotrack.view", state.view);
+  saveFilters();
   syncViewChips();
   refresh(true);
 });
@@ -4544,9 +4574,11 @@ const refLink = (key) => h("button", { type: "button", class: "reflink", title: 
   onclick: (e) => { e.stopPropagation(); openItemKey(key); } }, keyRef(key));
 const refLinks = (keys) => keys.map((k, n) => [n ? ", " : "", refLink(k)]);
 
-function selectProject(slug) {
+// keepFilters: the caller has just set view/owner/kind on purpose (the overview's tiles), so the project's remembered ones stay out.
+function selectProject(slug, keepFilters = false) {
   closeHome();
   state.project = slug; state.version = -1; state.nextPick = null;
+  if (!keepFilters) applyFilters(slug);
   store.set("cotrack.project", slug);
   noteProjectOpened(slug);
   history.replaceState(null, "", "#" + encodeURIComponent(slug));

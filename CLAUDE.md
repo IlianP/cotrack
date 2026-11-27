@@ -119,6 +119,11 @@
   re-sorts on each device (`state.projectSort`, localStorage `cotrack.projectSort`; `sortProjects`, `PROJECT_SORTS` in
   `src/ui.html`): changed · name · opened (`noteProjectOpened`, localStorage `cotrack.projectOpened`). Chosen with the
   button in the picker's "Alle Projekte" row (`projectSortBtn`, `#projectSortPop`); every `state.projects` list follows it.
+- Filters per project (this device): view (open · closed · all), Du/KI and category are remembered for each project in
+  localStorage `cotrack.filters` (`{slug: {view, owner, kind}}`, `loadFilters`/`saveFilters`/`applyFilters` in `src/ui.html`)
+  and applied when the project is opened (`selectProject`, boot). Saved on every change of one of the three; a project without
+  a record starts with `open`, no Du/KI, no category. The overview's tiles set filters on purpose and skip the stored ones
+  (`homeGo(…, keepFilters)`) without saving them. Search text and sort order are not part of it.
 - Footer delta (A121): `since` is either the version number from `cotrack_status` (the instance-wide newest event id,
   `latestEvent` in `src/mcp.js`, so it also fits a footer over several projects; digits = event id; `sinceVersion`,
   `changedSince` in `src/worker.js` – exact) or an ISO time (only as exact as the AI's clock). The MCP texts ask for the version.
